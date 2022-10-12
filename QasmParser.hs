@@ -193,6 +193,7 @@ data OpenQasmGate =
   | XFanout [OQCbit] [OQCbit] [OQCbit]
   | Matrix OQCbit [Complex Double] [OQCbit]
   | XMatrix OQCbit [Complex Double] [OQCbit]
+  | Ctrl OpenQasmGate OQCbit
   deriving (Show)
 
 -- | Take a gate from the abstract syntax and execute it in the
@@ -406,6 +407,18 @@ qasm_line = choice [
     skipSpaces
     char ';'
     return (X q)
+  ,
+  do -- @ NOT(qureg q=<5>)
+    skipSpaces
+    string "ctrl @"
+    skipSpaces
+    gate <- qasm_line
+    skipSpaces
+    char ','
+    skipSpaces
+    c <- oqbit
+    char ';'
+    return (Ctrl gate c)
   ,
   do -- @ NOT(qureg q=<5>)
     skipSpaces
