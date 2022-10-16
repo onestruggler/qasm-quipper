@@ -38,8 +38,14 @@ import QasmLang
 %left NEG
 %%
 
+StmtList : Stmt                             { [$1] }
+         | Stmt StmtList                    { $1 : $2 }
+
+Stmt : Gate ';'                             { QasmGateStmt $1 }
+
 Gate : id GateOperands                      { NamedGateOp $1 [] $2 }
      | id '(' ExprList ')' GateOperands     { NamedGateOp $1 $3 $5 }
+     | gphase '(' Expr ')'                  { GPhaseOp $3 [] }
      | gphase '(' Expr ')' GateOperands     { GPhaseOp $3 $5 }
      | ctrl '@' Gate                        { CtrlMod Nothing $3 }
      | ctrl '(' Expr ')' '@' Gate           { CtrlMod (Just $3) $6 }
@@ -47,6 +53,9 @@ Gate : id GateOperands                      { NamedGateOp $1 [] $2 }
      | negctrl '(' Expr ')' '@' Gate        { NegCtrlMod (Just $3) $6 }
      | inv '@' Gate                         { InvMod $3 }
      | pow '(' Expr ')' '@' Gate            { PowMod $3 $6 }
+
+ExprList : Expr                             { [$1] }
+         | Expr ',' ExprList                { $1 : $3 }
 
 Expr : Expr '+' Expr                        { Plus $1 $3 }
      | Expr '-' Expr                        { Minus $1 $3 }
@@ -58,14 +67,11 @@ Expr : Expr '+' Expr                        { Plus $1 $3 }
      | decint                               { DecInt $1 }
      | id                                   { QasmId $1 }
 
-ExprList : Expr                             { [$1] }
-         | Expr ',' ExprList                { $1 : $3 }
+GateOperands : GateOperand                  { [$1] }
+             | GateOperand GateOperands     { $1 : $2 }
 
 GateOperand : id                            { QVar $1 }
             | id '[' Expr ']'               { QReg $1 $3 }
-
-GateOperands : GateOperand                  { [$1] }
-             | GateOperand GateOperands     { $1 : $2 }
 
 {
 lexwrap :: (Token -> Alex a) -> Alex a
@@ -74,6 +80,6 @@ lexwrap = (alexQasmMonadScan >>=)
 happyError :: Token -> Alex a
 happyError (Token p t) = alexQasmError p ("parse error at token '" ++ unlex t ++ "'")
 
-parseQasm :: FilePath -> String -> Either String Gate
+parseQasm :: FilePath -> String -> Either String [Stmt]
 parseQasm = runAlexQasm parse
 }

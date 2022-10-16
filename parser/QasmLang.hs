@@ -22,3 +22,5 @@ data Gate = NamedGateOp String [Expr] [GateOperand]
           | InvMod Gate
           | PowMod Expr Gate
           deriving (Show)
+
+data QasmStmt = QasmGateStmt Gate deriving (Show)
