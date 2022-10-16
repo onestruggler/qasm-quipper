@@ -18,6 +18,8 @@ import System.FilePath
 
 $decimal    = [0-9]
 $alpha      = [A-Za-z]
+$greek      = [\x370-\x3FF]
+$idchars    = ['_' $alpha $greek]
 
 tokens :-
     $white+                                 ;
@@ -26,7 +28,7 @@ tokens :-
     inv                                     { constLex TokenInv }
     pow                                     { constLex TokenPow }
     ($decimal '_'?)* $decimal               { charLex TokenDecInt }
-    ['_' $alpha] ['_' $alpha $decimal]*     { charLex TokenID }
+    $idchars [$idchars $decimal]*           { charLex TokenID }
     \@                                      { constLex TokenAt }
     \(                                      { constLex TokenLParen }
     \)                                      { constLex TokenRParen }
