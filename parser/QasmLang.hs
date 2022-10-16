@@ -6,6 +6,7 @@ data Expr = Plus Expr Expr
           | Div Expr Expr
           | Brack Expr
           | Negate Expr
+          | Pi
           | DecInt String
           | QasmId String
           deriving (Show)

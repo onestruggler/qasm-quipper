@@ -18,6 +18,7 @@ import QasmLang
     inv             { Token _ TokenInv }
     pow             { Token _ TokenPow }
     decint          { Token _ (TokenDecInt $$) }
+    pi              { Token _ (TokenPi $$) }
     id              { Token _ (TokenID $$) }
     '@'             { Token _ TokenAt }
     '+'             { Token _ TokenPlus }
@@ -49,6 +50,7 @@ Expr : Expr '+' Expr                        { Plus $1 $3 }
      | Expr '/' Expr                        { Div $1 $3 }
      | '(' Expr ')'                         { Brack $2 }
      | '-' Expr %prec NEG                   { Negate $2 }
+     | pi                                   { Pi}
      | decint                               { DecInt $1 }
      | id                                   { QasmId $1 }
 
