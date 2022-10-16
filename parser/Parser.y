@@ -20,12 +20,19 @@ import QasmLang
     decint          { Token _ (TokenDecInt $$) }
     id              { Token _ (TokenID $$) }
     '@'             { Token _ TokenAt }
+    '+'             { Token _ TokenPlus }
+    '-'             { Token _ TokenMinus }
+    '*'             { Token _ TokenStar }
+    '/'             { Token _ TokenSlash }
     '('             { Token _ TokenLParen }
     ')'             { Token _ TokenRParen }
     '['             { Token _ TokenLBrack }
     ']'             { Token _ TokenRBrack }
     ';'             { Token _ TokenSemicolon }
 
+%left '+' '-'
+%left '*' '/'
+%left NEG
 %%
 
 Gate : id GateOperands                      { NamedGate $1 $2 }
@@ -36,7 +43,14 @@ Gate : id GateOperands                      { NamedGate $1 $2 }
      | inv '@' Gate                         { InvMod $3 }
      | pow '(' Expr ')' '@' Gate            { PowMod $3 $6 }
 
-Expr : decint                               { DecInt $1 }
+Expr : Expr '+' Expr                        { Plus $1 $3 }
+     | Expr '-' Expr                        { Minus $1 $3 }
+     | Expr '*' Expr                        { Times $1 $3 }
+     | Expr '/' Expr                        { Div $1 $3 }
+     | '(' Expr ')'                         { Brack $2 }
+     | '-' Expr %prec NEG                   { Negate $2 }
+     | decint                               { DecInt $1 }
+     | id                                   { QasmId $1 }
 
 GateOperand : id                            { QVar $1 }
             | id '[' Expr ']'               { QReg $1 $3 }

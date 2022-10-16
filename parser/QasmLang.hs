@@ -1,6 +1,14 @@
 module QasmLang where
 
-data Expr = DecInt String deriving (Show)
+data Expr = Plus Expr Expr
+          | Minus Expr Expr
+          | Times Expr Expr
+          | Div Expr Expr
+          | Brack Expr
+          | Negate Expr
+          | DecInt String
+          | QasmId String
+          deriving (Show)
 
 data GateOperand = QVar String
                  | QReg String Expr

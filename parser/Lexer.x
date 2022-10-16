@@ -30,6 +30,10 @@ tokens :-
     ($decimal '_'?)* $decimal               { charLex TokenDecInt }
     $idchars [$idchars $decimal]*           { charLex TokenID }
     \@                                      { constLex TokenAt }
+    \+                                      { constLex TokenPlus }
+    \-                                      { constLex TokenMinus }
+    \*                                      { constLex TokenStar }
+    \/                                      { constLex TokenSlash }
     \(                                      { constLex TokenLParen }
     \)                                      { constLex TokenRParen }
     \[                                      { constLex TokenLBrack }
@@ -57,6 +61,10 @@ data TokenClass = TokenCtrl
                 | TokenDecInt String
                 | TokenID String
                 | TokenAt
+                | TokenPlus
+                | TokenMinus
+                | TokenStar
+                | TokenSlash
                 | TokenLParen
                 | TokenRParen
                 | TokenLBrack
@@ -76,6 +84,10 @@ unlex TokenPow        = "pow"
 unlex (TokenDecInt x) = (show x)
 unlex (TokenID str)   = (show str)
 unlex TokenAt         = "@"
+unlex TokenPlus       = "+"
+unlex TokenMinus      = "-"
+unlex TokenStar       = "*"
+unlex TokenSlash      = "/"
 unlex TokenLParen     = "("
 unlex TokenRParen     = ")"
 unlex TokenLBrack     = "["
