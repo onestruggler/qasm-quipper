@@ -40,6 +40,7 @@ tokens :-
     \)                                      { constLex TokenRParen }
     \[                                      { constLex TokenLBrack }
     \]                                      { constLex TokenRBrack }
+    \,                                      { constLex TokenComma }
     \;                                      { constLex TokenSemicolon }
 
 {
@@ -73,6 +74,7 @@ data TokenClass = TokenCtrl
                 | TokenRParen
                 | TokenLBrack
                 | TokenRBrack
+                | TokenComma
                 | TokenSemicolon
                 | TokenEOF
                 deriving (Show)
@@ -98,6 +100,7 @@ unlex TokenLParen     = "("
 unlex TokenRParen     = ")"
 unlex TokenLBrack     = "["
 unlex TokenRBrack     = "]"
+unlex TokenComma      = ","
 unlex TokenSemicolon  = ";"
 unlex TokenEOF        = "<EOF>"
 

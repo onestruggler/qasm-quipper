@@ -30,6 +30,7 @@ import QasmLang
     ')'             { Token _ TokenRParen }
     '['             { Token _ TokenLBrack }
     ']'             { Token _ TokenRBrack }
+    ','             { Token _ TokenComma }
     ';'             { Token _ TokenSemicolon }
 
 %left '+' '-'
@@ -37,7 +38,8 @@ import QasmLang
 %left NEG
 %%
 
-Gate : id GateOperands                      { NamedGateOp $1 $2 }
+Gate : id GateOperands                      { NamedGateOp $1 [] $2 }
+     | id '(' ExprList ')' GateOperands     { NamedGateOp $1 $3 $5 }
      | gphase '(' Expr ')' GateOperands     { GPhaseOp $3 $5 }
      | ctrl '@' Gate                        { CtrlMod Nothing $3 }
      | ctrl '(' Expr ')' '@' Gate           { CtrlMod (Just $3) $6 }
@@ -55,6 +57,9 @@ Expr : Expr '+' Expr                        { Plus $1 $3 }
      | pi                                   { Pi }
      | decint                               { DecInt $1 }
      | id                                   { QasmId $1 }
+
+ExprList : Expr                             { [$1] }
+         | Expr ',' ExprList                { $1 : $3 }
 
 GateOperand : id                            { QVar $1 }
             | id '[' Expr ']'               { QReg $1 $3 }

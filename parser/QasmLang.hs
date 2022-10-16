@@ -15,7 +15,7 @@ data GateOperand = QVar String
                  | QReg String Expr
                  deriving (Show)
 
-data Gate = NamedGateOp String [GateOperand]
+data Gate = NamedGateOp String [Expr] [GateOperand]
           | GPhaseOp Expr [GateOperand]
           | CtrlMod (Maybe Expr) Gate
           | NegCtrlMod (Maybe Expr) Gate
