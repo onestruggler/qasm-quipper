@@ -27,6 +27,7 @@ tokens :-
     negctrl                                 { constLex TokenNegCtrl }
     inv                                     { constLex TokenInv }
     pow                                     { constLex TokenPow }
+    gphase                                  { constLex TokenGPhase }
     ($decimal '_'?)* $decimal               { charLex TokenDecInt }
     \x3C0 | pi                              { charLex TokenPi }
     $idchars [$idchars $decimal]*           { charLex TokenID }
@@ -59,6 +60,7 @@ data TokenClass = TokenCtrl
                 | TokenNegCtrl
                 | TokenInv
                 | TokenPow
+                | TokenGPhase
                 | TokenDecInt String
                 | TokenPi String
                 | TokenID String
@@ -83,6 +85,7 @@ unlex TokenCtrl       = "ctrl"
 unlex TokenNegCtrl    = "negctrl"
 unlex TokenInv        = "inv"
 unlex TokenPow        = "pow"
+unlex TokenGPhase     = "gphase"
 unlex (TokenDecInt x) = (show x)
 unlex (TokenPi tok)   = (show tok)
 unlex (TokenID str)   = (show str)

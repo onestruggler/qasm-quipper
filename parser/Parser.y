@@ -17,6 +17,7 @@ import QasmLang
     negctrl         { Token _ TokenNegCtrl }
     inv             { Token _ TokenInv }
     pow             { Token _ TokenPow }
+    gphase          { Token _ TokenGPhase }
     decint          { Token _ (TokenDecInt $$) }
     pi              { Token _ (TokenPi $$) }
     id              { Token _ (TokenID $$) }
@@ -36,7 +37,8 @@ import QasmLang
 %left NEG
 %%
 
-Gate : id GateOperands                      { NamedGate $1 $2 }
+Gate : id GateOperands                      { NamedGateOp $1 $2 }
+     | gphase '(' Expr ')' GateOperands     { GPhaseOp $3 $5 }
      | ctrl '@' Gate                        { CtrlMod Nothing $3 }
      | ctrl '(' Expr ')' '@' Gate           { CtrlMod (Just $3) $6 }
      | negctrl '@' Gate                     { NegCtrlMod Nothing $3 }
@@ -50,7 +52,7 @@ Expr : Expr '+' Expr                        { Plus $1 $3 }
      | Expr '/' Expr                        { Div $1 $3 }
      | '(' Expr ')'                         { Brack $2 }
      | '-' Expr %prec NEG                   { Negate $2 }
-     | pi                                   { Pi}
+     | pi                                   { Pi }
      | decint                               { DecInt $1 }
      | id                                   { QasmId $1 }
 
