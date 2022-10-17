@@ -23,19 +23,26 @@ $idchars    = ['_' $alpha $greek]
 
 tokens :-
     $white+                                 ;
+    -- Gates and Modifiers.
     ctrl                                    { constLex TokenCtrl }
     negctrl                                 { constLex TokenNegCtrl }
     inv                                     { constLex TokenInv }
     pow                                     { constLex TokenPow }
     gphase                                  { constLex TokenGPhase }
+    -- Type Keywords.
+    qreg                                    { constLex TokenQReg }
+    qubit                                   { constLex TokenQubit }
+    -- Literals and Identifiers.
     ($decimal '_'?)* $decimal               { charLex TokenDecInt }
     \x3C0 | pi                              { charLex TokenPi }
     $idchars [$idchars $decimal]*           { charLex TokenID }
+    -- Operators.
     \@                                      { constLex TokenAt }
     \+                                      { constLex TokenPlus }
     \-                                      { constLex TokenMinus }
     \*                                      { constLex TokenStar }
     \/                                      { constLex TokenSlash }
+    -- Braces.
     \(                                      { constLex TokenLParen }
     \)                                      { constLex TokenRParen }
     \[                                      { constLex TokenLBrack }
@@ -62,6 +69,8 @@ data TokenClass = TokenCtrl
                 | TokenInv
                 | TokenPow
                 | TokenGPhase
+                | TokenQReg
+                | TokenQubit
                 | TokenDecInt String
                 | TokenPi String
                 | TokenID String
@@ -88,6 +97,8 @@ unlex TokenNegCtrl    = "negctrl"
 unlex TokenInv        = "inv"
 unlex TokenPow        = "pow"
 unlex TokenGPhase     = "gphase"
+unlex TokenQReg       = "qreg"
+unlex TokenQubit      = "qubit"
 unlex (TokenDecInt x) = (show x)
 unlex (TokenPi tok)   = (show tok)
 unlex (TokenID str)   = (show str)

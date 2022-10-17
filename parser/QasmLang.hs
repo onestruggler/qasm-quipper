@@ -23,4 +23,10 @@ data Gate = NamedGateOp String [Expr] [GateOperand]
           | PowMod Expr Gate
           deriving (Show)
 
-data QasmStmt = QasmGateStmt Gate deriving (Show)
+data Type = QubitT
+          | QubitArrT Expr
+          deriving (Show)
+
+data QasmStmt = QasmGateStmt Gate
+              | QasmDeclStmt Type String
+              deriving (Show)

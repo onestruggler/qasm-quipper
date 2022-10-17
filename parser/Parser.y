@@ -18,6 +18,8 @@ import QasmLang
     inv             { Token _ TokenInv }
     pow             { Token _ TokenPow }
     gphase          { Token _ TokenGPhase }
+    qreg            { Token _ TokenQReg }
+    qubit           { Token _ TokenQubit }
     decint          { Token _ (TokenDecInt $$) }
     pi              { Token _ (TokenPi $$) }
     id              { Token _ (TokenID $$) }
@@ -42,6 +44,16 @@ StmtList : Stmt                             { [$1] }
          | Stmt StmtList                    { $1 : $2 }
 
 Stmt : Gate ';'                             { QasmGateStmt $1 }
+     | QubitDeclStmt                        { $1 }
+
+Designator : '[' Expr ']'                   { $2 }
+
+QubitType : qubit                           { QubitT }
+          | qubit Designator                { QubitArrT $2 }
+
+QubitDeclStmt : QubitType id ';'            { QasmDeclStmt $1 $2 }
+              | qreg id ';'                 { QasmDeclStmt QubitT $2 }
+              | qreg id Designator ';'      { QasmDeclStmt (QubitArrayT $3) $2 }
 
 Gate : id GateOperands                      { NamedGateOp $1 [] $2 }
      | id '(' ExprList ')' GateOperands     { NamedGateOp $1 $3 $5 }
@@ -71,7 +83,7 @@ GateOperands : GateOperand                  { [$1] }
              | GateOperand GateOperands     { $1 : $2 }
 
 GateOperand : id                            { QVar $1 }
-            | id '[' Expr ']'               { QReg $1 $3 }
+            | id Designator                 { QReg $1 $2 }
 
 {
 lexwrap :: (Token -> Alex a) -> Alex a
@@ -80,6 +92,6 @@ lexwrap = (alexQasmMonadScan >>=)
 happyError :: Token -> Alex a
 happyError (Token p t) = alexQasmError p ("parse error at token '" ++ unlex t ++ "'")
 
-parseQasm :: FilePath -> String -> Either String [Stmt]
+parseQasm :: FilePath -> String -> Either String [QasmStmt]
 parseQasm = runAlexQasm parse
 }
