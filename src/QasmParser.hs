@@ -1,7 +1,8 @@
+-- | Command-line interface to the OpenQASM 3 parser.
+
 module Main where
 
-import QasmLang
-import Parser
+import Qasm.Parser
 import System.Environment
 
 main = do

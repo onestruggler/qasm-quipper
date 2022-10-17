@@ -1,6 +1,6 @@
 -- Monad template from: https://github.com/dagit/happy-plus-alex/
 {
-module Lexer
+module Qasm.Lexer
   ( Token(..)
   , TokenClass(..)
   , unlex

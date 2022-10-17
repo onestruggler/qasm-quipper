@@ -1,9 +1,9 @@
 -- Monad template from: https://github.com/dagit/happy-plus-alex/
 {
-module Parser (parseQasm) where
+module Qasm.Parser (parseQasm) where
 
-import Lexer
-import QasmLang
+import Qasm.Lexer
+import Qasm.Language
 }
 
 %name parse
@@ -53,7 +53,7 @@ QubitType : qubit                           { QubitT }
 
 QubitDeclStmt : QubitType id ';'            { QasmDeclStmt $1 $2 }
               | qreg id ';'                 { QasmDeclStmt QubitT $2 }
-              | qreg id Designator ';'      { QasmDeclStmt (QubitArrayT $3) $2 }
+              | qreg id Designator ';'      { QasmDeclStmt (QubitArrT $3) $2 }
 
 Gate : id GateOperands                      { NamedGateOp $1 [] $2 }
      | id '(' ExprList ')' GateOperands     { NamedGateOp $1 $3 $5 }
@@ -80,7 +80,7 @@ Expr : Expr '+' Expr                        { Plus $1 $3 }
      | id                                   { QasmId $1 }
 
 GateOperands : GateOperand                  { [$1] }
-             | GateOperand GateOperands     { $1 : $2 }
+             | GateOperand ',' GateOperands { $1 : $3 }
 
 GateOperand : id                            { QVar $1 }
             | id Designator                 { QReg $1 $2 }
@@ -92,6 +92,6 @@ lexwrap = (alexQasmMonadScan >>=)
 happyError :: Token -> Alex a
 happyError (Token p t) = alexQasmError p ("parse error at token '" ++ unlex t ++ "'")
 
-parseQasm :: FilePath -> String -> Either String [QasmStmt]
+parseQasm :: FilePath -> String -> Either String [Stmt]
 parseQasm = runAlexQasm parse
 }
