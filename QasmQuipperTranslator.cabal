@@ -16,6 +16,7 @@ extra-source-files:  CHANGELOG.md, README.md
 library
   exposed-modules:     Qasm.Expression
                        Qasm.Gate
+                       Qasm.GateName
                        Qasm.Language
                        Qasm.Parser
   other-modules:       Qasm.Lexer

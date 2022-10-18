@@ -11,11 +11,11 @@ data Expr = Plus Expr Expr
           | Pi
           | DecInt String
           | QasmId String
-          deriving (Show)
+          deriving (Show, Eq)
 
 data GateOperand = QVar String
                  | QReg String Expr
-                 deriving (Show)
+                 deriving (Show, Eq)
 
 data GateExpr = NamedGateOp String [Expr] [GateOperand]
               | GPhaseOp Expr [GateOperand]
@@ -23,12 +23,12 @@ data GateExpr = NamedGateOp String [Expr] [GateOperand]
               | NegCtrlMod (Maybe Expr) GateExpr
               | InvMod GateExpr
               | PowMod Expr GateExpr
-              deriving (Show)
+              deriving (Show, Eq)
 
 data Type = QubitT
           | QubitArrT Expr
-          deriving (Show)
+          deriving (Show, Eq)
 
 data Stmt = QasmGateStmt GateExpr
           | QasmDeclStmt Type String
-          deriving (Show)
+          deriving (Show, Eq)

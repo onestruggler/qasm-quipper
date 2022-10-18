@@ -7,7 +7,14 @@ module Qasm.Gate
   , negateMod
   , addCtrlsToMod
   , addNegCtrlsToMod
+  , Gate(..)
+  , invert
+  , addCtrls
+  , addNegCtrls
   ) where
+
+import Qasm.GateName (GateName)
+import Qasm.Language (Expr(..), GateOperand(..), GateExpr(..))
 
 -------------------------------------------------------------------------------
 -- * Modifiers and Update Functions.
@@ -44,3 +51,31 @@ addCtrlsToMod = addSignsToMod Pos
 -- Equivalent to (addSignsToMod Neg).
 addNegCtrlsToMod :: Int -> GateMod -> GateMod
 addNegCtrlsToMod = addSignsToMod Neg
+
+-------------------------------------------------------------------------------
+-- * Gates and Decorator Functions.
+
+-- | Abstract representation of a gate: name, parameters, operands, and mods.
+data Gate = NamedGate GateName [Expr] [GateOperand] GateMod
+          | GPhaseGate Expr [GateOperand] GateMod
+          deriving (Show, Eq)
+
+-- | Consumes a modifier update function (f) and a gate. Returns the gate
+-- obtained by applying f to the underlying gate modifier.
+applyToMod :: (GateMod -> GateMod) -> Gate -> Gate
+applyToMod f (NamedGate name params operands mod)
+    = NamedGate name params operands (f mod)
+applyToMod f (GPhaseGate param operands mod)
+    = GPhaseGate param operands (f mod)
+
+-- Equivalent to applyToMod negateMod.
+invert :: Gate -> Gate
+invert = applyToMod negateMod
+
+-- | Equivalent to applyToMod (addCtrlsToMod n).
+addCtrls :: Int -> Gate -> Gate
+addCtrls n = applyToMod (addCtrlsToMod n)
+
+-- | Equivalent to applyToMod (addNegCtrlsToMod n).
+addNegCtrls :: Int -> Gate -> Gate
+addNegCtrls n gate = applyToMod (addNegCtrlsToMod n) gate

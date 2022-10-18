@@ -48,6 +48,7 @@ data GateName = UserDefined String
               | GateU3
               -- Rotational Quipper Integration Gates:
               | GateQuipRZ
+              deriving (Show, Eq)
 
 -------------------------------------------------------------------------------
 -- * Name Analysis Functions.
