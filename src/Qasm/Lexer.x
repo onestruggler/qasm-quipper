@@ -11,7 +11,7 @@ module Qasm.Lexer
   ) where
 
 import Control.Monad (liftM)
-import System.FilePath
+import System.FilePath (FilePath)
 }
 
 %wrapper "monadUserState"
