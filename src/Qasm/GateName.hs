@@ -1,11 +1,11 @@
--- |
+-- | Named gates and associated data.
 
 module Qasm.GateName where
 
 -------------------------------------------------------------------------------
 -- * Gate Name Declarations.
 
--- |
+-- | Assigns a unique type to each named gate in OpenQASM 3.
 data GateName = UserDefined String
               -- Non-Rotational OpenQASM Gates:
               | GateX

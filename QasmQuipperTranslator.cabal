@@ -15,6 +15,7 @@ extra-source-files:  CHANGELOG.md, README.md
 
 library
   exposed-modules:     Qasm.Expression
+                       Qasm.Gate
                        Qasm.Language
                        Qasm.Parser
   other-modules:       Qasm.Lexer
@@ -45,4 +46,9 @@ common basic-unit-test-props
 test-suite qasm-expression-tests
   import:              basic-unit-test-props
   main-is:             Qasm-Expression-Tests.hs
+  type:                exitcode-stdio-1.0
+
+test-suite qasm-gate-tests
+  import:              basic-unit-test-props
+  main-is:             Qasm-Gate-Tests.hs
   type:                exitcode-stdio-1.0
