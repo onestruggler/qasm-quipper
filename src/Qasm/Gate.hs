@@ -13,10 +13,11 @@ module Qasm.Gate
   , addNegCtrls
   , GateSummaryErr(..)
   , exprToGate
+  , validateGate
   ) where
 
 import Qasm.Expression (ExprErr(..), toConstInt)
-import Qasm.GateName (GateName, toGateName)
+import Qasm.GateName (GateName, toGateName, toParamCount, toOperandCount)
 import Qasm.Language (Expr(..), GateOperand(..), GateExpr(..))
 
 -------------------------------------------------------------------------------
@@ -88,6 +89,8 @@ addNegCtrls n gate = applyToMod (addNegCtrlsToMod n) gate
 
 data GateSummaryErr = NonConstParam ExprErr Expr
                     | NonPosParam Int Expr
+                    | UnexpectedParamCount Int Int
+                    | UnexpectedOperandCount Int Int
                     deriving (Show, Eq)
 
 type GateEval = Either (Int, Gate) GateSummaryErr
@@ -110,20 +113,21 @@ tryParseParam expr =
         Left n    -> if n > 0 then Left n else Right (NonPosParam n expr)
         Right err -> Right (NonConstParam err expr)
 
--- Consumes a gate update function parameterized by an integer (f), a gate
+-- | Consumes a gate update function parameterized by an integer (f), a gate
 -- expression (gateExpr), and a parameter expression (paramExpr). If gateExpr
 -- evaluates successfully to (n, gate) and paramExpr evaluates successfully to
 -- m, then (n, f m gate) is returned. Otherwise, a gate summarization error is
--- returned to descrie the first failure.
+-- returned to descrie the first evaluation failure.
 tryParamUpdate :: (Int -> Gate -> Gate) -> GateExpr -> Expr -> GateEval
 tryParamUpdate f gateExpr paramExpr =
     case tryParseParam paramExpr of
         Left n    -> tryUpdate (f n) gateExpr
         Right err -> Right err
 
--- Evaluates a gate expression as a tuple (n, gate) where gate is the specified
--- gate and n is the number of applications of gate. If summarization fails,
--- then a gate summarization error is returned to describe the first failure.
+-- | Evaluates a gate expression as a tuple (n, gate) where gate is the
+-- specified gate and n is the number of applications of gate. If summarization
+-- fails, then a gate summarization error is returned to describe the first
+-- evaluation failure.
 exprToGate :: GateExpr -> GateEval
 exprToGate (NamedGateOp name params operands) = Left (1, gate)
     where gate = NamedGate (toGateName name) params operands nullGateMod
@@ -140,3 +144,43 @@ exprToGate (PowMod expr gate) =
             Left (n, gate) -> Left (n + m, gate)
             Right err      -> Right err
         Right err -> Right err
+
+-------------------------------------------------------------------------------
+-- * Gate Validation.
+
+-- | Consumes a parameter list (params) and an optional integer (n). If n is
+-- provided, and the length of params is not n, then an UnexpectedParamCount
+-- exception is returned. Otherwise, nothing is returned.
+checkParamCt :: Maybe Int -> [Expr] -> Maybe GateSummaryErr
+checkParamCt Nothing  _ = Nothing
+checkParamCt (Just expect) params
+    | actual == expect = Nothing
+    | otherwise        = Just (UnexpectedParamCount actual expect)
+    where actual = length params
+
+-- | Consumes a gate modifier (mod), an operand list (operands), and an
+-- optional integer (n). If n is not provided, and the number of controls in
+-- mod exceeds the number of operands, then an UnexpectedOperandCount expection
+-- is returned. Likewise, if n is provided, and the number of controls plus n
+-- does not equal the number of operands, then an UnexpectedOperandCount
+-- expection is returned. Otherwise, nothing is returned.
+checkOpCt :: Maybe Int -> GateMod -> [GateOperand] -> Maybe GateSummaryErr
+checkOpCt Nothing  (GateMod _ ctrls) operands
+    | actual >= expect = Nothing
+    | otherwise        = Just (UnexpectedOperandCount actual expect)
+    where actual = length operands
+          expect = length ctrls + 1
+checkOpCt (Just n) (GateMod _ ctrls) operands
+    | actual == expect = Nothing
+    | otherwise        = Just (UnexpectedOperandCount actual expect)
+    where actual = length operands
+          expect = length ctrls + n
+
+-- | Returns an exception if either the parameter count or the operand count is
+-- invalid for the given gate.
+validateGate :: Gate -> Maybe GateSummaryErr
+validateGate (NamedGate name params operands mods) =
+    case checkParamCt (toParamCount name) params of
+        Just err -> Just err
+        Nothing  -> checkOpCt (toOperandCount name) mods operands
+validateGate (GPhaseGate _ operands mods) = checkOpCt (Just 0) mods operands

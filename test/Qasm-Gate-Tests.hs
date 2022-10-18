@@ -112,7 +112,7 @@ test18 = TestCase (assertEqual "Building phase gates (6/6)."
                                gate5B)
 
 -----------------------------------------------------------------------------------------
--- Gate Construction
+-- Gate Evaluation
 
 targetAndCtrl = [QVar "v", QReg "reg" (DecInt "2")]
 
@@ -183,6 +183,58 @@ test28 = TestCase (assertEqual "Catching exceptions in gate evaluations (3/3)."
                                (exprToGate badGate3))
 
 -----------------------------------------------------------------------------------------
+-- Gate Validation
+
+doubleControl = (QVar "w") : targetAndCtrl
+
+validGate1 = NamedGate GateCRX [pidiv2] targetAndCtrl nullGateMod
+validGate2 = NamedGate GateCRX [pidiv2] doubleControl (addNegCtrlsToMod 1 nullGateMod)
+validGate3 = GPhaseGate pidiv2 [] nullGateMod
+validGate4 = GPhaseGate pidiv2 doubleControl (addNegCtrlsToMod 3 nullGateMod)
+validGate5 = NamedGate (UserDefined "mygate") [pidiv2] targetAndCtrl nullGateMod
+
+test29 = TestCase (assertEqual "Gate validation (1/5)."
+                               (Nothing :: Maybe GateSummaryErr)
+                               (validateGate validGate1))
+
+test30 = TestCase (assertEqual "Gate validation (2/5)."
+                               (Nothing :: Maybe GateSummaryErr)
+                               (validateGate validGate2))
+
+test31 = TestCase (assertEqual "Gate validation (3/5)."
+                               (Nothing :: Maybe GateSummaryErr)
+                               (validateGate validGate3))
+
+test32 = TestCase (assertEqual "Gate validation (4/5)."
+                               (Nothing :: Maybe GateSummaryErr)
+                               (validateGate validGate4))
+
+test33 = TestCase (assertEqual "Gate validation (5/5)."
+                               (Nothing :: Maybe GateSummaryErr)
+                               (validateGate validGate5))
+
+invalidGate1 = NamedGate GateCRX [pidiv2, pidiv2] targetAndCtrl nullGateMod
+invalidGate2 = NamedGate GateCRX [pidiv2] doubleControl nullGateMod
+invalidGate3 = NamedGate (UserDefined "mygate") [pidiv2] targetAndCtrl mod2
+invalidGate4 = GPhaseGate pidiv2 targetAndCtrl nullGateMod
+
+test34 = TestCase (assertEqual "Invalid gate detection (1/4)."
+                               (Just (UnexpectedParamCount 2 1) :: Maybe GateSummaryErr)
+                               (validateGate invalidGate1))
+
+test35 = TestCase (assertEqual "Invalid gate detection (2/4)."
+                               (Just (UnexpectedOperandCount 3 2) :: Maybe GateSummaryErr)
+                               (validateGate invalidGate2))
+
+test36 = TestCase (assertEqual "Invalid gate detection (3/4)."
+                               (Just (UnexpectedOperandCount 2 3) :: Maybe GateSummaryErr)
+                               (validateGate invalidGate3))
+
+test37 = TestCase (assertEqual "Invalid gate detection (4/4)."
+                               (Just (UnexpectedOperandCount 2 0) :: Maybe GateSummaryErr)
+                               (validateGate invalidGate4))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "GateMod_1" test1,
@@ -212,6 +264,15 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateMod_1" test1,
                                      TestLabel "GateEval_7" test25,
                                      TestLabel "BadGate_1" test26,
                                      TestLabel "BadGate_2" test27,
-                                     TestLabel "BadGate_3" test28]
+                                     TestLabel "BadGate_3" test28,
+                                     TestLabel "Validate_1" test29,
+                                     TestLabel "Validate_2" test30,
+                                     TestLabel "Validate_3" test31,
+                                     TestLabel "Validate_4" test32,
+                                     TestLabel "Validate_5" test33,
+                                     TestLabel "Invalidated_1" test34,
+                                     TestLabel "Invalidated_2" test35,
+                                     TestLabel "Invalidated_3" test36,
+                                     TestLabel "Invalidated_4" test37]
 
 main = defaultMain tests
