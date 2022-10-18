@@ -1,18 +1,13 @@
 -- | Command-line interface to the OpenQASM 3 static analyzer.
 
-import Qasm.Parser
+import Text.Pretty.Simple (pPrint)
+import QasmUtils (parseQasmFromArgs)
 import Qasm.Passes
-import System.Environment
 
 main = do
-    -- Parses input according to arguments.
-    args <- getArgs
-    result <- case args of
-        []  -> fmap (parseQasm "<stdin>") getContents
-        [f] -> fmap (parseQasm f) (readFile f)
-    -- Displays results.
+    result <- parseQasmFromArgs
     case result of
         Left str  -> putStrLn str
         Right res -> case toAst 0 res of
-            Left ast  -> putStrLn (show ast)
+            Left ast  -> pPrint ast
             Right err -> putStrLn (show err)
