@@ -3,6 +3,7 @@ module Main where
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit
+import Qasm.Expression
 import Qasm.Gate
 import Qasm.GateName
 import Qasm.Language
@@ -111,6 +112,77 @@ test18 = TestCase (assertEqual "Building phase gates (6/6)."
                                gate5B)
 
 -----------------------------------------------------------------------------------------
+-- Gate Construction
+
+targetAndCtrl = [QVar "v", QReg "reg" (DecInt "2")]
+
+cexprVal3 = Plus (DecInt "4") (DecInt "-1")
+cexprVal2 = Times (DecInt "-1") (Minus (DecInt "1") (DecInt "3"))
+
+gateExpr1 = NamedGateOp "crx" [pidiv2] targetAndCtrl
+gateExpr2 = NamedGateOp "mygate" params inputs
+gateExpr3 = GPhaseOp pidiv2 [] 
+gateExpr4 = NegCtrlMod (Just cexprVal3) (CtrlMod (Just cexprVal2) (InvMod gateExpr1))
+gateExpr5 = NegCtrlMod (Just cexprVal3) (CtrlMod (Just cexprVal2) (InvMod gateExpr3))
+gateExpr6 = InvMod gateExpr4
+gateExpr7 = PowMod cexprVal3 gateExpr6
+
+gateEval1 = NamedGate GateCRX [pidiv2] targetAndCtrl nullGateMod
+gateEval2 = NamedGate (UserDefined "mygate") params inputs nullGateMod
+gateEval3 = GPhaseGate pidiv2 [] nullGateMod
+gateEval4 = NamedGate GateCRX [pidiv2] targetAndCtrl mod3
+gateEval5 = GPhaseGate pidiv2 [] mod3
+gateEval6 = NamedGate GateCRX [pidiv2] targetAndCtrl mod4
+
+test19 = TestCase (assertEqual "Evaluating gate expressions (1/7)."
+                               (Left (1, gateEval1) :: Either (Int, Gate) GateSummaryErr)
+                               (exprToGate gateExpr1))
+
+test20 = TestCase (assertEqual "Evaluating gate expressions (2/7)."
+                               (Left (1, gateEval2) :: Either (Int, Gate) GateSummaryErr)
+                               (exprToGate gateExpr2))
+
+test21 = TestCase (assertEqual "Evaluating gate expressions (3/7)."
+                               (Left (1, gateEval3) :: Either (Int, Gate) GateSummaryErr)
+                               (exprToGate gateExpr3))
+
+test22 = TestCase (assertEqual "Evaluating gate expressions (4/7)."
+                               (Left (1, gateEval4) :: Either (Int, Gate) GateSummaryErr)
+                               (exprToGate gateExpr4))
+
+test23 = TestCase (assertEqual "Evaluating gate expressions (5/7)."
+                               (Left (1, gateEval5) :: Either (Int, Gate) GateSummaryErr)
+                               (exprToGate gateExpr5))
+
+test24 = TestCase (assertEqual "Evaluating gate expressions (6/7)."
+                               (Left (1, gateEval6) :: Either (Int, Gate) GateSummaryErr)
+                               (exprToGate gateExpr6))
+
+test25 = TestCase (assertEqual "Evaluating gate expressions (7/7)."
+                               (Left (4, gateEval6) :: Either (Int, Gate) GateSummaryErr)
+                               (exprToGate gateExpr7))
+
+badGate1 = PowMod (DecInt "0") gateExpr1
+badGate2 = PowMod (DecInt "-1") gateExpr1
+badGate3 = PowMod Pi gateExpr1
+
+err1 = NonPosParam 0 (DecInt "0")
+err2 = NonPosParam (-1) (DecInt "-1")
+err3 = NonConstParam (BadType "angle") Pi
+
+test26 = TestCase (assertEqual "Catching exceptions in gate evaluations (1/3)."
+                               (Right err1 :: Either (Int, Gate) GateSummaryErr)
+                               (exprToGate badGate1))
+
+test27 = TestCase (assertEqual "Catching exceptions in gate evaluations (2/3)."
+                               (Right err2 :: Either (Int, Gate) GateSummaryErr)
+                               (exprToGate badGate2))
+
+test28 = TestCase (assertEqual "Catching exceptions in gate evaluations (3/3)."
+                               (Right err3 :: Either (Int, Gate) GateSummaryErr)
+                               (exprToGate badGate3))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "GateMod_1" test1,
@@ -130,6 +202,16 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateMod_1" test1,
                                      TestLabel "PhaseGate_3" test15,
                                      TestLabel "PhaseGate_4" test16,
                                      TestLabel "PhaseGate_5" test17,
-                                     TestLabel "PhaseGate_6" test18]
+                                     TestLabel "PhaseGate_6" test18,
+                                     TestLabel "GateEval_1" test19,
+                                     TestLabel "GateEval_2" test20,
+                                     TestLabel "GateEval_3" test21,
+                                     TestLabel "GateEval_4" test22,
+                                     TestLabel "GateEval_5" test23,
+                                     TestLabel "GateEval_6" test24,
+                                     TestLabel "GateEval_7" test25,
+                                     TestLabel "BadGate_1" test26,
+                                     TestLabel "BadGate_2" test27,
+                                     TestLabel "BadGate_3" test28]
 
 main = defaultMain tests

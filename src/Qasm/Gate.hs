@@ -11,9 +11,12 @@ module Qasm.Gate
   , invert
   , addCtrls
   , addNegCtrls
+  , GateSummaryErr(..)
+  , exprToGate
   ) where
 
-import Qasm.GateName (GateName)
+import Qasm.Expression (ExprErr(..), toConstInt)
+import Qasm.GateName (GateName, toGateName)
 import Qasm.Language (Expr(..), GateOperand(..), GateExpr(..))
 
 -------------------------------------------------------------------------------
@@ -79,3 +82,61 @@ addCtrls n = applyToMod (addCtrlsToMod n)
 -- | Equivalent to applyToMod (addNegCtrlsToMod n).
 addNegCtrls :: Int -> Gate -> Gate
 addNegCtrls n gate = applyToMod (addNegCtrlsToMod n) gate
+
+-------------------------------------------------------------------------------
+-- * Gate Summarization.
+
+data GateSummaryErr = NonConstParam ExprErr Expr
+                    | NonPosParam Int Expr
+                    deriving (Show, Eq)
+
+type GateEval = Either (Int, Gate) GateSummaryErr
+
+-- | Consumes a gate update function (f), and a gate expression (expr). If expr
+-- evaluates successfully to (n, gate), then returns (n, f gate). Otherwise, a
+-- gate summarization error is returned to describe the failure.
+tryUpdate :: (Gate -> Gate) -> GateExpr -> GateEval
+tryUpdate f gateExpr =
+    case exprToGate gateExpr of
+        Left (n, gate) -> Left (n, f gate)
+        Right err      -> Right err
+
+-- | Consumes an expression (expr). If expr evaluates to a constant, positive
+-- integer n, then n is returned. Otherwise, a gate summarization error is
+-- returned to describe the failure.
+tryParseParam :: Expr -> Either Int GateSummaryErr
+tryParseParam expr =
+    case toConstInt expr of
+        Left n    -> if n > 0 then Left n else Right (NonPosParam n expr)
+        Right err -> Right (NonConstParam err expr)
+
+-- Consumes a gate update function parameterized by an integer (f), a gate
+-- expression (gateExpr), and a parameter expression (paramExpr). If gateExpr
+-- evaluates successfully to (n, gate) and paramExpr evaluates successfully to
+-- m, then (n, f m gate) is returned. Otherwise, a gate summarization error is
+-- returned to descrie the first failure.
+tryParamUpdate :: (Int -> Gate -> Gate) -> GateExpr -> Expr -> GateEval
+tryParamUpdate f gateExpr paramExpr =
+    case tryParseParam paramExpr of
+        Left n    -> tryUpdate (f n) gateExpr
+        Right err -> Right err
+
+-- Evaluates a gate expression as a tuple (n, gate) where gate is the specified
+-- gate and n is the number of applications of gate. If summarization fails,
+-- then a gate summarization error is returned to describe the first failure.
+exprToGate :: GateExpr -> GateEval
+exprToGate (NamedGateOp name params operands) = Left (1, gate)
+    where gate = NamedGate (toGateName name) params operands nullGateMod
+exprToGate (GPhaseOp param operands) = Left (1, gate)
+    where gate = GPhaseGate param operands nullGateMod
+exprToGate (CtrlMod Nothing gate)        = tryUpdate (addCtrls 1) gate
+exprToGate (CtrlMod (Just expr) gate)    = tryParamUpdate addCtrls gate expr
+exprToGate (NegCtrlMod Nothing gate)     = tryUpdate (addNegCtrls 1) gate
+exprToGate (NegCtrlMod (Just expr) gate) = tryParamUpdate addNegCtrls gate expr
+exprToGate (InvMod gate)                 = tryUpdate invert gate
+exprToGate (PowMod expr gate) =
+    case tryParseParam expr of
+        Left m -> case exprToGate gate of
+            Left (n, gate) -> Left (n + m, gate)
+            Right err      -> Right err
+        Right err -> Right err
