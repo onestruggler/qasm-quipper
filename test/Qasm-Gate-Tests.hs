@@ -135,31 +135,31 @@ gateEval5 = GPhaseGate pidiv2 [] mod3
 gateEval6 = NamedGate GateCRX [pidiv2] targetAndCtrl mod4
 
 test19 = TestCase (assertEqual "Evaluating gate expressions (1/7)."
-                               (Left (1, gateEval1) :: Either (Int, Gate) GateSummaryErr)
+                               (Left (0, gateEval1) :: Either (Int, Gate) GateSummaryErr)
                                (exprToGate gateExpr1))
 
 test20 = TestCase (assertEqual "Evaluating gate expressions (2/7)."
-                               (Left (1, gateEval2) :: Either (Int, Gate) GateSummaryErr)
+                               (Left (0, gateEval2) :: Either (Int, Gate) GateSummaryErr)
                                (exprToGate gateExpr2))
 
 test21 = TestCase (assertEqual "Evaluating gate expressions (3/7)."
-                               (Left (1, gateEval3) :: Either (Int, Gate) GateSummaryErr)
+                               (Left (0, gateEval3) :: Either (Int, Gate) GateSummaryErr)
                                (exprToGate gateExpr3))
 
 test22 = TestCase (assertEqual "Evaluating gate expressions (4/7)."
-                               (Left (1, gateEval4) :: Either (Int, Gate) GateSummaryErr)
+                               (Left (0, gateEval4) :: Either (Int, Gate) GateSummaryErr)
                                (exprToGate gateExpr4))
 
 test23 = TestCase (assertEqual "Evaluating gate expressions (5/7)."
-                               (Left (1, gateEval5) :: Either (Int, Gate) GateSummaryErr)
+                               (Left (0, gateEval5) :: Either (Int, Gate) GateSummaryErr)
                                (exprToGate gateExpr5))
 
 test24 = TestCase (assertEqual "Evaluating gate expressions (6/7)."
-                               (Left (1, gateEval6) :: Either (Int, Gate) GateSummaryErr)
+                               (Left (0, gateEval6) :: Either (Int, Gate) GateSummaryErr)
                                (exprToGate gateExpr6))
 
 test25 = TestCase (assertEqual "Evaluating gate expressions (7/7)."
-                               (Left (4, gateEval6) :: Either (Int, Gate) GateSummaryErr)
+                               (Left (3, gateEval6) :: Either (Int, Gate) GateSummaryErr)
                                (exprToGate gateExpr7))
 
 badGate1 = PowMod (DecInt "0") gateExpr1

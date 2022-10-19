@@ -21,6 +21,7 @@ library
                        Qasm.Language
                        Qasm.Passes
                        Qasm.Parser
+                       Qasm.Printer
   other-modules:       Qasm.Lexer
   build-tools:         happy,
                        alex
@@ -41,6 +42,15 @@ executable qasm_parser
 
 executable qasm_analyzer
   main-is:             QasmAnalyzer.hs
+  other-modules:       QasmUtils
+  build-depends:       base >=4.12 && <4.13,
+                       pretty-simple,
+                       QasmQuipperTranslator
+  hs-source-dirs:      exe
+  default-language:    Haskell2010
+
+executable qasm_printer
+  main-is:             QasmPrinter.hs
   other-modules:       QasmUtils
   build-depends:       base >=4.12 && <4.13,
                        pretty-simple,

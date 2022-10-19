@@ -129,9 +129,9 @@ tryParamUpdate f gateExpr paramExpr =
 -- fails, then a gate summarization error is returned to describe the first
 -- evaluation failure.
 exprToGate :: GateExpr -> GateEval
-exprToGate (NamedGateOp name params operands) = Left (1, gate)
+exprToGate (NamedGateOp name params operands) = Left (0, gate)
     where gate = NamedGate (toGateName name) params operands nullGateMod
-exprToGate (GPhaseOp param operands) = Left (1, gate)
+exprToGate (GPhaseOp param operands) = Left (0, gate)
     where gate = GPhaseGate param operands nullGateMod
 exprToGate (CtrlMod Nothing gate)        = tryUpdate (addCtrls 1) gate
 exprToGate (CtrlMod (Just expr) gate)    = tryParamUpdate addCtrls gate expr
