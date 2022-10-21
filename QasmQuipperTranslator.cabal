@@ -25,7 +25,7 @@ library
   other-modules:       Qasm.Lexer
   build-tools:         happy,
                        alex
-  build-depends:       base >=4.12 && <4.13,
+  build-depends:       base,
                        array,
                        filepath
   hs-source-dirs:      src
@@ -34,7 +34,7 @@ library
 executable qasm_parser
   main-is:             QasmParser.hs
   other-modules:       QasmUtils
-  build-depends:       base >=4.12 && <4.13,
+  build-depends:       base,
                        pretty-simple,
                        QasmQuipperTranslator
   hs-source-dirs:      exe
@@ -43,7 +43,7 @@ executable qasm_parser
 executable qasm_analyzer
   main-is:             QasmAnalyzer.hs
   other-modules:       QasmUtils
-  build-depends:       base >=4.12 && <4.13,
+  build-depends:       base,
                        pretty-simple,
                        QasmQuipperTranslator
   hs-source-dirs:      exe
@@ -52,7 +52,7 @@ executable qasm_analyzer
 executable qasm_printer
   main-is:             QasmPrinter.hs
   other-modules:       QasmUtils
-  build-depends:       base >=4.12 && <4.13,
+  build-depends:       base,
                        pretty-simple,
                        QasmQuipperTranslator
   hs-source-dirs:      exe
