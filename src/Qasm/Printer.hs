@@ -6,7 +6,7 @@ import Data.List (intercalate)
 import Qasm.AST (AstStmt(..))
 import Qasm.Gate (Gate(..), GateMod(..), Sign(..))
 import Qasm.GateName (GateName(..))
-import Qasm.Language(Expr(..), GateOperand(..), Type(..))
+import Qasm.Language(Expr(..), GateOperand(..))
 
 -------------------------------------------------------------------------------
 -- * Expression Printing.
@@ -109,17 +109,17 @@ printGate (GPhaseGate param operands mods) = mstr ++ body
 -------------------------------------------------------------------------------
 -- * Statement Printing.
 
--- | Converts a type to its syntactic representation.
-printType :: Type -> String
-printType QubitT         = "qubit"
-printType (QubitArrT sz) = "qubit" ++ "[" ++ printExpr sz ++ "]"
+-- | Converts a qubit array of a given length to its syntactic representation.
+printQubitType :: Maybe Int -> String
+printQubitType Nothing  = "qubit"
+printQubitType (Just n) = printQubitType Nothing ++ "[" ++ show n ++ "]"
 
 -- | Concretizes a statement, and produces its syntactic representation.
 printAstStmt :: AstStmt -> String
 printAstStmt (AstGateStmt n gate) = pownMod ++ gateStr ++ ";"
-    where pownMod = if n == 0 then "" else "pow(" ++ (show n) ++ ") @ "
+    where pownMod = if n == 0 then "" else "pow(" ++ show n ++ ") @ "
           gateStr = printGate gate
-printAstStmt (AstDeclStmt ty decl) = (printType ty) ++ " " ++ decl ++ ";"
+printAstStmt (AstQubitDecl len decl) = printQubitType len ++ " " ++ decl ++ ";"
 
 -- | Concretizes each statement, and produces its syntactic representation.
 printAst :: [AstStmt] -> [String]

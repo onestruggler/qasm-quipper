@@ -6,5 +6,5 @@ import Qasm.Gate (Gate(..))
 import Qasm.Language (Type(..))
 
 data AstStmt = AstGateStmt Int Gate
-             | AstDeclStmt Type String
+             | AstQubitDecl (Maybe Int) String
              deriving (Show, Eq)
