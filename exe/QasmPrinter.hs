@@ -16,5 +16,5 @@ main = do
     case result of
         Left str  -> putStrLn str
         Right res -> case toAst 0 res of
-            Left ast  -> printLines (printAst ast)
+            Left ast  -> printLines (printAst False ast)
             Right err -> putStrLn (show err)

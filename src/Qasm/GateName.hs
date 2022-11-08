@@ -57,6 +57,7 @@ data GateName = UserDefined String
 toGateName :: String -> GateName
 toGateName "x"          = GateX
 toGateName "cx"         = GateCX
+toGateName "CX"         = GateCX
 toGateName "ccx"        = GateCCX
 toGateName "y"          = GateY
 toGateName "cy"         = GateCY
