@@ -9,6 +9,7 @@ import QasmCmdLn (QasmTools(..), getToolArgs)
 import Qasm.AST (AstStmt)
 import Qasm.Parser (parseQasm)
 import Qasm.Passes (toAst)
+import Qasm.Printer (printAst)
 import System.Exit (die)
 import System.IO (Handle, hPutStrLn)
 import Text.Pretty.Simple (pHPrint)
@@ -42,10 +43,16 @@ analyze file text =
 -- * Writer Interface.
 
 codegen :: Bool -> DoTaskFn [String]
-codegen legacy text file = Right []
+codegen legacy file text =
+    case analyze file text of
+        Left err  -> Left err
+        Right ast -> Right (printAst legacy ast)
 
 displayQasm :: DisplayFn [String]
-displayQasm hdl lines = hPutStrLn hdl "Codegen."
+displayQasm _   []           = return ()
+displayQasm hdl (line:lines) = do
+    hPutStrLn hdl line
+    displayQasm hdl lines
 
 -------------------------------------------------------------------------------
 -- * Entry Point.
