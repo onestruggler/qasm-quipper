@@ -3,13 +3,18 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# OPTIONS_GHC -fno-cse #-}
 
+module QasmCmdLn
+  ( QasmTools(..)
+  , getToolArgs
+  ) where
+
 import System.Console.CmdArgs
 
 -------------------------------------------------------------------------------
 -- * Argument Data Type.
 
 data QasmTools
-    = Reader { src :: String
+    = Parser { src :: String
              , out :: String
              }
     | Analyzer { src :: String
@@ -44,11 +49,11 @@ legacyFlags x = x &= help "Generate OpenQASM 2.0 output"
 -------------------------------------------------------------------------------
 -- * Program Modes.
 
-readerMode :: QasmTools
-readerMode = Reader
+parserMode :: QasmTools
+parserMode = Parser
     { src = srcFlags def
     , out = outFlags def
-    } &= details ["Reader:",
+    } &= details ["Parser:",
                   "Parses an OpenQasm program."]
 
 analyzerMode :: QasmTools
@@ -70,7 +75,7 @@ writerMode = Writer
 -- * CmdArgs Mode Declaration.
 
 toolModes :: Mode (CmdArgs QasmTools)
-toolModes = cmdArgsMode $ modes [readerMode, analyzerMode, writerMode]
+toolModes = cmdArgsMode $ modes [parserMode, analyzerMode, writerMode]
     &= summary info
     &= help desc
     &= versionArg [explicit, name "version", name "v", summary vers]
@@ -84,5 +89,3 @@ toolModes = cmdArgsMode $ modes [readerMode, analyzerMode, writerMode]
 -- | Returns all command-line arguments as a QasmTools value.
 getToolArgs :: IO (QasmTools)
 getToolArgs = cmdArgsRun toolModes
-
-main = print =<< getToolArgs

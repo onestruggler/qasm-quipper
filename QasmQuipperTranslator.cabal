@@ -58,10 +58,14 @@ executable qasm_printer
   hs-source-dirs:      exe
   default-language:    Haskell2010
 
-executable qasm_args
-  main-is:             QasmCmdLn.hs
+executable qasm_tools
+  main-is:             QasmTools.hs
+  other-modules:       IOUtils,
+                       QasmCmdLn
   build-depends:       base,
-                       cmdargs
+                       cmdargs,
+                       directory,
+                       QasmQuipperTranslator
   hs-source-dirs:      exe
   default-language:    Haskell2010
 
