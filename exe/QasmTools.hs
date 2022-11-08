@@ -8,6 +8,7 @@ import IOUtils (readSrc, withOut)
 import QasmCmdLn (QasmTools(..), getToolArgs)
 import Qasm.AST (AstStmt)
 import Qasm.Parser (parseQasm)
+import Qasm.Passes (toAst)
 import System.Exit (die)
 import System.IO (Handle, hPutStrLn)
 import Text.Pretty.Simple (pHPrint)
@@ -30,10 +31,12 @@ type DisplayFn a = Handle -> a -> IO ()
 -- * Analyzer Interface.
 
 analyze :: DoTaskFn [AstStmt]
-analyze text file = Right []
-
-displayIR :: DisplayFn [AstStmt]
-displayIR hdl ast = hPutStrLn hdl "Analyzer."
+analyze file text =
+    case parseQasm file text of
+        Left err  -> Left err
+        Right res -> case toAst 0 res of
+            Left ast  -> Right ast
+            Right err -> Left (show err)
 
 -------------------------------------------------------------------------------
 -- * Writer Interface.
@@ -70,7 +73,7 @@ setupTool doTask display src out = do
 -- dispatched to the correct invocation of setupTool.
 processArgs :: QasmTools -> IO ()
 processArgs mode@Parser{..}   = setupTool parseQasm pHPrint src out
-processArgs mode@Analyzer{..} = setupTool analyze displayIR src out
+processArgs mode@Analyzer{..} = setupTool analyze pHPrint src out
 processArgs mode@Writer{..}   = setupTool doTaskFn displayQasm src out
     where doTaskFn = codegen legacy
 
