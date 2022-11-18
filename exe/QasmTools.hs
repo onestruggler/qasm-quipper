@@ -35,7 +35,7 @@ analyze :: DoTaskFn [AstStmt]
 analyze file text =
     case parseQasm file text of
         Left err  -> Left err
-        Right res -> case toAst 0 res of
+        Right res -> case toAst res of
             Left ast  -> Right ast
             Right err -> Left (show err)
 
