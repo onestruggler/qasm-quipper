@@ -135,3 +135,21 @@ toOperandCount GateCP          = Just 2
 toOperandCount GateCPhase      = Just 2
 toOperandCount GateCU          = Just 2
 toOperandCount _               = Just 1
+
+-- | Returns true if a gate is self-inverse.
+isSelfInverse :: GateName -> Bool
+isSelfInverse GateX     = True
+isSelfInverse GateCX    = True
+isSelfInverse GateCCX   = True
+isSelfInverse GateY     = True
+isSelfInverse GateCY    = True
+isSelfInverse GateZ     = True
+isSelfInverse GateCZ    = True
+isSelfInverse GateH     = True
+isSelfInverse GateCH    = True
+isSelfInverse GateSwap  = True
+isSelfInverse GateCSwap = True
+isSelfInverse GateSX    = True
+isSelfInverse GateID    = True
+isSelfInverse GateQuipW = True
+isSelfInverse _         = False
