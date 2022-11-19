@@ -153,3 +153,16 @@ isSelfInverse GateSX    = True
 isSelfInverse GateID    = True
 isSelfInverse GateQuipW = True
 isSelfInverse _         = False
+
+-- | Returns true if a gate is inverted by negating all parameters to the gate.
+isParamInverse :: GateName -> Bool
+isParamInverse GateRX     = True
+isParamInverse GateCRX    = True
+isParamInverse GateRY     = True
+isParamInverse GateCRY    = True
+isParamInverse GateRZ     = True
+isParamInverse GateCRZ    = True
+isParamInverse GateP      = True
+isParamInverse GateCP     = True
+isParamInverse GateQuipRZ = True
+isParamInverse _          = False
