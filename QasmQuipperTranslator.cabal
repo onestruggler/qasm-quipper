@@ -18,6 +18,7 @@ library
                        Qasm.Expression
                        Qasm.Gate
                        Qasm.GateName
+                       Qasm.Inversion
                        Qasm.Language
                        Qasm.Passes
                        Qasm.Parser
@@ -61,4 +62,9 @@ test-suite qasm-expression-tests
 test-suite qasm-gate-tests
   import:              basic-unit-test-props
   main-is:             Qasm-Gate-Tests.hs
+  type:                exitcode-stdio-1.0
+
+test-suite qasm-inversion-tests
+  import:              basic-unit-test-props
+  main-is:             Qasm-Inversion-Tests.hs
   type:                exitcode-stdio-1.0
