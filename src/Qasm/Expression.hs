@@ -2,6 +2,7 @@
 
 module Qasm.Expression
   ( ExprErr(..)
+  , zero
   , readDecInt
   , toConstInt
   , negateExpr
@@ -18,6 +19,12 @@ data ExprErr = BadType String
 
 type ExprEval a = Either a ExprErr
 type ExprEvalFn a = Expr -> ExprEval a
+
+-------------------------------------------------------------------------------
+-- * Useful Expressions.
+
+zero :: Expr
+zero = DecInt "0"
 
 -------------------------------------------------------------------------------
 -- * Evaluation Helper Methods.

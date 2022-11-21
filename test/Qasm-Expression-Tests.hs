@@ -98,6 +98,13 @@ test16 = TestCase (assertEqual "negateExpr is a semantically correct negation (2
                                (toConstInt $ negateExpr expr2))
 
 -----------------------------------------------------------------------------------------
+-- zero
+
+test17 = TestCase (assertEqual "Zero expression has correct semantic value."
+                               (Left 0 :: Either Int ExprErr)
+                               (toConstInt zero))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores" test1,
@@ -115,6 +122,7 @@ tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores
                                      TestLabel "negateExpr_Syntactic_Test3" test13,
                                      TestLabel "negateExpr_Syntactic_Test4" test14,
                                      TestLabel "negateExpr_Semantic_Test5" test15,
-                                     TestLabel "negateExpr_Semantic_Test6" test16]
+                                     TestLabel "negateExpr_Semantic_Test6" test16,
+                                     TestLabel "zero" test17]
 
 main = defaultMain tests
