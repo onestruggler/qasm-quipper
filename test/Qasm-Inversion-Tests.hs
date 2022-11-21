@@ -38,6 +38,7 @@ params_len4 = [angle1, angle2, angle3, angle4]
 ops_len1 = [QVar "x0"]
 ops_len2 = [QVar "x0", QVar "x1"]
 ops_len3 = [QVar "x0", QVar "x1", QReg "reg" (DecInt "7")]
+ops_len4 = [QVar "x0", QVar "x1", QReg "reg" (DecInt "7"), QVar "x2"]
 
 build_g1 :: [Expr] -> Gate
 build_g1 params = NamedGate name1 params [] mod1
@@ -126,6 +127,50 @@ test13 = TestCase (assertEqual "threeParamInversion performs correct inversions 
                                (threeParamInversion $ build_g2 set2_params2_pre))
 
 -----------------------------------------------------------------------------------------
+-- oneParamInversion
+
+set3_g1_pre = NamedGate GatePhase [angle1] ops_len1 mod1
+set3_g1_res = NamedGate GateU [zero, negateExpr angle1, zero] ops_len1 mod1
+set3_g2_pre = NamedGate GateCPhase [angle1] ops_len4 mod2
+set3_g2_res = NamedGate GateCU [zero, negateExpr angle1, zero] ops_len4 mod2
+
+test14 = TestCase (assertEqual "oneParamInversion requires 1 parameter (1/5)."
+                              Nothing
+                              (oneParamInversion (build_g1 []) True))
+
+test15 = TestCase (assertEqual "oneParamInversion requires 1 parameter (2/5)."
+                              Nothing
+                              (oneParamInversion (build_g1 params_len2) False))
+
+test16 = TestCase (assertEqual "oneParamInversion requires 1 parameter (3/5)."
+                              Nothing
+                              (oneParamInversion (build_g1 params_len3) True))
+
+test17 = TestCase (assertEqual "oneParamInversion requires 1 parameter (4/5)."
+                              Nothing
+                              (oneParamInversion (build_g1 params_len4) False))
+
+test18 = TestCase (assertEqual "oneParamInversion requires 1 parameter (5/5)."
+                              Nothing
+                              (oneParamInversion (build_pg1 angle1) True))
+
+test19 = TestCase (assertEqual "oneParamInversion requires a single operand."
+                              Nothing
+                              (oneParamInversion (build_g3 params_len1) False))
+
+test20 = TestCase (assertEqual "oneParamInversion requires controls."
+                              Nothing
+                              (oneParamInversion (build_g4 params_len1) True))
+
+test21 = TestCase (assertEqual "oneParamInversion converts to U(0, a, 0)."
+                              (Just set3_g1_res)
+                              (oneParamInversion set3_g1_pre False))
+
+test22 = TestCase (assertEqual "oneParamInversion converts to CU(0, a, 0)."
+                              (Just set3_g2_res)
+                              (oneParamInversion set3_g2_pre True))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "negateParams_Named_0Param" test1,
@@ -140,6 +185,15 @@ tests = hUnitTestToTests $ TestList [TestLabel "negateParams_Named_0Param" test1
                                      TestLabel "threeParamInversion_Reg3_Test4" test10,
                                      TestLabel "threeParamInversion_Reg3_Test5" test11,
                                      TestLabel "threeParamInversion_Inv_Test1" test12,
-                                     TestLabel "threeParamInversion_Inv_Test2" test13]
+                                     TestLabel "threeParamInversion_Inv_Test2" test13,
+                                     TestLabel "threeParamInversion_Reg1_Test1" test14,
+                                     TestLabel "threeParamInversion_Reg1_Test2" test15,
+                                     TestLabel "threeParamInversion_Reg1_Test3" test16,
+                                     TestLabel "threeParamInversion_Reg1_Test4" test17,
+                                     TestLabel "threeParamInversion_Reg1_Test5" test18,
+                                     TestLabel "threeParamInversion_BadOperands" test19,
+                                     TestLabel "threeParamInversion_BadControls" test20,
+                                     TestLabel "threeParamInversion_NoControls" test21,
+                                     TestLabel "threeParamInversion_WithControls" test22]
 
 main = defaultMain tests

@@ -166,3 +166,9 @@ isParamInverse GateP      = True
 isParamInverse GateCP     = True
 isParamInverse GateQuipRZ = True
 isParamInverse _          = False
+
+-- | Returns true if a gate is equivalent to u1.
+isU1 :: GateName -> Bool
+isU1 GateU1    = True
+isU1 GatePhase = True
+isU2 _         = False
