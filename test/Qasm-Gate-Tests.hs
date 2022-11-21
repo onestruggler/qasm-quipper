@@ -235,6 +235,21 @@ test37 = TestCase (assertEqual "Invalid gate detection (4/4)."
                                (validateGate invalidGate4))
 
 -----------------------------------------------------------------------------------------
+-- Inversion Detection
+
+test38 = TestCase (assertBool "Inversion modifier detected (1/2)."
+                              (not $ hasInversionMod mod0))
+
+test39 = TestCase (assertBool "Inversion modifier detected (2/2)."
+                              (hasInversionMod mod1))
+
+test40 = TestCase (assertBool "Inverted gate detected (1/2)."
+                              (not $ isInverted validGate1))
+
+test41 = TestCase (assertBool "Inverted gate detected (2/2)."
+                              (isInverted gateEval4))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "GateMod_1" test1,
@@ -273,6 +288,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateMod_1" test1,
                                      TestLabel "Invalidated_1" test34,
                                      TestLabel "Invalidated_2" test35,
                                      TestLabel "Invalidated_3" test36,
-                                     TestLabel "Invalidated_4" test37]
+                                     TestLabel "Invalidated_4" test37,
+                                     TestLabel "IsInverted_Mod_1" test38,
+                                     TestLabel "IsInverted_Mod_2" test39,
+                                     TestLabel "IsInverted_Gate_1" test40,
+                                     TestLabel "IsInverted_Gate_2" test41]
 
 main = defaultMain tests

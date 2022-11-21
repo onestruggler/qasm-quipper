@@ -7,10 +7,12 @@ module Qasm.Gate
   , negateMod
   , addCtrlsToMod
   , addNegCtrlsToMod
+  , hasInversionMod
   , Gate(..)
   , invert
   , addCtrls
   , addNegCtrls
+  , isInverted
   , GateSummaryErr(..)
   , exprToGate
   , validateGate
@@ -56,6 +58,10 @@ addCtrlsToMod = addSignsToMod Pos
 addNegCtrlsToMod :: Int -> GateMod -> GateMod
 addNegCtrlsToMod = addSignsToMod Neg
 
+-- | Returns true if the inversion modifier is active.
+hasInversionMod :: GateMod -> Bool
+hasInversionMod (GateMod inv _) = inv
+
 -------------------------------------------------------------------------------
 -- * Gates and Decorator Functions.
 
@@ -83,6 +89,11 @@ addCtrls n = applyToMod (addCtrlsToMod n)
 -- | Equivalent to applyToMod (addNegCtrlsToMod n).
 addNegCtrls :: Int -> Gate -> Gate
 addNegCtrls n gate = applyToMod (addNegCtrlsToMod n) gate
+
+-- | Returns true if the gate is inverted.
+isInverted :: Gate -> Bool
+isInverted (NamedGate _ _ _ mod) = hasInversionMod mod
+isInverted (GPhaseGate _ _ mod)  = hasInversionMod mod
 
 -------------------------------------------------------------------------------
 -- * Gate Summarization.
