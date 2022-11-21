@@ -4,6 +4,7 @@ module Qasm.Expression
   ( ExprErr(..)
   , readDecInt
   , toConstInt
+  , negateExpr
   ) where
 
 import Qasm.Language (Expr(..))
@@ -63,3 +64,10 @@ toConstInt (Negate expr)   = applyUnaryOp toConstInt (\x -> -x) expr
 toConstInt Pi              = Right (BadType "angle")
 toConstInt (DecInt str)    = Left (readDecInt str)
 toConstInt (QasmId str)    = Right (NonConstId str)
+
+-------------------------------------------------------------------------------
+-- * Manipulation Methods.
+
+-- Returns the symbolic negation of a numeric expression.
+negateExpr :: Expr -> Expr
+negateExpr expr = Negate (Brack expr)
