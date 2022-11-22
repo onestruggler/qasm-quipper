@@ -105,6 +105,33 @@ test17 = TestCase (assertEqual "Zero expression has correct semantic value."
                                (toConstInt zero))
 
 -----------------------------------------------------------------------------------------
+-- avgExpr
+
+test18 = TestCase (assertEqual "avgExpr is a syntatctically correct average (1/4)."
+                               (Div (Brack (Plus expr1 expr2)) (DecInt "2"))
+                               (avgExpr expr1 expr2))
+
+test19 = TestCase (assertEqual "avgExpr is a syntatctically correct average (2/4)."
+                               (Div (Brack (Plus expr1 expr3)) (DecInt "2"))
+                               (avgExpr expr1 expr3))
+
+test20 = TestCase (assertEqual "avgExpr is a syntatctically correct average (3/4)."
+                               (Div (Brack (Plus expr1 expr4)) (DecInt "2"))
+                               (avgExpr expr1 expr4))
+
+test21 = TestCase (assertEqual "avgExpr is a syntatctically correct average (4/4)."
+                               (Div (Brack (Plus expr2 expr1)) (DecInt "2"))
+                               (avgExpr expr2 expr1))
+
+test22 = TestCase (assertEqual "avgExpr is a semantically correct average (1/2)."
+                               (Left 16 :: Either Int ExprErr)
+                               (toConstInt $ avgExpr expr1 expr1))
+
+test23 = TestCase (assertEqual "avgExpr is a semantically correct average (2/2)."
+                               (Left 9 :: Either Int ExprErr)
+                               (toConstInt $ avgExpr expr1 expr2))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores" test1,
@@ -121,8 +148,14 @@ tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores
                                      TestLabel "negateExpr_Syntactic_Test2" test12,
                                      TestLabel "negateExpr_Syntactic_Test3" test13,
                                      TestLabel "negateExpr_Syntactic_Test4" test14,
-                                     TestLabel "negateExpr_Semantic_Test5" test15,
-                                     TestLabel "negateExpr_Semantic_Test6" test16,
-                                     TestLabel "zero" test17]
+                                     TestLabel "negateExpr_Semantic_Test1" test15,
+                                     TestLabel "negateExpr_Semantic_Test2" test16,
+                                     TestLabel "zero" test17,
+                                     TestLabel "avgExpr_Syntactic_Test1" test18,
+                                     TestLabel "avgExpr_Syntactic_Test2" test19,
+                                     TestLabel "avgExpr_Syntactic_Test3" test20,
+                                     TestLabel "avgExpr_Syntactic_Test4" test21,
+                                     TestLabel "avgExpr_Semantic_Test1" test22,
+                                     TestLabel "avgExpr_Semantic_Test2" test23]
 
 main = defaultMain tests

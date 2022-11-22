@@ -6,6 +6,7 @@ module Qasm.Expression
   , readDecInt
   , toConstInt
   , negateExpr
+  , avgExpr
   ) where
 
 import Qasm.Language (Expr(..))
@@ -78,3 +79,7 @@ toConstInt (QasmId str)    = Right (NonConstId str)
 -- Returns the symbolic negation of a numeric expression.
 negateExpr :: Expr -> Expr
 negateExpr expr = Negate (Brack expr)
+
+-- | Returns the symbolic average of two numeric expressions.
+avgExpr :: Expr -> Expr -> Expr
+avgExpr lhs rhs = Div (Brack (Plus lhs rhs)) (DecInt "2")
