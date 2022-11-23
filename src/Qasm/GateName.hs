@@ -149,7 +149,6 @@ isSelfInverse GateH     = True
 isSelfInverse GateCH    = True
 isSelfInverse GateSwap  = True
 isSelfInverse GateCSwap = True
-isSelfInverse GateSX    = True
 isSelfInverse GateID    = True
 isSelfInverse GateQuipW = True
 isSelfInverse _         = False
@@ -166,9 +165,3 @@ isParamInverse GateP      = True
 isParamInverse GateCP     = True
 isParamInverse GateQuipRZ = True
 isParamInverse _          = False
-
--- | Returns true if a gate is equivalent to u1.
-isU1 :: GateName -> Bool
-isU1 GateU1    = True
-isU1 GatePhase = True
-isU2 _         = False

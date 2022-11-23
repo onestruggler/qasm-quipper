@@ -1,5 +1,6 @@
 module Main where
 
+import Data.Maybe
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit
@@ -171,6 +172,162 @@ test22 = TestCase (assertEqual "oneParamInversion converts to CU(0, a, 0)."
                               (oneParamInversion set3_g2_pre True))
 
 -----------------------------------------------------------------------------------------
+-- invertGate
+
+set4_mk_operands :: [Sign] -> GateName -> [GateOperand]
+set4_mk_operands ctrl name = impl (ctrlCt + argsCt)
+    where ctrlCt = length ctrl
+          argsCt = fromJust $ toOperandCount name
+          impl n = if n == 0 then [] else QVar ("var" ++ show n) : impl (n - 1)
+
+set4_mktest_selfinv :: GateName -> Test.HUnit.Test
+set4_mktest_selfinv name = TestCase (assertEqual msg (Just [gate]) res)
+    where msg  = "inverseGate supports self-inverse gates (" ++ show name ++ ")."
+          ctrl = [Pos, Neg]
+          gate = NamedGate name [] (set4_mk_operands ctrl name) (GateMod True ctrl)
+          res  = invertGate gate
+
+test23 = set4_mktest_selfinv GateX
+test24 = set4_mktest_selfinv GateCX
+test25 = set4_mktest_selfinv GateCCX
+test26 = set4_mktest_selfinv GateY
+test27 = set4_mktest_selfinv GateCY
+test28 = set4_mktest_selfinv GateZ
+test29 = set4_mktest_selfinv GateCZ
+test30 = set4_mktest_selfinv GateH
+test31 = set4_mktest_selfinv GateCH
+test32 = set4_mktest_selfinv GateSwap
+test33 = set4_mktest_selfinv GateCSwap
+test34 = set4_mktest_selfinv GateID
+test35 = set4_mktest_selfinv GateQuipW
+
+set4_mk_params :: GateName -> [Expr]
+set4_mk_params name = impl (fromJust $ toParamCount name)
+    where impl n = if n == 0 then [] else (Div Pi (DecInt $ show (n + 1))) : impl (n - 1)
+
+set4_mktest_paraminv :: GateName -> Test.HUnit.Test
+set4_mktest_paraminv name = TestCase (assertEqual msg (Just [inv]) res)
+    where msg   = "inverseGate supports inverse by param negation (" ++ show name ++ ")."
+          ctrl  = [Pos, Neg]
+          param = set4_mk_params name
+          ops   = set4_mk_operands ctrl name
+          mod   = GateMod True ctrl
+          inv   = NamedGate name (map negateExpr param) ops mod
+          res   = invertGate (NamedGate name param ops mod)
+
+test36 = set4_mktest_paraminv GateRX
+test37 = set4_mktest_paraminv GateCRX
+test38 = set4_mktest_paraminv GateRY
+test39 = set4_mktest_paraminv GateCRY
+test40 = set4_mktest_paraminv GateRZ
+test41 = set4_mktest_paraminv GateCRZ
+test42 = set4_mktest_paraminv GateP
+test43 = set4_mktest_paraminv GateCP
+test44 = set4_mktest_paraminv GateQuipRZ
+
+set4_mktest_invpair :: GateName -> GateName -> Test.HUnit.Test
+set4_mktest_invpair name iname = TestCase (assertEqual msg (Just [inv]) res)
+    where msg  = "inverseGate identifies pairs of inverse gates (" ++ show name ++ ")."
+          ctrl = [Pos, Neg]
+          ops  = set4_mk_operands ctrl name
+          mod  = GateMod True ctrl
+          inv  = NamedGate iname [] ops mod
+          res  = invertGate (NamedGate name [] ops mod)
+
+test45 = set4_mktest_invpair GateS GateSdg
+test46 = set4_mktest_invpair GateSdg GateS
+test47 = set4_mktest_invpair GateT GateTdg
+test48 = set4_mktest_invpair GateTdg GateT
+
+set4_mktest_phaseinv :: GateName -> Bool -> Test.HUnit.Test
+set4_mktest_phaseinv name enableCU = TestCase (assertEqual msg (Just [inv]) res)
+    where msg   = "inverseGate with U(0, -a, 0) as an inverse (" ++ show name ++ ")."
+          ctrl  = [Pos, Neg]
+          ops   = set4_mk_operands ctrl name
+          mod   = GateMod True ctrl
+          iname = if enableCU then GateCU else GateU
+          inv   = NamedGate iname [zero, negateExpr angle1, zero] ops mod
+          res   = invertGate (NamedGate name [angle1] ops mod)
+
+test49 = set4_mktest_phaseinv GateU1 False
+test50 = set4_mktest_phaseinv GatePhase False
+test51 = set4_mktest_phaseinv GateCPhase True
+
+set4_mktest_ugate :: GateName -> Test.HUnit.Test
+set4_mktest_ugate name = TestCase (assertEqual msg (Just [inv]) res)
+    where msg     = "inverseGate applied to " ++ show name ++ "."
+          ctrl    = [Pos, Neg]
+          ops     = set4_mk_operands ctrl name
+          mod     = GateMod True ctrl
+          params  = [angle1, angle2, angle3]
+          iparams = [negateExpr angle1, negateExpr angle3, negateExpr angle2]
+          inv     = NamedGate name iparams ops mod
+          res     = invertGate (NamedGate name params ops mod)
+
+test52 = set4_mktest_ugate GateU
+test53 = set4_mktest_ugate GateCU
+
+test54 = TestCase (assertEqual "inverseGate applied to U3."
+                               (Just [GPhaseGate (avgExpr angle2 angle3) ops mod,
+                                      NamedGate GateU iparams ops mod])
+                               (invertGate (NamedGate GateU3 params ops mod)))
+    where ctrl    = [Pos, Neg]
+          ops     = set4_mk_operands ctrl GateU3
+          mod     = GateMod True ctrl
+          params  = [angle1, angle2, angle3]
+          iparams = [negateExpr angle1, negateExpr angle3, negateExpr angle2]
+
+test55 = TestCase (assertEqual "inverseGate applied to U2."
+                               (Just [GPhaseGate (avgExpr angle1 angle2) ops mod,
+                                      NamedGate GateU iparams ops mod])
+                               (invertGate (NamedGate name params ops mod)))
+    where name    = GateU2
+          ctrl    = [Pos, Neg]
+          ops     = set4_mk_operands ctrl name
+          mod     = GateMod True ctrl
+          halfPi  = Div Pi (DecInt "2")
+          params  = [angle1, angle2]
+          iparams = [negateExpr halfPi, negateExpr angle2, negateExpr angle1]
+
+test56 = TestCase (assertEqual "inverseGate applied to Omega."
+                               (Just [GPhaseGate sevenFourthsPi ops mod])
+                               (invertGate (NamedGate name [] ops mod)))
+    where name           = GateQuipOmega
+          ctrl           = [Pos, Neg]
+          ops            = set4_mk_operands ctrl name
+          mod            = GateMod True ctrl
+          sevenFourthsPi = Times (Div (DecInt "7") (DecInt "4")) Pi
+
+test57 = TestCase (assertEqual "inverseGate applied to SX."
+                               (Just [NamedGate GateSX [] ops mod,
+                                      NamedGate GateX [] ops mod])
+                               (invertGate (NamedGate name [] ops mod)))
+    where name = GateSX
+          ctrl = [Pos, Neg]
+          ops  = set4_mk_operands ctrl name
+          mod  = GateMod True ctrl
+
+test58 = TestCase (assertEqual "inverseGate applied to E."
+                               (Just [GPhaseGate fiveFourthsPi ops mod,
+                                      NamedGate GateH [] ops mod,
+                                      NamedGate GateS [] ops mod])
+                               (invertGate (NamedGate name [] ops mod)))
+    where name          = GateQuipE
+          ctrl          = [Pos, Neg]
+          ops           = set4_mk_operands ctrl name
+          mod           = GateMod True ctrl
+          fiveFourthsPi = Times (Div (DecInt "5") (DecInt "4")) Pi
+
+test59 = TestCase (assertEqual "inverseGate applied to E."
+                               (Just [GPhaseGate Pi ops mod,
+                                      NamedGate GateQuipIX [] ops mod])
+                               (invertGate (NamedGate name [] ops mod)))
+    where name          = GateQuipIX
+          ctrl          = [Pos, Neg]
+          ops           = set4_mk_operands ctrl name
+          mod           = GateMod True ctrl
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "negateParams_Named_0Param" test1,
@@ -194,6 +351,43 @@ tests = hUnitTestToTests $ TestList [TestLabel "negateParams_Named_0Param" test1
                                      TestLabel "threeParamInversion_BadOperands" test19,
                                      TestLabel "threeParamInversion_BadControls" test20,
                                      TestLabel "threeParamInversion_NoControls" test21,
-                                     TestLabel "threeParamInversion_WithControls" test22]
+                                     TestLabel "threeParamInversion_WithControls" test22,
+                                     TestLabel "invertGate_SelfInverse_Test1" test23,
+                                     TestLabel "invertGate_SelfInverse_Test2" test24,
+                                     TestLabel "invertGate_SelfInverse_Test3" test25,
+                                     TestLabel "invertGate_SelfInverse_Test4" test26,
+                                     TestLabel "invertGate_SelfInverse_Test5" test27,
+                                     TestLabel "invertGate_SelfInverse_Test6" test28,
+                                     TestLabel "invertGate_SelfInverse_Test7" test29,
+                                     TestLabel "invertGate_SelfInverse_Test8" test30,
+                                     TestLabel "invertGate_SelfInverse_Test9" test31,
+                                     TestLabel "invertGate_SelfInverse_Test10" test32,
+                                     TestLabel "invertGate_SelfInverse_Test11" test33,
+                                     TestLabel "invertGate_SelfInverse_Test12" test34,
+                                     TestLabel "invertGate_SelfInverse_Test13" test35,
+                                     TestLabel "invertGate_ParamInverse_Test1" test36,
+                                     TestLabel "invertGate_ParamInverse_Test2" test37,
+                                     TestLabel "invertGate_ParamInverse_Test3" test38,
+                                     TestLabel "invertGate_ParamInverse_Test4" test39,
+                                     TestLabel "invertGate_ParamInverse_Test5" test40,
+                                     TestLabel "invertGate_ParamInverse_Test6" test41,
+                                     TestLabel "invertGate_ParamInverse_Test7" test42,
+                                     TestLabel "invertGate_ParamInverse_Test8" test43,
+                                     TestLabel "invertGate_ParamInverse_Test9" test44,
+                                     TestLabel "invertGate_InversePairs_Test1" test45,
+                                     TestLabel "invertGate_InversePairs_Test2" test46,
+                                     TestLabel "invertGate_InversePairs_Test3" test47,
+                                     TestLabel "invertGate_InversePairs_Test4" test48,
+                                     TestLabel "invertGate_PhaseLike_Test1" test49,
+                                     TestLabel "invertGate_PhaseLike_Test2" test50,
+                                     TestLabel "invertGate_PhaseLike_Test3" test51,
+                                     TestLabel "invertGate_U" test52,
+                                     TestLabel "invertGate_CU" test53,
+                                     TestLabel "invertGate_U3" test54,
+                                     TestLabel "invertGate_U2" test55,
+                                     TestLabel "invertGate_Omega" test56,
+                                     TestLabel "invertGate_SX" test57,
+                                     TestLabel "invertGate_E" test58,
+                                     TestLabel "invertGate_iX" test58]
 
 main = defaultMain tests
