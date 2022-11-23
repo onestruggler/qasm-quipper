@@ -8,7 +8,7 @@ module Qasm.Inversion
   ) where
 
 import Qasm.Expression (zero, negateExpr, avgExpr)
-import Qasm.Gate (GateMod, Gate(..), isInverted)
+import Qasm.Gate (GateMod, Gate(..), invert, isInverted)
 import Qasm.GateName (GateName(..), toOperandCount, isSelfInverse, isParamInverse)
 import Qasm.Language (Expr(..), GateOperand)
 import Utils (maybeWrap, maybeAppend)
@@ -66,7 +66,7 @@ threeParamInversion (NamedGate name [a, b, c] operands mod) = Just result
 threeParamInversion _ = Nothing
 
 -------------------------------------------------------------------------------
--- * 
+-- * Named Gate Inversion.
 
 -- | Returns true if a gate is self-inverse.
 gateIsSelfInverse :: Gate -> Bool
@@ -125,11 +125,15 @@ invertGateImpl (NamedGate name [a, b, c] operands mod)
     where gate = NamedGate name [a, b, c] operands mod
 invertGateImpl _ = Nothing
 
--- | Takes as input a gate g. If g is not user-defined and the inverse of g is
--- known a-priori, then just the inverse of g is returned (with all modifiers
+-- | Takes as input a gate g. If g is not modified by the inverse flag, then g
+-- is returned unchanged. If g is marked by the inverse flag, g is not
+-- user-defined, and the inverse of g is known a-priori, then just the inverse
+-- of g is returned (with the inverse flag lowered, and all other modifiers
 -- unchanged). Otherwise, nothing is returned.
 invertGate :: Gate -> Maybe [Gate]
 invertGate g
-    | gateIsSelfInverse g  = Just [g]
-    | gateIsParamInverse g = Just [negateParams g]
-    | otherwise            = invertGateImpl g
+    | not (isInverted g)   = Just [g]
+    | gateIsSelfInverse g  = Just [invG]
+    | gateIsParamInverse g = Just [negateParams invG]
+    | otherwise            = invertGateImpl invG
+    where invG = invert g
