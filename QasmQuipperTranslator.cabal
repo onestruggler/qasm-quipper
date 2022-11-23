@@ -14,7 +14,8 @@ build-type:          Simple
 extra-source-files:  CHANGELOG.md, README.md
 
 library
-  exposed-modules:     Qasm.AST
+  exposed-modules:     Utils
+                       Qasm.AST
                        Qasm.Expression
                        Qasm.Gate
                        Qasm.GateName
@@ -67,4 +68,9 @@ test-suite qasm-gate-tests
 test-suite qasm-inversion-tests
   import:              basic-unit-test-props
   main-is:             Qasm-Inversion-Tests.hs
+  type:                exitcode-stdio-1.0
+
+test-suite utils-tests
+  import:              basic-unit-test-props
+  main-is:             Utils-Tests.hs
   type:                exitcode-stdio-1.0
