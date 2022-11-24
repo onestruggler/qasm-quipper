@@ -74,3 +74,8 @@ test-suite utils-tests
   import:              basic-unit-test-props
   main-is:             Utils-Tests.hs
   type:                exitcode-stdio-1.0
+
+test-suite qasm-passes-tests
+  import:              basic-unit-test-props
+  main-is:             Qasm-Passes-Tests.hs
+  type:                exitcode-stdio-1.0

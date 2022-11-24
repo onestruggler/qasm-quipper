@@ -8,7 +8,7 @@ import IOUtils (readSrc, withOut)
 import QasmCmdLn (QasmTools(..), getToolArgs)
 import Qasm.AST (AstStmt)
 import Qasm.Parser (parseQasm)
-import Qasm.Passes (toAst)
+import Qasm.Passes (toAst, elimInv)
 import Qasm.Printer (printAst)
 import System.Exit (die)
 import System.IO (Handle, hPutStrLn)
@@ -31,20 +31,26 @@ type DisplayFn a = Handle -> a -> IO ()
 -------------------------------------------------------------------------------
 -- * Analyzer Interface.
 
-analyze :: DoTaskFn [AstStmt]
-analyze file text =
+doInlineInv :: [AstStmt] -> Either String [AstStmt]
+doInlineInv ast =
+    case elimInv ast of
+        Left ast  -> Right ast
+        Right err -> Left (show err)
+
+analyze :: Bool -> DoTaskFn [AstStmt]
+analyze inlineInv file text =
     case parseQasm file text of
         Left err  -> Left err
         Right res -> case toAst res of
-            Left ast  -> Right ast
+            Left ast  -> if inlineInv then doInlineInv ast else Right ast
             Right err -> Left (show err)
 
 -------------------------------------------------------------------------------
 -- * Writer Interface.
 
-codegen :: Bool -> DoTaskFn [String]
-codegen legacy file text =
-    case analyze file text of
+codegen :: Bool -> Bool -> DoTaskFn [String]
+codegen inlineInv legacy file text =
+    case analyze inlineInv file text of
         Left err  -> Left err
         Right ast -> Right (printAst legacy ast)
 
@@ -80,9 +86,10 @@ setupTool doTask display src out = do
 -- dispatched to the correct invocation of setupTool.
 processArgs :: QasmTools -> IO ()
 processArgs mode@Parser{..}   = setupTool parseQasm pHPrint src out
-processArgs mode@Analyzer{..} = setupTool analyze pHPrint src out
+processArgs mode@Analyzer{..} = setupTool doTaskFn pHPrint src out
+    where doTaskFn = analyze inlineInv
 processArgs mode@Writer{..}   = setupTool doTaskFn displayQasm src out
-    where doTaskFn = codegen legacy
+    where doTaskFn = codegen inlineInv legacy
 
 main :: IO ()
 main = do

@@ -1,10 +1,17 @@
 -- | Static analysis passes for OpenQASM 3 compilation.
 
-module Qasm.Passes where
+module Qasm.Passes
+  ( AbstractionErr(..)
+  , toAst
+  , InversionErr(..)
+  , elimInv
+  ) where
 
 import Qasm.AST (AstStmt(..))
 import Qasm.Expression (ExprErr, toConstInt)
-import Qasm.Gate (GateSummaryErr, exprToGate, validateGate)
+import Qasm.Inversion (invertGate)
+import Qasm.Gate (Gate(NamedGate), GateSummaryErr, exprToGate, validateGate)
+import Qasm.GateName (GateName(UserDefined))
 import Qasm.Language (Expr, GateExpr, Stmt(..), Type(..))
 
 -------------------------------------------------------------------------------
@@ -26,7 +33,7 @@ applyPerLinePass f n (line:lines) =
         Right err -> Right err
 
 -------------------------------------------------------------------------------
--- * Pass 1: Abstraction Pass.
+-- * Primary Pass: Abstraction Pass.
 
 data AbstractionErr = GateAbstractionErr Int GateSummaryErr
                     | ArrayLenAbstractionErr Int ExprErr
@@ -64,7 +71,52 @@ abstractStmt :: Int -> Stmt -> Either [AstStmt] AbstractionErr
 abstractStmt ln (QasmGateStmt expr)    = abstractQasmGate ln expr
 abstractStmt ln (QasmDeclStmt ty decl) = abstractQasmDecl ln ty decl
 
--- Converts a list of statements into an AST. If the conversion fails, then an
--- appropriate abstraction error is returned.
+-- | Converts a list of statements into an AST. If the conversion fails, then
+-- an appropriate abstraction error is returned.
 toAst :: [Stmt] -> Either [AstStmt] AbstractionErr
-toAst = applyPerLinePass abstractStmt 0
+toAst = applyPerLinePass abstractStmt 1
+
+-------------------------------------------------------------------------------
+-- * Secondary Pass: Inverse Elimination
+
+data InversionErr = UnknownUserDefinedInv Int String
+                  | UnknownNativeInv Int GateName
+                  | UnhandledInvErr Int
+                  deriving (Show, Eq)
+
+-- | Inlines the inverse circuit (circ) to a gate g, where g is repeated n
+-- times.  If circ contains a single gate inv, then pow(n) @ inv is returned.
+-- Otherwise, circ is promoted to sequence of (AstGateStmt 0) statements,
+-- with the sequence repeated min(1, n) times.
+inlineInv :: Int -> [Gate] -> [AstStmt]
+inlineInv n [inv] = [AstGateStmt n inv]
+inlineInv 0 circ  = map (AstGateStmt 0) circ
+inlineInv 1 circ  = inlineInv 0 circ
+inlineInv n circ  = concat $ replicate n $ inlineInv 0 circ
+
+-- | If invertGate is unable to invert a gate g, then either g is user-defined,
+-- or the inverse of g is unknown. If g is user-defined, and an inverse can be
+-- resolved, then the inverse is returned. Otherwise, an appropriate error is
+-- returned.
+resolveUnknownInv :: Int -> Gate -> Either [AstStmt] InversionErr
+resolveUnknownInv ln (NamedGate (UserDefined str) _ _ _) = Right err
+    where err = UnknownUserDefinedInv ln str
+resolveUnknownInv ln (NamedGate name _ _ _) = Right err
+    where err = UnknownNativeInv ln name
+resolveUnknownInv ln _ = Right err
+    where err = UnhandledInvErr ln
+
+-- | Consumes a single AST statement. If the statement is an inverted gate,
+-- then the inverse circuit is returned. Otherwise, the statement is returned
+-- unchanged. If inlining fails, then an appropriate error is returned.
+elimInvImpl :: Int -> AstStmt -> Either [AstStmt] InversionErr
+elimInvImpl ln (AstGateStmt n gate) =
+    case invertGate gate of
+        Just inv -> Left (inlineInv n inv)
+        Nothing  -> resolveUnknownInv ln gate
+elimInvImpl _  stmt = Left [stmt]
+
+-- | Inlines all inverse gates in a list of AST statements. If inlining fails,
+-- then an appropriate error is returned.
+elimInv :: [AstStmt] -> Either [AstStmt] InversionErr
+elimInv = applyPerLinePass elimInvImpl 1

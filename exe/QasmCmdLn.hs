@@ -19,10 +19,12 @@ data QasmTools
              }
     | Analyzer { src :: String
                , out :: String
+               , inlineInv :: Bool
                }
-    | Writer { src    :: String 
-             , out    :: String
-             , legacy :: Bool
+    | Writer { src       :: String 
+             , out       :: String
+             , inlineInv :: Bool
+             , legacy    :: Bool
              }
     deriving (Show,Eq,Data,Typeable)
 
@@ -44,7 +46,12 @@ outFlags x = x &= help "Output destination (defaults to stdout)."
 -- | Returns the flags for the --legacy argument. The default value is taken as
 -- an argument, since flags are impure.
 legacyFlags :: Bool -> Bool
-legacyFlags x = x &= help "Generate OpenQASM 2.0 output"
+legacyFlags x = x &= help "Generate OpenQASM 2.0 output."
+
+-- | Returns the flags for the --inline_inv argument. The default value is
+-- taken as an argument, since flags are impure.
+inlineInvFlags :: Bool -> Bool
+inlineInvFlags x = x &= help "Inlines all inv modifiers (enabled by legacy)."
 
 -------------------------------------------------------------------------------
 -- * Program Modes.
@@ -60,14 +67,16 @@ analyzerMode :: QasmTools
 analyzerMode = Analyzer
     { src = srcFlags def
     , out = outFlags def
+    , inlineInv = inlineInvFlags def
     } &= details ["Analyzer:",
                   "Computes the internal represntation of an OpenQASM program."]
 
 writerMode :: QasmTools
 writerMode = Writer
-    { src    = srcFlags def
-    , out    = outFlags def
-    , legacy = legacyFlags def
+    { src       = srcFlags def
+    , out       = outFlags def
+    , inlineInv = inlineInvFlags def
+    , legacy    = legacyFlags def
     } &= details ["Writer:",
                   "Computes the image of an OpenQASM program."]
 
