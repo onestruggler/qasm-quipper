@@ -95,6 +95,30 @@ test9 = TestCase (assertEqual "elimInv returns unknown native inv errors."
           name = "asdf"
           stmt = AstGateStmt 0 (NamedGate GateU [Pi, Pi] [QVar "v1"] imod)
 
+-------------------------------------------------------------------------------
+-- elimPow
+
+test10 = TestCase (assertEqual "elimPow supports empty files."
+                               []
+                               (elimPow []))
+
+test11 = TestCase (assertEqual "elimPow supports empty files."
+                               [decl1, decl2, elim1, elim1, elim1, elim2, elim3]
+                               (elimPow [decl1, decl2, stmt1, stmt2, stmt3]))
+    where opLn1 = [QVar "v1"]
+          opLn2 = [QVar "v1", QVar "v2"]
+          decl1 = AstQubitDecl Nothing "v1"
+          decl2 = AstQubitDecl Nothing "v2"
+          gate1 = NamedGate GateCX [] opLn2 nullGateMod
+          gate2 = NamedGate GateS [] opLn1 nullGateMod
+          gate3 = NamedGate GateTdg [] opLn1 nullGateMod
+          stmt1 = AstGateStmt 3 gate1
+          stmt2 = AstGateStmt 0 gate2
+          stmt3 = AstGateStmt 1 gate3
+          elim1 = AstGateStmt 0 gate1
+          elim2 = AstGateStmt 0 gate2
+          elim3 = AstGateStmt 0 gate3
+
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
@@ -106,6 +130,8 @@ tests = hUnitTestToTests $ TestList [TestLabel "toAst_EmptyFile" test1,
                                      TestLabel "elimInv_EmptyFile" test6,
                                      TestLabel "elimInv_Basic" test7,
                                      TestLabel "elimInv_UserDefinedErr" test8,
-                                     TestLabel "elimInv_NativeErr" test9]
+                                     TestLabel "elimInv_NativeErr" test9,
+                                     TestLabel "elimPow_EmptyFile" test10,
+                                     TestLabel "elimPow_Basic" test11]
 
 main = defaultMain tests

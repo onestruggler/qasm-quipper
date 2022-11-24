@@ -8,7 +8,7 @@ import IOUtils (readSrc, withOut)
 import QasmCmdLn (QasmTools(..), getToolArgs)
 import Qasm.AST (AstStmt)
 import Qasm.Parser (parseQasm)
-import Qasm.Passes (toAst, elimInv)
+import Qasm.Passes (toAst, elimInv, elimPow)
 import Qasm.Printer (printAst)
 import System.Exit (die)
 import System.IO (Handle, hPutStrLn)
@@ -31,26 +31,33 @@ type DisplayFn a = Handle -> a -> IO ()
 -------------------------------------------------------------------------------
 -- * Analyzer Interface.
 
-doInlineInv :: [AstStmt] -> Either String [AstStmt]
-doInlineInv ast =
+doInlinePow :: [AstStmt] -> Either String [AstStmt]
+doInlinePow ast = Right (elimPow ast)
+
+doInlineInv :: Bool -> [AstStmt] -> Either String [AstStmt]
+doInlineInv inlinePow ast =
     case elimInv ast of
-        Left ast  -> Right ast
+        Left ast  -> if inlinePow
+                     then doInlinePow ast
+                     else Right ast
         Right err -> Left (show err)
 
-analyze :: Bool -> DoTaskFn [AstStmt]
-analyze inlineInv file text =
+analyze :: Bool -> Bool -> DoTaskFn [AstStmt]
+analyze inlineInv inlinePow file text =
     case parseQasm file text of
         Left err  -> Left err
         Right res -> case toAst res of
-            Left ast  -> if inlineInv then doInlineInv ast else Right ast
+            Left ast  -> if inlineInv
+                         then doInlineInv inlinePow ast
+                         else Right ast
             Right err -> Left (show err)
 
 -------------------------------------------------------------------------------
 -- * Writer Interface.
 
-codegen :: Bool -> Bool -> DoTaskFn [String]
-codegen inlineInv legacy file text =
-    case analyze inlineInv file text of
+codegen :: Bool -> Bool -> Bool -> DoTaskFn [String]
+codegen inlineInv inlinePow legacy file text =
+    case analyze inlineInv inlinePow file text of
         Left err  -> Left err
         Right ast -> Right (printAst legacy ast)
 
@@ -87,9 +94,9 @@ setupTool doTask display src out = do
 processArgs :: QasmTools -> IO ()
 processArgs mode@Parser{..}   = setupTool parseQasm pHPrint src out
 processArgs mode@Analyzer{..} = setupTool doTaskFn pHPrint src out
-    where doTaskFn = analyze inlineInv
+    where doTaskFn = analyze inlineInv inlinePow
 processArgs mode@Writer{..}   = setupTool doTaskFn displayQasm src out
-    where doTaskFn = codegen inlineInv legacy
+    where doTaskFn = codegen inlineInv inlinePow legacy
 
 main :: IO ()
 main = do

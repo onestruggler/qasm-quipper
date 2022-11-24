@@ -5,6 +5,7 @@ module Qasm.Passes
   , toAst
   , InversionErr(..)
   , elimInv
+  , elimPow
   ) where
 
 import Qasm.AST (AstStmt(..))
@@ -31,6 +32,12 @@ applyPerLinePass f n (line:lines) =
             Left rest -> Left (stmt ++ rest)
             Right err -> Right err
         Right err -> Right err
+
+-- | An "safe per-line pass" is equivalent to a per-line pass, except that the
+-- error case is never encountered.
+applySafePerLinePass :: (a -> [b]) -> [a] -> [b]
+applySafePerLinePass _ []           = []
+applySafePerLinePass f (line:lines) = f line ++ applySafePerLinePass f lines
 
 -------------------------------------------------------------------------------
 -- * Primary Pass: Abstraction Pass.
@@ -85,7 +92,7 @@ data InversionErr = UnknownUserDefinedInv Int String
                   deriving (Show, Eq)
 
 -- | Inlines the inverse circuit (circ) to a gate g, where g is repeated n
--- times.  If circ contains a single gate inv, then pow(n) @ inv is returned.
+-- times. If circ contains a single gate inv, then pow(n) @ inv is returned.
 -- Otherwise, circ is promoted to sequence of (AstGateStmt 0) statements,
 -- with the sequence repeated min(1, n) times.
 inlineInv :: Int -> [Gate] -> [AstStmt]
@@ -120,3 +127,16 @@ elimInvImpl _  stmt = Left [stmt]
 -- then an appropriate error is returned.
 elimInv :: [AstStmt] -> Either [AstStmt] InversionErr
 elimInv = applyPerLinePass elimInvImpl 1
+
+-------------------------------------------------------------------------------
+-- * Secondary Pass: Integral Power Elimination
+
+-- | Inlines the power modifers of a single AST statements.
+elimPowImpl :: AstStmt -> [AstStmt]
+elimPowImpl (AstGateStmt 0 gate) = [AstGateStmt 0 gate]
+elimPowImpl (AstGateStmt n gate) = (replicate n $ AstGateStmt 0 gate)
+elimPowImpl stmt                 = [stmt]
+
+-- | Inlines all power modifers in a list of AST statements.
+elimPow :: [AstStmt] -> [AstStmt]
+elimPow = applySafePerLinePass elimPowImpl
