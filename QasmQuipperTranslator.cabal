@@ -24,6 +24,7 @@ library
                        Qasm.Passes
                        Qasm.Parser
                        Qasm.Printer
+                       Quip.GateName
                        Quip.Parser
   other-modules:       Qasm.Lexer
   build-tools:         happy,
