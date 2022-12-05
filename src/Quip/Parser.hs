@@ -13,7 +13,7 @@ module Quip.Parser
 
 import qualified Data.IntMap.Strict as IntMap
 import Quip.Gate (Control(..), Gate(..), Wire)
-import Quip.GateName (toGateName, toRotName)
+import Quip.GateName (NamedOp(..), toGateName, toRotName)
 import Quipper (Endpoint, Circ)
 import Quipper.Internal.Circuit (Gate(..), Signed(..), Wiretype(..))
 import Quipper.Internal.Generic (encapsulate_generic)
@@ -51,17 +51,32 @@ encapsulateCtrl (Signed w True)  = Pos w
 encapsulateCtrls :: [Signed Wire] -> [Control]
 encapsulateCtrls = map encapsulateCtrl
 
+-- | Consumes a list of inputs (ins), a list of general controls (gctrls), and
+-- the name of an operator. If the operator is user-defined, then ctrls is
+-- prepended to ins to eliminate generalized controls (this loses information
+-- about the program, but is a valid transformation). Otherwise, if the
+-- operator is primitive, then ctrls must be [] and ins is returned. Otherwise,
+-- an error is raised.
+mergeInputs :: NamedOp a => a -> [Wire] -> [Wire] -> [Wire]
+mergeInputs name ins gctrls
+    | isUserDefined name = gctrls ++ ins
+    | gctrls == []       = ins
+    | otherwise          = error errmsg
+    where errmsg = "quipToGates: mergeInputs: Primitive must not have gctrls."
+
 -- | Helper function to convert Quipper internal gates to the gates used within
 -- the translator. If conversion fails, then an error is raised.
 abstractGate :: Quipper.Internal.Circuit.Gate -> Quip.Gate.Gate
-abstractGate (QGate name inv ins _ ctrls _) = tgate
+abstractGate (QGate name inv ins gctrls ctrls _) = tgate
     where tname = toGateName name
+          tgins = mergeInputs tname ins gctrls
           tctrl = encapsulateCtrls ctrls
-          tgate = NamedGate tname inv ins tctrl
-abstractGate (QRot name inv angle ins _ ctrls _) = tgate
+          tgate = NamedGate tname inv tgins tctrl
+abstractGate (QRot name inv angle ins gctrls ctrls _) = tgate
     where tname = toRotName name
+          tgins = mergeInputs tname ins gctrls
           tctrl = encapsulateCtrls ctrls
-          tgate = RotGate tname inv angle ins tctrl
+          tgate = RotGate tname inv angle tgins tctrl
 abstractGate (GPhase angle _ ctrls _) = tgate
     where tctrl = encapsulateCtrls ctrls
           tgate = PhaseGate angle tctrl

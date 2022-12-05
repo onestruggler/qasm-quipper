@@ -1,9 +1,20 @@
 -- | Named gates and associated data.
 
-module Quip.GateName where
+module Quip.GateName
+  ( NamedOp(..)
+  , GateName(..)
+  , RotName(..)
+  , toGateName
+  , toRotName
+  ) where
 
 -------------------------------------------------------------------------------
 -- * Gate Name Declarations.
+
+-- | A named operator is a collection of unitary operators names, with optional
+-- support for user-defined operators.
+class NamedOp a where
+    isUserDefined :: a -> Bool
 
 -- | Assigns a unique type to each standard named gate in Quipper.
 data GateName = GateX
@@ -21,6 +32,10 @@ data GateName = GateX
               | UserDefinedGate String
               deriving (Show, Eq)
 
+instance NamedOp GateName where
+    isUserDefined (UserDefinedGate _) = True
+    isUserDefined _                   = False
+
 -- | Assigns a unique type to each standard rotation gate in Quipper.
 --
 -- Note: Both RotExpZ and RotZ are both e^(-iZt), up to a global phase. While
@@ -30,6 +45,10 @@ data RotName = RotExpZ
              | RotZ
              | UserDefinedRot String
              deriving (Show, Eq)
+
+instance NamedOp RotName where
+    isUserDefined (UserDefinedRot _) = True
+    isUserDefined _                  = False
 
 -------------------------------------------------------------------------------
 -- * Name Analysis Functions.
