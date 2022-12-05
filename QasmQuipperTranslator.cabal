@@ -32,6 +32,7 @@ library
                        alex
   build-depends:       base,
                        array,
+                       containers,
                        filepath,
                        newsynth,
                        quipper-language,

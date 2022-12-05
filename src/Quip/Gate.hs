@@ -1,11 +1,15 @@
 -- | Abstract representation of Quipper gates.
 
-module Quip.Gate where
+module Quip.Gate
+  ( Wire
+  , Control(..)
+  , Gate(..)
+  ) where
 
 import Quip.GateName (GateName(..), RotName(..))
 
 -------------------------------------------------------------------------------
--- * Utility Types..
+-- * Utility Types.
 
 -- | Identifies a uniuqe wire.
 type Wire = Int
@@ -27,7 +31,7 @@ type Angle = Double
 
 -- | Abstract representations of Quipper gates. For example, nocontrol flags
 -- are dropped as they are currently unsured during translation.
-data Gate = NamedGate GateName InverseFlag [Wire] [Wire] [Control]
-          | RotGate RotName InverseFlag Angle [Wire] [Wire] [Control]
-          | PhaseGate Angle [Wire] [Control]
+data Gate = NamedGate GateName InverseFlag [Wire] [Control]
+          | RotGate RotName InverseFlag Angle [Wire] [Control]
+          | PhaseGate Angle [Control]
           deriving (Show,Eq)
