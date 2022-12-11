@@ -14,7 +14,10 @@ module Quip.GateName
 -- | A named operator is a collection of unitary operators names, with optional
 -- support for user-defined operators.
 class NamedOp a where
+    -- | Returns true if a gate is user-defined.
     isUserDefined :: a -> Bool
+    -- | Returns the textual representation of a gate.
+    printGate :: a -> String
 
 -- | Assigns a unique type to each standard named gate in Quipper.
 data GateName = GateX
@@ -33,8 +36,23 @@ data GateName = GateX
               deriving (Show, Eq)
 
 instance NamedOp GateName where
+    -- | isUserDefined :: a -> Bool
     isUserDefined (UserDefinedGate _) = True
     isUserDefined _                   = False
+    -- | printGate :: a -> String
+    printGate GateX                 = "X"
+    printGate GateY                 = "Y"
+    printGate GateZ                 = "Z"
+    printGate GateH                 = "H"
+    printGate GateSwap              = "SWAP"
+    printGate GateV                 = "V"
+    printGate GateS                 = "S"
+    printGate GateT                 = "T"
+    printGate GateIX                = "iX"
+    printGate GateOmega             = "Omega"
+    printGate GateW                 = "W"
+    printGate GateE                 = "E"
+    printGate (UserDefinedGate str) = str
 
 -- | Assigns a unique type to each standard rotation gate in Quipper.
 --
@@ -47,8 +65,13 @@ data RotName = RotExpZ
              deriving (Show, Eq)
 
 instance NamedOp RotName where
+    -- | isUserDefined :: a -> Bool
     isUserDefined (UserDefinedRot _) = True
     isUserDefined _                  = False
+    -- | printGate :: a -> String
+    printGate RotExpZ              = "exp(-i%Z)"
+    printGate RotZ                 = "R(2pi/%)"
+    printGate (UserDefinedRot str) = str
 
 -------------------------------------------------------------------------------
 -- * Name Analysis Functions.

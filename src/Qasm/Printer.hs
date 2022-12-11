@@ -1,4 +1,4 @@
--- | Printing Methods for the OpenQASM 3 AST.
+-- | Printing functions for the OpenQASM 3 AST.
 
 module Qasm.Printer (printAst) where
 

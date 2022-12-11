@@ -1,7 +1,7 @@
 -- | Converts a Quipper program into our internal representation. Also provides
--- encapsulation around the Quipper internal libraries. This design improves
--- maintainability, since changes to the Quipper internal library will only
--- impact this single module.
+-- encapsulation around the Quipper circuit interface (which is subject to
+-- refactoring). This design improves maintainability, since changes to the
+-- Quipper internal library will only impact this single module.
 
 module Quip.Parser
   ( WireType(..)
@@ -9,37 +9,45 @@ module Quip.Parser
   , QuipCirc(..)
   , parseQuip
   , quipToGates
+  , gatesToAscii
   ) where
 
 import qualified Data.IntMap.Strict as IntMap
+import qualified Data.Map.Lazy as Map
 import Quip.Gate (Control(..), Gate(..), Wire)
 import Quip.GateName (NamedOp(..), toGateName, toRotName)
 import Quipper (Endpoint, Circ)
-import Quipper.Internal.Circuit (Gate(..), Signed(..), Wiretype(..))
+import Quipper.Internal.Circuit (BoxId, Gate(..), Signed(..), TypedSubroutine, Wiretype(..))
 import Quipper.Internal.Generic (encapsulate_generic)
+import Quipper.Internal.Printing (ascii_of_bcircuit)
 import Quipper.Libraries.QuipperASCIIParser (parse_circuit)
 
 -------------------------------------------------------------------------------
--- * Gate-based Circuit Representation.
+-- * Circuit Representations.
 
 -- \ An input or output to a Quipper circuit.
 data WireType = QWire | CWire deriving (Show, Eq)
 
--- | A gate-representation of a Quipper circuit.
+-- | A gate-representation of a Quipper circuit. This is an abstract Quipper
+-- circuit.
 data GateCirc = GateCirc { inputs  :: IntMap.IntMap Quip.Parser.WireType
                          , gates   :: [Quip.Gate.Gate]
                          , outputs :: IntMap.IntMap Quip.Parser.WireType
                          , size    :: Int
                          } deriving (Show, Eq)
 
--------------------------------------------------------------------------------
--- * Functional Circuit Representation.
-
--- | Wraps a Quipper circuit function, along with its shape.
+-- | Wraps a Quipper circuit function, along with its shape. This is a concrete
+-- Quipper circuit.
 data QuipCirc = QuipCirc ([Endpoint] -> Circ [Endpoint]) [Endpoint]
 
 -------------------------------------------------------------------------------
--- * Gate Conversion.
+-- * Circuit Abstraction.
+
+-- | Helper function to convert Quipper internal wire types to the wire types
+-- used within the translator.
+arityToWire :: Wiretype -> Quip.Parser.WireType
+arityToWire Qbit = QWire
+arityToWire Cbit = CWire
 
 -- | Helper function to convert Quipper's internal signed wires to the controls
 -- used within the translator.
@@ -67,45 +75,84 @@ mergeInputs name ins gctrls
 -- | Helper function to convert Quipper internal gates to the gates used within
 -- the translator. If conversion fails, then an error is raised.
 abstractGate :: Quipper.Internal.Circuit.Gate -> Quip.Gate.Gate
-abstractGate (QGate name inv ins gctrls ctrls _) = tgate
-    where tname = toGateName name
-          tgins = mergeInputs tname ins gctrls
-          tctrl = encapsulateCtrls ctrls
-          tgate = NamedGate tname inv tgins tctrl
-abstractGate (QRot name inv angle ins gctrls ctrls _) = tgate
-    where tname = toRotName name
-          tgins = mergeInputs tname ins gctrls
-          tctrl = encapsulateCtrls ctrls
-          tgate = RotGate tname inv angle tgins tctrl
-abstractGate (GPhase angle _ ctrls _) = tgate
-    where tctrl = encapsulateCtrls ctrls
-          tgate = PhaseGate angle tctrl
-
--------------------------------------------------------------------------------
--- * Circuit Abstraction.
-
--- | Helper function to convert Quipper internal wire types to the wire types
--- used within the translator.
-arityToWire :: Wiretype -> Quip.Parser.WireType
-arityToWire Qbit = QWire
-arityToWire Cbit = CWire
+abstractGate (QGate name inv ins gctrls ctrls _) = gate
+    where tname  = toGateName name
+          allins = mergeInputs tname ins gctrls
+          qctrls = encapsulateCtrls ctrls
+          gate   = NamedGate tname inv allins qctrls
+abstractGate (QRot name inv angle ins gctrls ctrls _) = gate
+    where tname  = toRotName name
+          allins = mergeInputs tname ins gctrls
+          qctrls = encapsulateCtrls ctrls
+          gate   = RotGate tname inv angle allins qctrls
+abstractGate (GPhase angle _ ctrls _) = gate
+    where qctrls = encapsulateCtrls ctrls
+          gate   = PhaseGate angle qctrls
 
 -- | Consumes the functional representation of a Quipper circuit (with optional
 -- post-processing). Returns a gate-based representation of the circuit. If the
 -- conversion fails, then an error is raised.
 quipToGates :: QuipCirc -> GateCirc
-quipToGates (QuipCirc fn sp) = GateCirc { inputs  = IntMap.map arityToWire ins
-                                        , gates   = map abstractGate gates
-                                        , outputs = IntMap.map arityToWire outs
-                                        , size    = sz
-                                        }
+quipToGates (QuipCirc fn sp)
+    | null ns   = GateCirc { inputs  = IntMap.map arityToWire ins
+                           , gates   = map abstractGate gates
+                           , outputs = IntMap.map arityToWire outs
+                           , size    = sz
+                           }
+    | otherwise = error "Subroutines are not supported."
     where efn msg                = "quipToGates: encapsulate_generic: " ++ msg
           (_, bcirc, _)          = encapsulate_generic efn fn sp
-          (circ, _)              = bcirc
+          (circ, ns)             = bcirc
           (ins, gates, outs, sz) = circ
 
 -------------------------------------------------------------------------------
--- * Circuit Parsing.
+-- * Circuit Concretization.
+
+-- | Helper function to convert the wire types used within translation to the
+-- Quipper internal wire types.
+wireToArity :: Quip.Parser.WireType -> Wiretype
+wireToArity QWire = Qbit
+wireToArity CWire = Cbit
+
+-- | Helper function to convert the controls used within the translator to
+-- Quipper's internal signed wires.
+exposeCtrl :: Control -> Signed Wire
+exposeCtrl (Neg w) = Signed w False
+exposeCtrl (Pos w) = Signed w True
+
+-- | Helper function to expose a list of controls via exposeCtrl.
+exposeCtrls :: [Control] -> [Signed Wire]
+exposeCtrls = map exposeCtrl
+
+-- | Helper function to convert an abstract gate used within translation to the
+-- best approximated Quipper gate.
+concretizeGate :: Quip.Gate.Gate -> Quipper.Internal.Circuit.Gate
+concretizeGate (NamedGate name inv ins ctrls) = gate
+    where sname  = printGate name
+          qctrls = exposeCtrls ctrls
+          gate   = QGate sname inv ins [] qctrls False
+concretizeGate (RotGate name inv angle ins ctrls) = gate
+    where sname  = printGate name
+          qctrls = exposeCtrls ctrls
+          gate   = QRot sname inv angle ins [] qctrls False
+concretizeGate (PhaseGate angle ctrls) = gate
+    where qctrls = exposeCtrls ctrls
+          gate   = GPhase angle [] qctrls False
+
+-- | Consumes a gate-based representation of a Quipper circuit. Returns the
+-- ASCII representation of the circuit. If the conversion fails, then an error
+-- is raised.
+gatesToAscii :: GateCirc -> String
+gatesToAscii circ = ascii_of_bcircuit bcirc
+    where ins    = IntMap.map wireToArity $ inputs circ
+          qgates = map concretizeGate $ gates circ
+          outs   = IntMap.map wireToArity $ outputs circ
+          qcirc  = (ins, qgates, outs, size circ)
+          ns     = Map.empty :: Map.Map BoxId TypedSubroutine
+          bcirc  = (qcirc, ns)
+
+-------------------------------------------------------------------------------
+-- * Circuit Conversion.
 
 -- | Consumes the name of an input stream (fp) and the contents of the input
 -- stream (input). If input contaisn a valid Quipper circuit in ASCII format,
