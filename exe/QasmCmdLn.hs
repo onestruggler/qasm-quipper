@@ -102,7 +102,7 @@ toolModes = cmdArgsMode $ modes [parserMode, analyzerMode, writerMode]
     where summ = "OpenQASM Transpilation Tools"
           vers = "1.0.0"
           info = summ ++ " version " ++ vers
-          desc = "Provides a cmdln interface to the OpenQASM transpiler pipeline."
+          desc = "A cmdln interface to the OpenQASM transpiler pipeline."
 
 -- | Returns all command-line arguments as a QasmTools value.
 getToolArgs :: IO (QasmTools)

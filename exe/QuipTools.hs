@@ -1,37 +1,45 @@
-{-# LANGUAGE ExistentialQuantification #-}
+-- | Command-line interface to the Quipper tools (parser, analyzer, etc.).
+
+{-# LANGUAGE RecordWildCards #-}
 
 module Main where
 
-import Quipper
-import Quipper.Libraries.QuipperASCIIParser
+import QuipCmdLn (QuipTools(..), getToolArgs)
+import Quip.Parser (GateCirc, parseQuip, quipToGates, gatesToAscii)
+import SetupTools (DoTaskFn, DisplayFn, setupTool)
+import System.IO (hPutStr)
+import Text.Pretty.Simple (pHPrint)
 
-data IRGate b = IRGate b
+-------------------------------------------------------------------------------
+-- * Reader Interface.
 
-data IR a = IROutput a
-          | forall b. IROp (IRGate b) (IR a)
+-- | Composes parsing functions to convert a Quipper ASCII circuit into an
+-- abstract gate circuit.
+readQuip :: DoTaskFn GateCirc
+readQuip file text = Right (quipToGates $ parseQuip file text)
 
---my_transformer' :: Transformer [] Int Int
---my_transformer' (T_QGate str _ _ _ _ f) = f $
+-------------------------------------------------------------------------------
+-- * Writer Interface.
 
-my_tansformer :: Transformer IO Qubit Bit
-my_tansformer (T_QGate str _ _ _ _ f) = f $
-    \qbits cbits ctrls -> do
-        putStrLn str
-        return (qbits, cbits, ctrls)
 
-fn :: Int -> [Int]
-fn x = [x, 10 * x, 100 * x]
+-- | Composes parsing functions to convert a Quipper ASCII circuit into an
+-- equivalent Quipper ASCII circuit (obtained after performing all processing).
+writeQuip :: DoTaskFn String
+writeQuip file text =
+    case readQuip file text of
+        Left  err  -> Left err
+        Right circ -> Right (gatesToAscii circ)
 
-mfn :: Int -> [Int]
-mfn x = do
-    t1 <- fn x
-    t2 <- fn t1
-    fn t2
+-------------------------------------------------------------------------------
+-- * Entry Point.
+
+-- | Takes as input an instance of QuipTools arguments. The arguments are
+-- dispatched to the correct invocation of setupTool.
+processArgs :: QuipTools -> IO ()
+processArgs mode@Parser{..} = setupTool readQuip pHPrint src out
+processArgs mode@Writer{..} = setupTool writeQuip hPutStr src out
 
 main :: IO ()
 main = do
-    text <- getContents
-    let (shape, circ) = parse_circuit text
-    let f = transform_generic_shape my_tansformer circ shape
-    _ <- f shape
-    putStrLn (show $ mfn 5)
+    args <- getToolArgs
+    processArgs args

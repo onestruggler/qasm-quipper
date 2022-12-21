@@ -53,6 +53,19 @@ executable qasm_tools
   hs-source-dirs:      exe
   default-language:    Haskell2010
 
+executable quip_tools
+  main-is:             QuipTools.hs
+  other-modules:       IOUtils,
+                       SetupTools,
+                       QuipCmdLn
+  build-depends:       base,
+                       cmdargs,
+                       directory,
+                       pretty-simple,
+                       QasmQuipperTranslator
+  hs-source-dirs:      exe
+  default-language:    Haskell2010
+
 common basic-unit-test-props
   hs-source-dirs:      test
   default-language:    Haskell2010
