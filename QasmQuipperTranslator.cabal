@@ -43,6 +43,7 @@ library
 executable qasm_tools
   main-is:             QasmTools.hs
   other-modules:       IOUtils,
+                       SetupTools,
                        QasmCmdLn
   build-depends:       base,
                        cmdargs,
