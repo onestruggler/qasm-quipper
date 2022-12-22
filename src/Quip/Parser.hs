@@ -16,6 +16,7 @@ import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Lazy as Map
 import Quip.Gate (Control(..), Gate(..), Wire)
 import Quip.GateName (NamedOp(..), toGateName, toRotName)
+import Quip.Wire (WireType(..))
 import Quipper (Endpoint, Circ)
 import Quipper.Internal.Circuit (BoxId, Gate(..), Signed(..), TypedSubroutine, Wiretype(..))
 import Quipper.Internal.Generic (encapsulate_generic)
@@ -25,14 +26,11 @@ import Quipper.Libraries.QuipperASCIIParser (parse_circuit)
 -------------------------------------------------------------------------------
 -- * Circuit Representations.
 
--- \ An input or output to a Quipper circuit.
-data WireType = QWire | CWire deriving (Show, Eq)
-
 -- | A gate-representation of a Quipper circuit. This is an abstract Quipper
 -- circuit.
-data GateCirc = GateCirc { inputs  :: IntMap.IntMap Quip.Parser.WireType
+data GateCirc = GateCirc { inputs  :: IntMap.IntMap WireType
                          , gates   :: [Quip.Gate.Gate]
-                         , outputs :: IntMap.IntMap Quip.Parser.WireType
+                         , outputs :: IntMap.IntMap WireType
                          , size    :: Int
                          } deriving (Show, Eq)
 
@@ -45,7 +43,7 @@ data QuipCirc = QuipCirc ([Endpoint] -> Circ [Endpoint]) [Endpoint]
 
 -- | Helper function to convert Quipper internal wire types to the wire types
 -- used within the translator.
-arityToWire :: Wiretype -> Quip.Parser.WireType
+arityToWire :: Wiretype -> WireType
 arityToWire Qbit = QWire
 arityToWire Cbit = CWire
 
@@ -110,7 +108,7 @@ quipToGates (QuipCirc fn sp)
 
 -- | Helper function to convert the wire types used within translation to the
 -- Quipper internal wire types.
-wireToArity :: Quip.Parser.WireType -> Wiretype
+wireToArity :: WireType -> Wiretype
 wireToArity QWire = Qbit
 wireToArity CWire = Cbit
 
