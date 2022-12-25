@@ -4,11 +4,11 @@
 
 module Main where
 
-import QasmCmdLn (QasmTools(..), getToolArgs)
 import Qasm.AST (AstStmt)
 import Qasm.Parser (parseQasm)
 import Qasm.Passes (toAst, elimInv, elimPow)
 import Qasm.Printer (printAst)
+import QasmTools.CmdLn (QasmTools(..), getToolArgs)
 import System.IO (hPutStrLn)
 import SetupTools (DoTaskFn, DisplayFn, setupTool)
 import Text.Pretty.Simple (pHPrint)

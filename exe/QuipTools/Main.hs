@@ -4,8 +4,8 @@
 
 module Main where
 
-import QuipCmdLn (QuipTools(..), getToolArgs)
 import Quip.Parser (GateCirc, parseQuip, quipToGates, gatesToAscii)
+import QuipTools.CmdLn (QuipTools(..), getToolArgs)
 import SetupTools (DoTaskFn, DisplayFn, setupTool)
 import System.IO (hPutStr)
 import Text.Pretty.Simple (pHPrint)

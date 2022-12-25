@@ -3,11 +3,12 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# OPTIONS_GHC -fno-cse #-}
 
-module QuipCmdLn
+module QuipTools.CmdLn
   ( QuipTools(..)
   , getToolArgs
   ) where
 
+import CmdLnFlags (srcFlags, outFlags)
 import System.Console.CmdArgs
 
 -------------------------------------------------------------------------------
@@ -17,25 +18,10 @@ data QuipTools
     = Parser { src :: String
              , out :: String
              }
-    | Writer { src       :: String 
-             , out       :: String
+    | Writer { src :: String 
+             , out :: String
              }
     deriving (Show,Eq,Data,Typeable)
-
--------------------------------------------------------------------------------
--- * Flag Generators.
-
--- | Returns the flags for the --src argument. The default value is taken as an
--- argument, since flags are impure.
-srcFlags :: String -> String
-srcFlags x = x &= help "Input source (defaults to stdin)."
-               &= typFile
-
--- | Returns the flags for the --out argument. The default value is taken as an
--- argument, since flags are impure.
-outFlags :: String -> String
-outFlags x = x &= help "Output destination (defaults to stdout)."
-               &= typFile
 
 -------------------------------------------------------------------------------
 -- * Program Modes.

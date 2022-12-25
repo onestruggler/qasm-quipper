@@ -42,10 +42,11 @@ library
   default-language:    Haskell2010
 
 executable qasm_tools
-  main-is:             QasmTools.hs
-  other-modules:       IOUtils,
-                       SetupTools,
-                       QasmCmdLn
+  main-is:             QasmTools/Main.hs
+  other-modules:       CmdLnFlags,
+                       IOUtils,
+                       QasmTools.CmdLn,
+                       SetupTools
   build-depends:       base,
                        cmdargs,
                        directory,
@@ -55,10 +56,11 @@ executable qasm_tools
   default-language:    Haskell2010
 
 executable quip_tools
-  main-is:             QuipTools.hs
-  other-modules:       IOUtils,
-                       SetupTools,
-                       QuipCmdLn
+  main-is:             QuipTools/Main.hs
+  other-modules:       CmdLnFlags,
+                       IOUtils,
+                       QuipTools.CmdLn,
+                       SetupTools
   build-depends:       base,
                        cmdargs,
                        directory,
