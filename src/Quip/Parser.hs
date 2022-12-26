@@ -106,6 +106,8 @@ abstractGate (QRot name inv angle ins gctrls ctrls _) = gate
 abstractGate (GPhase angle _ ctrls _) = gate
     where qctrls = encapsulateCtrls ctrls
           gate   = PhaseGate angle qctrls
+abstractGate (QInit on wire _) = QInitGate on wire
+abstractGate (QTerm on wire _) = QTermGate on wire
 
 -- | Consumes the functional representation of a Quipper circuit (with optional
 -- post-processing). Returns a gate-based representation of the circuit. If the

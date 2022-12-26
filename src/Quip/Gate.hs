@@ -29,6 +29,9 @@ data Control = Pos Wire
 -- | If true, then the gate is inverted.
 type InverseFlag = Bool
 
+-- | If true, then the initialized/terminated register is 1, otherwise 0.
+type SetOnFlag = Bool
+
 -- | The angle parameterizing a rotational gate.
 type Angle = Double
 
@@ -40,4 +43,6 @@ type Angle = Double
 data Gate = NamedGate GateName InverseFlag [Wire] [Control]
           | RotGate RotName InverseFlag Angle [Wire] [Control]
           | PhaseGate Angle [Control]
+          | QInitGate SetOnFlag Wire
+          | QTermGate SetOnFlag Wire
           deriving (Show,Eq)
