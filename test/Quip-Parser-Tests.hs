@@ -28,8 +28,8 @@ absGate3 = PhaseGate 2 []
 -- parseQuip
 
 test1 = TestCase (assertEqual "parseQuip supports valid files."
-                             2
-                             (length shape))
+                              2
+                              (length shape))
     where input = "Inputs: 0:Qbit, 1:Qbit\n" ++
                   asciiGate0 ++
                   "Outputs: 0:Qbit, 1:Qbit"
@@ -37,7 +37,7 @@ test1 = TestCase (assertEqual "parseQuip supports valid files."
           QuipCirc _ shape = qcirc
 
 -----------------------------------------------------------------------------------------
--- quipToCirc\
+-- quipToCirc
 
 simpleInput = "Inputs: 0:Qbit, 1:Qbit\n" ++
                asciiGateX ++ "\n" ++
@@ -57,7 +57,7 @@ test2 = TestCase (assertBool "quipToGates supports valid file with unitary gates
           qgates = gates gcirc
 
 -----------------------------------------------------------------------------------------
--- Orchestrates tests.
+-- gatesToAscii
 
 test3 = TestCase (assertEqual "gatesToAscii supports 1-to-1 mapping of unitary gates."
                               (simpleInput ++ "\n\n")
