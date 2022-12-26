@@ -27,6 +27,7 @@ library
                        Quip.Gate
                        Quip.GateName
                        Quip.Parser
+                       Quip.Transformers
                        Quip.Wire
   other-modules:       Qasm.Lexer
   build-tools:         happy,
@@ -111,6 +112,12 @@ test-suite qasm-parser-tests
 test-suite quip-parser-tests
   import:              basic-unit-test-props
   main-is:             Quip-Parser-Tests.hs
+  type:                exitcode-stdio-1.0
+
+test-suite quip-transformers-tests
+  import:              basic-unit-test-props
+  main-is:             Quip-Transformers-Tests.hs
+  build-depends:       quipper-language
   type:                exitcode-stdio-1.0
 
 test-suite quip-wire-tests
