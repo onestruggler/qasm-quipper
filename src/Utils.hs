@@ -1,9 +1,12 @@
 -- | General-purpose utility functions.
 
 module Utils
-  ( maybeWrap
-  , maybeAppend
+  ( maybeAppend
+  , maybeWrap
   ) where
+
+-------------------------------------------------------------------------------
+-- * Import Section.
 
 import Data.Maybe (maybe)
 

@@ -6,7 +6,13 @@ module SetupTools
   , setupTool
   ) where
 
-import IOUtils (readSrc, withOut)
+-------------------------------------------------------------------------------
+-- * Import Section.
+
+import IOUtils
+  ( readSrc
+  , withOut
+  )
 import System.Exit (die)
 import System.IO (Handle)
 

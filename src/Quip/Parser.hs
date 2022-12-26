@@ -4,21 +4,41 @@
 -- Quipper internal library will only impact this single module.
 
 module Quip.Parser
-  ( WireType(..)
-  , GateCirc(..)
+  ( GateCirc(..)
   , QuipCirc(..)
+  , WireType(..)
+  , gatesToAscii
   , parseQuip
   , quipToGates
-  , gatesToAscii
   ) where
+
+-------------------------------------------------------------------------------
+-- * Import Section.
 
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Lazy as Map
-import Quip.Gate (Control(..), Gate(..), Wire)
-import Quip.GateName (NamedOp(..), toGateName, toRotName)
+import Quip.Gate
+  ( Control(..)
+  , Gate(..)
+  , Wire
+  )
+import Quip.GateName 
+  ( NamedOp(..)
+  , toGateName
+  , toRotName
+  )
 import Quip.Wire (WireType(..))
-import Quipper (Endpoint, Circ)
-import Quipper.Internal.Circuit (BoxId, Gate(..), Signed(..), TypedSubroutine, Wiretype(..))
+import Quipper
+  ( Circ
+  , Endpoint
+  , Signed(..)
+  )
+import Quipper.Internal.Circuit
+  ( BoxId
+  , Gate(..)
+  , TypedSubroutine
+  , Wiretype(..)
+  )
 import Quipper.Internal.Generic (encapsulate_generic)
 import Quipper.Internal.Printing (ascii_of_bcircuit)
 import Quipper.Libraries.QuipperASCIIParser (parse_circuit)

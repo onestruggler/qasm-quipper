@@ -7,9 +7,17 @@ module IOUtils
   , withOut
   ) where
 
+-------------------------------------------------------------------------------
+-- * Import Section.
+
 import System.Exit (die)
 import System.Directory (doesFileExist)
-import System.IO (Handle, IOMode(WriteMode), withFile, stdout)
+import System.IO
+  ( Handle
+  , IOMode(WriteMode)
+  , stdout
+  , withFile
+  )
 
 -------------------------------------------------------------------------------
 -- * Helper Methods.

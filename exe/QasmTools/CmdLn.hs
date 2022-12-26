@@ -8,7 +8,16 @@ module QasmTools.CmdLn
   , getToolArgs
   ) where
 
-import CmdLnFlags (srcFlags, outFlags, legacyFlags, inlinePowFlags, inlineInvFlags)
+-------------------------------------------------------------------------------
+-- * Import Section.
+
+import CmdLnFlags
+  ( inlineInvFlags
+  , inlinePowFlags
+  , legacyFlags
+  , outFlags
+  , srcFlags
+  )
 import System.Console.CmdArgs
 
 -------------------------------------------------------------------------------

@@ -1,26 +1,41 @@
 -- | Abstract representation of OpenQasm 3 gates and their modifiers.
 
+-------------------------------------------------------------------------------
+-- * Import Section.
+
 module Qasm.Gate
-  ( Sign(..)
+  ( Gate(..)
   , GateMod(..)
-  , nullGateMod
-  , negateMod
-  , addCtrlsToMod
-  , addNegCtrlsToMod
-  , hasInversionMod
-  , Gate(..)
-  , invert
-  , addCtrls
-  , addNegCtrls
-  , isInverted
   , GateSummaryErr(..)
+  , Sign(..)
+  , addCtrls
+  , addCtrlsToMod
+  , addNegCtrls
+  , addNegCtrlsToMod
   , exprToGate
+  , hasInversionMod
+  , invert
+  , isInverted
+  , negateMod
+  , nullGateMod
   , validateGate
   ) where
 
-import Qasm.Expression (ExprErr(..), toConstInt)
-import Qasm.GateName (GateName, toGateName, toParamCount, toOperandCount)
-import Qasm.Language (Expr(..), GateOperand(..), GateExpr(..))
+import Qasm.Expression
+  ( ExprErr(..)
+  , toConstInt
+  )
+import Qasm.GateName
+  ( GateName
+  , toGateName
+  , toParamCount
+  , toOperandCount
+  )
+import Qasm.Language
+  ( Expr(..)
+  , GateOperand(..)
+  , GateExpr(..)
+  )
 
 -------------------------------------------------------------------------------
 -- * Modifiers and Update Functions.

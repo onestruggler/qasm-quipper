@@ -1,8 +1,8 @@
 -- | Named gates and associated data.
 
 module Quip.GateName
-  ( NamedOp(..)
-  , GateName(..)
+  ( GateName(..)
+  , NamedOp(..)
   , RotName(..)
   , toGateName
   , toRotName

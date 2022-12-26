@@ -2,6 +2,9 @@
 
 module Qasm.Language where
 
+-------------------------------------------------------------------------------
+-- * Expressions.
+
 data Expr = Plus Expr Expr
           | Minus Expr Expr
           | Times Expr Expr
@@ -28,6 +31,9 @@ data GateExpr = NamedGateOp String [Expr] [GateOperand]
 data Type = QubitT
           | QubitArrT Expr
           deriving (Show, Eq)
+
+-------------------------------------------------------------------------------
+-- * Statements.
 
 data Stmt = QasmGateStmt GateExpr
           | QasmDeclStmt Type String

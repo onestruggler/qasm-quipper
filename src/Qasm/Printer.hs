@@ -2,11 +2,21 @@
 
 module Qasm.Printer (printAst) where
 
+-------------------------------------------------------------------------------
+-- * Import Section.
+
 import Data.List (intercalate)
 import Qasm.AST (AstStmt(..))
-import Qasm.Gate (Gate(..), GateMod(..), Sign(..))
+import Qasm.Gate
+  ( Gate(..)
+  , GateMod(..)
+  , Sign(..)
+  )
 import Qasm.GateName (GateName(..))
-import Qasm.Language(Expr(..), GateOperand(..))
+import Qasm.Language
+  ( Expr(..)
+  , GateOperand(..)
+  )
 
 -------------------------------------------------------------------------------
 -- * Expression Printing.

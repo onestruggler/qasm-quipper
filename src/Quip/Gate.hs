@@ -1,12 +1,18 @@
 -- | Abstract representation of Quipper gates.
 
 module Quip.Gate
-  ( Wire
-  , Control(..)
+  ( Control(..)
   , Gate(..)
+  , Wire
   ) where
 
-import Quip.GateName (GateName(..), RotName(..))
+-------------------------------------------------------------------------------
+-- * Import Section.
+
+import Quip.GateName
+  ( GateName(..)
+  , RotName(..)
+  )
 
 -------------------------------------------------------------------------------
 -- * Utility Types.

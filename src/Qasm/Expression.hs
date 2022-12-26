@@ -2,12 +2,15 @@
 
 module Qasm.Expression
   ( ExprErr(..)
-  , zero
+  , avgExpr
+  , negateExpr
   , readDecInt
   , toConstInt
-  , negateExpr
-  , avgExpr
+  , zero
   ) where
+
+-------------------------------------------------------------------------------
+-- * Import Section.
 
 import Qasm.Language (Expr(..))
 

@@ -8,7 +8,13 @@ module QuipTools.CmdLn
   , getToolArgs
   ) where
 
-import CmdLnFlags (srcFlags, outFlags)
+-------------------------------------------------------------------------------
+-- * Import Section.
+
+import CmdLnFlags
+  ( outFlags
+  , srcFlags
+  )
 import System.Console.CmdArgs
 
 -------------------------------------------------------------------------------

@@ -2,18 +2,31 @@
 
 module Qasm.Passes
   ( AbstractionErr(..)
-  , toAst
   , InversionErr(..)
   , elimInv
   , elimPow
+  , toAst
   ) where
 
 import Qasm.AST (AstStmt(..))
-import Qasm.Expression (ExprErr, toConstInt)
+import Qasm.Expression
+  ( ExprErr
+  , toConstInt
+  )
 import Qasm.Inversion (invertGate)
-import Qasm.Gate (Gate(NamedGate), GateSummaryErr, exprToGate, validateGate)
+import Qasm.Gate
+  ( Gate(NamedGate)
+  , GateSummaryErr
+  , exprToGate
+  , validateGate
+  )
 import Qasm.GateName (GateName(UserDefined))
-import Qasm.Language (Expr, GateExpr, Stmt(..), Type(..))
+import Qasm.Language
+  ( Expr
+  , GateExpr
+  , Stmt(..)
+  , Type(..)
+  )
 
 -------------------------------------------------------------------------------
 -- * Pass Template.

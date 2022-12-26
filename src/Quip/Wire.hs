@@ -2,9 +2,12 @@
 
 module Quip.Wire
   ( WireType(..)
-  , countQWires
   , countCWires
+  , countQWires
   ) where
+
+-------------------------------------------------------------------------------
+-- * Import Section.
 
 import qualified Data.IntMap.Strict as IntMap
 
