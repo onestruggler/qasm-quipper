@@ -26,6 +26,7 @@ import Quipper
   , gate_X_at
   , gate_Y_at
   , gate_Z_at
+  , global_phase_anchored
   , identity_transformer
   , qnot_at
   , swap_at
@@ -38,7 +39,7 @@ import Quipper.Libraries.GateDecompositions
   )
 
 -------------------------------------------------------------------------------
--- * Transformer Applications
+-- * Transformer Applications.
 
 -- | Consumes a raw Quipper circuit, along with a Quipper circuit transformer.
 -- Returns a new Quipper circuit, with the transformer applied.
@@ -47,7 +48,7 @@ applyTransformer transformer (QuipCirc fn sp) = QuipCirc nfn sp
     where nfn = transform_generic transformer fn
 
 -------------------------------------------------------------------------------
--- * Combined Controlls
+-- * Helper Methods.
 
 -- | Represents a circuit with free controls.
 type CtrlOp a = [Signed Qubit] -> Circ a
@@ -57,7 +58,7 @@ with_combined_controls_tof :: Int -> [Signed Endpoint] -> CtrlOp a -> Circ a
 with_combined_controls_tof = with_combined_controls toffoli_plain_at
 
 -------------------------------------------------------------------------------
--- * Transformer to Eliminate Controls
+-- * Transformer to Eliminate Controls.
 
 -- | Represents a list of classical and/or quantum controls.
 type CtrlList = Ctrls Qubit Bit
@@ -77,6 +78,7 @@ elimCtrlsQGate ncf n ins ctrls op =
 -- by OpenQASM 3. Supported controlled gates include:
 -- 1. Controlled QGates: C(X), CC(X), C(Y), C(Z), C(swap), C(H), C(U)
 -- 2. Controlled QRots: C(rX), C(rY), C(rZ)
+-- Note that the OpenQASM 2 gate P is a singly controlled phase gate.
 elimCtrlsTransformer :: Transformer Circ Qubit Bit
 elimCtrlsTransformer (T_QGate "not" 1 0 _ ncf f) = f $
     \ins [] ctrls -> let [q] = ins
@@ -98,5 +100,9 @@ elimCtrlsTransformer (T_QGate "H" 1 0 _ ncf f) = f $
                      in elimCtrlsQGate ncf 1 ins ctrls $ gate_H_at q
 elimCtrlsTransformer (T_QGate n _ _ _ _ _)  = error $ "Missing T_QGate:" ++ n
 elimCtrlsTransformer (T_QRot n _ _ _ _ _ _) = error $ "Missing T_QRot:" ++ n
-elimCtrlsTransformer (T_GPhase _ _ _)       = error "Unsupported: T_QPhase"
-elimCtrlsTransformer g                      = identity_transformer g
+elimCtrlsTransformer (T_GPhase ts ncf f)    = f $
+    \ins ctrls -> without_controls_if ncf $
+        with_combined_controls_tof 1 ctrls $ \ctrls' -> do
+            global_phase_anchored ts ins `controlled` ctrls'
+            return ctrls
+elimCtrlsTransformer g = identity_transformer g

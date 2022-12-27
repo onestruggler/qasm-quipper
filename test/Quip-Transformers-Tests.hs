@@ -130,6 +130,43 @@ test8 = TestCase (assertEqual "elimCtrlsTransformer on CCC(Z)."
                   ascii_cccz ++ "\n" ++
                   "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
 
+-- Control Gates
+ascii_gphase    = "GPhase() with t=1"
+ascii_cgphase   = "GPhase() with t=2 with controls=[+1]"
+ascii_ccgphase  = "GPhase() with t=1.5 with controls=[+1, +2]"
+ascii_cccgphase = "GPhase() with t=3 with controls=[+1, +2, +3]"
+
+abs_gphase  = PhaseGate 1.0 []
+abs_cgphase = PhaseGate 2.0 [Pos 1]
+
+test9 = TestCase (assertEqual "elimCtrlsTransformer on GPhase()."
+                              [abs_gphase]
+                              (apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_gphase ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+
+test10 = TestCase (assertEqual "elimCtrlsTransformer on C(GPhase())."
+                               [abs_cgphase]
+                               (apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_cgphase ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+
+test11 = TestCase (assertEqual "elimCtrlsTransformer on CC(GPhase())."
+                               5
+                               (length $ apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_ccgphase ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+
+test12 = TestCase (assertEqual "elimCtrlsTransformer on CCC(GPhase())."
+                               9
+                               (length $ apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_cccgphase ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
@@ -140,6 +177,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "elimCtrlsTransformer_QGate_1" te
                                      TestLabel "elimCtrlsTransformer_QGate_5" test5,
                                      TestLabel "elimCtrlsTransformer_QGate_6" test6,
                                      TestLabel "elimCtrlsTransformer_QGate_7" test7,
-                                     TestLabel "elimCtrlsTransformer_QGate_8" test8]
+                                     TestLabel "elimCtrlsTransformer_QGate_8" test8,
+                                     TestLabel "elimCtrlsTransformer_QGate_9" test9,
+                                     TestLabel "elimCtrlsTransformer_QGate_10" test10,
+                                     TestLabel "elimCtrlsTransformer_QGate_11" test11,
+                                     TestLabel "elimCtrlsTransformer_QGate_12" test12]
 
 main = defaultMain tests
