@@ -11,6 +11,7 @@ module Quip.Transformers
 -------------------------------------------------------------------------------
 -- * Import Section.
 
+import Data.Algebra.Boolean (xor)
 import Quip.Parser (QuipCirc(..))
 import Quipper
   ( Bit
@@ -28,11 +29,14 @@ import Quipper
   , gate_Z_at
   , global_phase_anchored
   , identity_transformer
+  , qmultinot_at
   , qnot_at
   , swap_at
   , transform_generic
   , without_controls_if
   )
+import Quipper.Internal.Monad (named_rotation_qulist)
+import Quipper.Internal.Transformer (B_Endpoint)
 import Quipper.Libraries.GateDecompositions
   ( toffoli_plain_at
   , with_combined_controls
@@ -69,10 +73,41 @@ type ElimCtrlsRv = Circ ([Qubit], [Qubit], CtrlList)
 -- | Implements elimCtrls for QGates.
 elimCtrlsQGate :: Bool -> Int -> [Qubit] -> CtrlList -> Circ a -> ElimCtrlsRv
 elimCtrlsQGate ncf n ins ctrls op =
-    without_controls_if ncf $ do
+    without_controls_if ncf $
         with_combined_controls_tof n ctrls $ \ctrls' -> do
             op `controlled` ctrls'
             return (ins, [], ctrls)
+
+-- | The signature of a rotational circuit.
+type ElimCtrlRotSig = [Qubit] -> [Qubit] -> CtrlList -> ElimCtrlsRv
+
+-- | Implements elimCtrls for QRot gates.
+elimCtrlsRotGate :: String -> Bool -> Double -> Bool -> ElimCtrlRotSig
+elimCtrlsRotGate name inv ts ncf ins gens [] =
+    without_controls_if ncf $ do
+        named_rotation_qulist name inv ts ins gens
+        return (ins, gens, [])
+elimCtrlsRotGate name inv ts ncf ins gens ctrls =
+    without_controls_if ncf $
+        with_combined_controls_tof 1 ctrls $ \[c] -> do
+            applyRot False
+            qmultinot_at ins `controlled` c
+            applyRot True
+            qmultinot_at ins `controlled` c
+            return (ins, gens, ctrls)
+    where halfTs = ts / 2
+          applyRot i = named_rotation_qulist name (xor inv i) halfTs ins gens
+
+-- | An anchor used by a GPhase gate.
+type Anchor = B_Endpoint Qubit Bit
+
+-- | Implements elimCtrls for GPhase gates.
+elimCtrlsGPhase :: Double -> Bool -> [Anchor] -> CtrlList -> Circ CtrlList
+elimCtrlsGPhase ts ncf ins ctrls =
+    without_controls_if ncf $
+        with_combined_controls_tof 1 ctrls $ \ctrls' -> do
+            global_phase_anchored ts ins `controlled` ctrls'
+            return ctrls
 
 -- | Quipper transformer to eliminate all controls, except for those supported
 -- by OpenQASM 3. Supported controlled gates include:
@@ -98,11 +133,9 @@ elimCtrlsTransformer (T_QGate "swap" 2 0 _ ncf f) = f $
 elimCtrlsTransformer (T_QGate "H" 1 0 _ ncf f) = f $
     \ins [] ctrls -> let [q] = ins
                      in elimCtrlsQGate ncf 1 ins ctrls $ gate_H_at q
-elimCtrlsTransformer (T_QGate n _ _ _ _ _)  = error $ "Missing T_QGate:" ++ n
-elimCtrlsTransformer (T_QRot n _ _ _ _ _ _) = error $ "Missing T_QRot:" ++ n
-elimCtrlsTransformer (T_GPhase ts ncf f)    = f $
-    \ins ctrls -> without_controls_if ncf $
-        with_combined_controls_tof 1 ctrls $ \ctrls' -> do
-            global_phase_anchored ts ins `controlled` ctrls'
-            return ctrls
+elimCtrlsTransformer (T_QGate n _ _ _ _ _) = error $ "Missing T_QGate:" ++ n
+elimCtrlsTransformer (T_QRot name _ _ inv ts ncf f) = f $
+    \ins gen ctrls -> elimCtrlsRotGate name inv ts ncf ins gen ctrls
+elimCtrlsTransformer (T_GPhase ts ncf f) = f $
+    \ins ctrls -> elimCtrlsGPhase ts ncf ins ctrls
 elimCtrlsTransformer g = identity_transformer g

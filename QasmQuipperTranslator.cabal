@@ -34,6 +34,7 @@ library
                        alex
   build-depends:       base,
                        array,
+                       cond,
                        containers,
                        filepath,
                        newsynth,

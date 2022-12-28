@@ -130,7 +130,7 @@ test8 = TestCase (assertEqual "elimCtrlsTransformer on CCC(Z)."
                   ascii_cccz ++ "\n" ++
                   "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
 
--- Control Gates
+-- Phase Gates
 ascii_gphase    = "GPhase() with t=1"
 ascii_cgphase   = "GPhase() with t=2 with controls=[+1]"
 ascii_ccgphase  = "GPhase() with t=1.5 with controls=[+1, +2]"
@@ -167,6 +167,42 @@ test12 = TestCase (assertEqual "elimCtrlsTransformer on CCC(GPhase())."
                   ascii_cccgphase ++ "\n" ++
                   "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
 
+-- Rotational Gates
+ascii_rot    = "QRot[\"exp(-i%Z)\",0.5](0)"
+ascii_crot   = "QRot[\"exp(-i%Z)\",1](0) with controls=[+1]"
+ascii_ccrot  = "QRot[\"exp(-i%Z)\",2](0) with controls=[+1, +2]"
+ascii_cccrot = "QRot[\"exp(-i%Z)\",3](0) with controls=[+1, +2, +3]"
+
+abs_rot = RotGate RotExpZ False 0.5 [0] []
+
+test13 = TestCase (assertEqual "elimCtrlsTransformer on expZt."
+                               [abs_rot]
+                               (apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_rot ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+
+test14 = TestCase (assertEqual "elimCtrlsTransformer on C(expZt)."
+                               4
+                               (length $ apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_crot ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+
+test15 = TestCase (assertEqual "elimCtrlsTransformer on CC(expZt)."
+                               8
+                               (length $ apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_ccrot ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+
+test16 = TestCase (assertEqual "elimCtrlsTransformer on CCC(expZt)."
+                               12
+                               (length $ apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_cccrot ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
@@ -181,6 +217,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "elimCtrlsTransformer_QGate_1" te
                                      TestLabel "elimCtrlsTransformer_QGate_9" test9,
                                      TestLabel "elimCtrlsTransformer_QGate_10" test10,
                                      TestLabel "elimCtrlsTransformer_QGate_11" test11,
-                                     TestLabel "elimCtrlsTransformer_QGate_12" test12]
+                                     TestLabel "elimCtrlsTransformer_QGate_12" test12,
+                                     TestLabel "elimCtrlsTransformer_QGate_13" test13,
+                                     TestLabel "elimCtrlsTransformer_QGate_14" test14,
+                                     TestLabel "elimCtrlsTransformer_QGate_15" test15,
+                                     TestLabel "elimCtrlsTransformer_QGate_16" test16]
 
 main = defaultMain tests
