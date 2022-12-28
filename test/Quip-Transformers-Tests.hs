@@ -211,6 +211,18 @@ test16 = TestCase (assertEqual "elimCtrlsTransformer on CCC(expZt)."
                   ascii_cccrot ++ "\n" ++
                   "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
 
+-- Generalized Controlled QGates
+ascii_gctrl = "QGate[\"MyGate\"](0,1); [2,3]"
+
+abs_gctrl = NamedGate (UserDefinedGate "MyGate") False [2, 3, 0, 1] []
+
+test17 = TestCase (assertEqual "elimCtrlsTransformer on QGate with generalized controls."
+                               [abs_gctrl]
+                               (apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_gctrl ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
@@ -229,6 +241,7 @@ tests = hUnitTestToTests $ TestList [TestLabel "elimCtrlsTransformer_QGate_1" te
                                      TestLabel "elimCtrlsTransformer_QGate_13" test13,
                                      TestLabel "elimCtrlsTransformer_QGate_14" test14,
                                      TestLabel "elimCtrlsTransformer_QGate_15" test15,
-                                     TestLabel "elimCtrlsTransformer_QGate_16" test16]
+                                     TestLabel "elimCtrlsTransformer_QGate_16" test16,
+                                     TestLabel "elimCtrlsTransformer_QGate_17" test17]
 
 main = defaultMain tests

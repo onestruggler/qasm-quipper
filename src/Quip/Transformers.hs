@@ -35,7 +35,10 @@ import Quipper
   , transform_generic
   , without_controls_if
   )
-import Quipper.Internal.Monad (named_rotation_qulist)
+import Quipper.Internal.Monad
+  ( named_gate_qulist
+  , named_rotation_qulist
+  )
 import Quipper.Internal.Transformer (B_Endpoint)
 import Quipper.Libraries.GateDecompositions
   ( toffoli_plain_at
@@ -70,6 +73,9 @@ type CtrlList = Ctrls Qubit Bit
 -- | Represents a circuit returned by a transformer.
 type ElimCtrlsRv = Circ ([Qubit], [Qubit], CtrlList)
 
+-- | The signature of a rotational circuit.
+type ElimCtrlSig = [Qubit] -> [Qubit] -> CtrlList -> ElimCtrlsRv
+
 -- | Implements elimCtrls for QGates.
 elimCtrlsQGate :: Bool -> Int -> [Qubit] -> CtrlList -> Circ a -> ElimCtrlsRv
 elimCtrlsQGate ncf n ins ctrls op =
@@ -78,11 +84,17 @@ elimCtrlsQGate ncf n ins ctrls op =
             op `controlled` ctrls'
             return (ins, [], ctrls)
 
--- | The signature of a rotational circuit.
-type ElimCtrlRotSig = [Qubit] -> [Qubit] -> CtrlList -> ElimCtrlsRv
+-- | Implements elimCtrls for user-defined QGates.
+elimCtrlsUserQGate :: String -> Bool -> Bool -> ElimCtrlSig
+elimCtrlsUserQGate name inv ncf ins gens [] =
+    without_controls_if ncf $ do
+        named_gate_qulist name inv ins gens
+        return (ins, gens, [])
+elimCtrlsUserQGate name _ _ _ _ _ = error $ errMsg ++ name ++ "."
+    where errMsg = "elimCtrlsTransformer: Cannot control user-defined gate "
 
 -- | Implements elimCtrls for QRot gates.
-elimCtrlsRotGate :: String -> Bool -> Double -> Bool -> ElimCtrlRotSig
+elimCtrlsRotGate :: String -> Bool -> Double -> Bool -> ElimCtrlSig
 elimCtrlsRotGate name inv ts ncf ins gens [] =
     without_controls_if ncf $ do
         named_rotation_qulist name inv ts ins gens
@@ -118,24 +130,27 @@ elimCtrlsTransformer :: Transformer Circ Qubit Bit
 elimCtrlsTransformer (T_QGate "multinot" _ 0 _ ncf f) = f $
     \ins [] ctrls -> elimCtrlsQGate ncf 2 ins ctrls $ qmultinot_at ins
 elimCtrlsTransformer (T_QGate "not" 1 0 _ ncf f) = f $
-    \ins [] ctrls -> let [q] = ins
-                     in elimCtrlsQGate ncf 2 ins ctrls $ qnot_at q
+    \[q] [] ctrls -> elimCtrlsQGate ncf 2 [q] ctrls $ qnot_at q
 elimCtrlsTransformer (T_QGate "X" 1 0 _ ncf f) = f $
-    \ins [] ctrls -> let [q] = ins
-                     in elimCtrlsQGate ncf 2 ins ctrls $ gate_X_at q
+    \[q] [] ctrls -> elimCtrlsQGate ncf 2 [q] ctrls $ gate_X_at q
 elimCtrlsTransformer (T_QGate "Y" 1 0 _ ncf f) = f $
-    \ins [] ctrls -> let [q] = ins
-                     in elimCtrlsQGate ncf 1 ins ctrls $ gate_Y_at q
+    \[q] [] ctrls -> elimCtrlsQGate ncf 1 [q] ctrls $ gate_Y_at q
 elimCtrlsTransformer (T_QGate "Z" 1 0 _ ncf f) = f $
-    \ins [] ctrls -> let [q] = ins
-                     in elimCtrlsQGate ncf 1 ins ctrls $ gate_Z_at q
+    \[q] [] ctrls -> elimCtrlsQGate ncf 1 [q] ctrls $ gate_Z_at q
 elimCtrlsTransformer (T_QGate "swap" 2 0 _ ncf f) = f $
     \ins [] ctrls -> let [q0, q1] = ins
                      in elimCtrlsQGate ncf 1 ins ctrls $ swap_at q0 q1
 elimCtrlsTransformer (T_QGate "H" 1 0 _ ncf f) = f $
-    \ins [] ctrls -> let [q] = ins
-                     in elimCtrlsQGate ncf 1 ins ctrls $ gate_H_at q
-elimCtrlsTransformer (T_QGate n _ _ _ _ _) = error $ "Missing T_QGate:" ++ n
+    \[q] [] ctrls -> elimCtrlsQGate ncf 1 [q] ctrls $ gate_H_at q
+elimCtrlsTransformer (T_QGate "S" 1 0 _ _ _) = error "Missing gate: S"
+elimCtrlsTransformer (T_QGate "T" 1 0 _ _ _) = error "Missing gate: T"
+elimCtrlsTransformer (T_QGate "V" 1 0 _ _ _) = error "Missing gate: V"
+elimCtrlsTransformer (T_QGate "E" 1 0 _ _ _) = error "Missing gate: E"
+elimCtrlsTransformer (T_QGate "W" 2 0 _ _ _) = error "Missing gate: W"
+elimCtrlsTransformer (T_QGate "omega" 1 0 _ _ _) = error "Missing gate: omega"
+elimCtrlsTransformer (T_QGate "iX" 1 0 _ _ _) = error "Missing gate: iX"
+elimCtrlsTransformer (T_QGate name _ _  inv ncf f) = f $
+    \ins gens ctrls -> elimCtrlsUserQGate name inv ncf ins gens ctrls
 elimCtrlsTransformer (T_QRot name _ _ inv ts ncf f) = f $
     \ins gen ctrls -> elimCtrlsRotGate name inv ts ncf ins gen ctrls
 elimCtrlsTransformer (T_GPhase ts ncf f) = f $
