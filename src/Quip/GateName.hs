@@ -20,7 +20,8 @@ class NamedOp a where
     printGate :: a -> String
 
 -- | Assigns a unique type to each standard named gate in Quipper.
-data GateName = GateX
+data GateName = GateQMultiNot
+              | GateX
               | GateY
               | GateZ
               | GateH
@@ -40,6 +41,7 @@ instance NamedOp GateName where
     isUserDefined (UserDefinedGate _) = True
     isUserDefined _                   = False
     -- | printGate :: a -> String
+    printGate GateQMultiNot         = "multinot"
     printGate GateX                 = "X"
     printGate GateY                 = "Y"
     printGate GateZ                 = "Z"
@@ -78,20 +80,21 @@ instance NamedOp RotName where
 
 -- | Interprets a string as a standard Quipper gate name.
 toGateName :: String -> GateName
-toGateName "not"   = GateX
-toGateName "X"     = GateX
-toGateName "Y"     = GateY
-toGateName "Z"     = GateZ
-toGateName "H"     = GateH
-toGateName "swap"  = GateSwap
-toGateName "V"     = GateV
-toGateName "S"     = GateS
-toGateName "T"     = GateT
-toGateName "iX"    = GateIX
-toGateName "omega" = GateOmega
-toGateName "W"     = GateW
-toGateName "E"     = GateE
-toGateName str     = UserDefinedGate str
+toGateName "multinot" = GateQMultiNot
+toGateName "not"      = GateX
+toGateName "X"        = GateX
+toGateName "Y"        = GateY
+toGateName "Z"        = GateZ
+toGateName "H"        = GateH
+toGateName "swap"     = GateSwap
+toGateName "V"        = GateV
+toGateName "S"        = GateS
+toGateName "T"        = GateT
+toGateName "iX"       = GateIX
+toGateName "omega"    = GateOmega
+toGateName "W"        = GateW
+toGateName "E"        = GateE
+toGateName str        = UserDefinedGate str
 
 -- | Interprets a string as a standard Quipper rotation name.
 toRotName :: String -> RotName
