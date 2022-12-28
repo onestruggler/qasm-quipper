@@ -115,6 +115,8 @@ elimCtrlsGPhase ts ncf ins ctrls =
 -- 2. Controlled QRots: C(rX), C(rY), C(rZ)
 -- Note that the OpenQASM 2 gate P is a singly controlled phase gate.
 elimCtrlsTransformer :: Transformer Circ Qubit Bit
+elimCtrlsTransformer (T_QGate "multinot" _ 0 _ ncf f) = f $
+    \ins [] ctrls -> elimCtrlsQGate ncf 2 ins ctrls $ qmultinot_at ins
 elimCtrlsTransformer (T_QGate "not" 1 0 _ ncf f) = f $
     \ins [] ctrls -> let [q] = ins
                      in elimCtrlsQGate ncf 2 ins ctrls $ qnot_at q
