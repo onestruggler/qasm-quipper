@@ -23,8 +23,13 @@ import Quipper
   , T_Gate(..)
   , Transformer(..)
   , controlled
+  , gate_E_at
   , gate_H_at
+  , gate_iX_at
   , gate_omega_at
+  , gate_S_at
+  , gate_T_at
+  , gate_V_at
   , gate_W_at
   , gate_X_at
   , gate_Y_at
@@ -45,7 +50,12 @@ import Quipper.Internal.Monad
   )
 import Quipper.Internal.Transformer (B_Endpoint)
 import Quipper.Libraries.GateDecompositions
-  ( controlled_W_at
+  ( controlled_E_at
+  , controlled_iX_at
+  , controlled_S_at
+  , controlled_T_at
+  , controlled_V_at
+  , controlled_W_at
   , toffoli_plain_at
   , with_combined_controls
   )
@@ -88,6 +98,25 @@ elimCtrlsQGate ncf n ins ctrls op =
         with_combined_controls_tof n ctrls $ \ctrls' -> do
             op `controlled` ctrls'
             return (ins, [], ctrls)
+
+-- |
+type T2 = Qubit -> Signed Qubit -> Circ ()
+
+-- | Implements elimCtrls for single qubit QGates whose controlled form:
+-- 1. Does not appear in OpenQASM 2 as a primitive.
+-- 2. Does appear in Quipper.Libraries.GateDecompositions.
+-- Examples include: E, iX, S, T, and V gates.
+elimCtrlsBr :: Bool -> Bool -> Qubit -> CtrlList
+                    -> (Qubit -> Circ ())
+                    -> (Qubit -> Signed Qubit -> Circ ())
+                    -> ElimCtrlsRv
+elimCtrlsBr inv ncf q ctrls op cop =
+    without_controls_if ncf $ do
+        if null ctrls
+        then (reverse_imp_if inv op) q
+        else with_combined_controls_tof 1 ctrls $ \[c] -> do
+            (reverse_imp_if inv cop) q c
+        return ([q], [], ctrls)
 
 -- | Implements elimCtrls for the omega QGate (a special case).
 elimCtrlsOmega :: Bool -> Bool -> Qubit -> CtrlList -> ElimCtrlsRv
@@ -167,15 +196,20 @@ elimCtrlsTransformer (T_QGate "swap" 2 0 _ ncf f) = f $
                      in elimCtrlsQGate ncf 1 ins ctrls $ swap_at q0 q1
 elimCtrlsTransformer (T_QGate "H" 1 0 _ ncf f) = f $
     \[q] [] ctrls -> elimCtrlsQGate ncf 1 [q] ctrls $ gate_H_at q
-elimCtrlsTransformer (T_QGate "S" 1 0 _ _ _) = error "Missing gate: S"
-elimCtrlsTransformer (T_QGate "T" 1 0 _ _ _) = error "Missing gate: T"
-elimCtrlsTransformer (T_QGate "V" 1 0 _ _ _) = error "Missing gate: V"
-elimCtrlsTransformer (T_QGate "E" 1 0 _ _ _) = error "Missing gate: E"
+elimCtrlsTransformer (T_QGate "S" 1 0 inv ncf f) = f $
+    \[q] [] ctrls -> elimCtrlsBr inv ncf q ctrls gate_S_at controlled_S_at
+elimCtrlsTransformer (T_QGate "T" 1 0 inv ncf f) = f $
+    \[q] [] ctrls -> elimCtrlsBr inv ncf q ctrls gate_T_at controlled_T_at
+elimCtrlsTransformer (T_QGate "V" 1 0 inv ncf f) = f $
+    \[q] [] ctrls -> elimCtrlsBr inv ncf q ctrls gate_V_at controlled_V_at
+elimCtrlsTransformer (T_QGate "E" 1 0 inv ncf f) = f $
+    \[q] [] ctrls -> elimCtrlsBr inv ncf q ctrls gate_E_at controlled_E_at
 elimCtrlsTransformer (T_QGate "W" 2 0 inv ncf f) = f $
     \[q0, q1] [] ctrls -> elimCtrlsW inv ncf q0 q1 ctrls
 elimCtrlsTransformer (T_QGate "omega" 1 0 inv ncf f) = f $
     \[q] [] ctrls -> elimCtrlsOmega inv ncf q ctrls
-elimCtrlsTransformer (T_QGate "iX" 1 0 _ _ _) = error "Missing gate: iX"
+elimCtrlsTransformer (T_QGate "iX" 1 0 inv ncf f) = f $
+    \[q] [] ctrls -> elimCtrlsBr inv ncf q ctrls gate_iX_at controlled_iX_at
 elimCtrlsTransformer (T_QGate name _ _  inv ncf f) = f $
     \ins gens ctrls -> elimCtrlsUserQGate name inv ncf ins gens ctrls
 elimCtrlsTransformer (T_QRot name _ _ inv ts ncf f) = f $
