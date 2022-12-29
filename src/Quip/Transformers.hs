@@ -99,9 +99,6 @@ elimCtrlsQGate ncf n ins ctrls op =
             op `controlled` ctrls'
             return (ins, [], ctrls)
 
--- |
-type T2 = Qubit -> Signed Qubit -> Circ ()
-
 -- | Implements elimCtrls for single qubit QGates whose controlled form:
 -- 1. Does not appear in OpenQASM 2 as a primitive.
 -- 2. Does appear in Quipper.Libraries.GateDecompositions.
@@ -125,7 +122,7 @@ elimCtrlsOmega inv ncf q ctrls =
         if null ctrls
         then (reverse_imp_if inv gate_omega_at) q
         else with_combined_controls_tof 1 ctrls $ \[c] -> do
-            reverse_imp_if inv $ global_phase 0.25 `controlled` c
+            (reverse_imp_if inv $ global_phase 0.25) `controlled` c
         return ([q], [], ctrls)
 
 -- | Implements elimCtrls for the W QGate (a special case).
@@ -181,6 +178,7 @@ elimCtrlsGPhase ts ncf ins ctrls =
 -- 2. Controlled QRots: C(rX), C(rY), C(rZ)
 -- Note that the OpenQASM 2 gate P is a singly controlled phase gate.
 elimCtrlsTransformer :: Transformer Circ Qubit Bit
+-- Controllable QGates in OpenQASM 2.
 elimCtrlsTransformer (T_QGate "multinot" _ 0 _ ncf f) = f $
     \ins [] ctrls -> elimCtrlsQGate ncf 2 ins ctrls $ qmultinot_at ins
 elimCtrlsTransformer (T_QGate "not" 1 0 _ ncf f) = f $
@@ -196,24 +194,29 @@ elimCtrlsTransformer (T_QGate "swap" 2 0 _ ncf f) = f $
                      in elimCtrlsQGate ncf 1 ins ctrls $ swap_at q0 q1
 elimCtrlsTransformer (T_QGate "H" 1 0 _ ncf f) = f $
     \[q] [] ctrls -> elimCtrlsQGate ncf 1 [q] ctrls $ gate_H_at q
+-- Non-Controllable QGates in OpenQASM 2 (GateDecomposition).
+elimCtrlsTransformer (T_QGate "E" 1 0 inv ncf f) = f $
+    \[q] [] ctrls -> elimCtrlsBr inv ncf q ctrls gate_E_at controlled_E_at
+elimCtrlsTransformer (T_QGate "iX" 1 0 inv ncf f) = f $
+    \[q] [] ctrls -> elimCtrlsBr inv ncf q ctrls gate_iX_at controlled_iX_at
 elimCtrlsTransformer (T_QGate "S" 1 0 inv ncf f) = f $
     \[q] [] ctrls -> elimCtrlsBr inv ncf q ctrls gate_S_at controlled_S_at
 elimCtrlsTransformer (T_QGate "T" 1 0 inv ncf f) = f $
     \[q] [] ctrls -> elimCtrlsBr inv ncf q ctrls gate_T_at controlled_T_at
 elimCtrlsTransformer (T_QGate "V" 1 0 inv ncf f) = f $
     \[q] [] ctrls -> elimCtrlsBr inv ncf q ctrls gate_V_at controlled_V_at
-elimCtrlsTransformer (T_QGate "E" 1 0 inv ncf f) = f $
-    \[q] [] ctrls -> elimCtrlsBr inv ncf q ctrls gate_E_at controlled_E_at
+-- Non-Controllable QGates in OpenQASM 2 (Special Cases).
 elimCtrlsTransformer (T_QGate "W" 2 0 inv ncf f) = f $
     \[q0, q1] [] ctrls -> elimCtrlsW inv ncf q0 q1 ctrls
 elimCtrlsTransformer (T_QGate "omega" 1 0 inv ncf f) = f $
     \[q] [] ctrls -> elimCtrlsOmega inv ncf q ctrls
-elimCtrlsTransformer (T_QGate "iX" 1 0 inv ncf f) = f $
-    \[q] [] ctrls -> elimCtrlsBr inv ncf q ctrls gate_iX_at controlled_iX_at
+-- User-Defined QGates.
 elimCtrlsTransformer (T_QGate name _ _  inv ncf f) = f $
     \ins gens ctrls -> elimCtrlsUserQGate name inv ncf ins gens ctrls
+-- QRots and GPhase Gates.
 elimCtrlsTransformer (T_QRot name _ _ inv ts ncf f) = f $
     \ins gen ctrls -> elimCtrlsRotGate name inv ts ncf ins gen ctrls
 elimCtrlsTransformer (T_GPhase ts ncf f) = f $
     \ins ctrls -> elimCtrlsGPhase ts ncf ins ctrls
+-- Gates Without Controls.
 elimCtrlsTransformer g = identity_transformer g

@@ -327,11 +327,11 @@ ascii_s  = "QGate[\"S\"](0)"
 ascii_t  = "QGate[\"T\"](0)"
 ascii_v  = "QGate[\"V\"](0)"
 
-abs_e  = NamedGate GateE False  [0] []
+abs_e  = NamedGate GateE  False [0] []
 abs_ix = NamedGate GateIX False [0] []
-abs_s  = NamedGate GateS False  [0] []
-abs_t  = NamedGate GateT False  [0] []
-abs_v  = NamedGate GateV False  [0] []
+abs_s  = NamedGate GateS  False [0] []
+abs_t  = NamedGate GateT  False [0] []
+abs_v  = NamedGate GateV  False [0] []
 
 test26 = TestCase (assertEqual "elimCtrlsTransformer on controll-free special gates."
                                output
@@ -454,6 +454,105 @@ test33 = TestCase (assertEqual "elimCtrlsTransformer on CCC(E)."
                   ascii_ccce ++ "\n" ++
                   "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit, 4:Qbit"
 
+-- Gate Inversions
+ascii_h_inv      = "QGate[\"H\"]*(0)"
+ascii_s_inv      = "QGate[\"S\"]*(0)"
+ascii_w_inv      = "QGate[\"W\"]*(0,1)"
+ascii_omega_inv  = "QGate[\"omega\"]*(0)"
+ascii_rot_inv    = "QRot[\"exp(-i%Z)\",1]*(0)"
+ascii_user_inv   = "QGate[\"MyGate\"]*(0)"
+ascii_cs_inv     = "QGate[\"S\"]*(0) with controls=[+1]"
+ascii_cw_inv     = "QGate[\"W\"]*(0,1) with controls=[+2]"
+ascii_comega_inv = "QGate[\"omega\"]*(0) with controls=[+1]"
+ascii_crot_inv   = "QRot[\"exp(-i%Z)\",1]*(0) with controls=[+1]"
+
+abs_h_inv      = NamedGate GateH                      False         [0]    []
+abs_s_inv      = NamedGate GateS                      True          [0]    []
+abs_w_inv      = NamedGate GateW                      True          [0, 1] []
+abs_omega_inv  = NamedGate GateOmega                  True          [0]    []
+abs_comega_inv = PhaseGate                                  (-0.25)        [Pos 1]
+abs_rot_inv    = RotGate   RotExpZ                    True  1       [0]    []
+abs_user_inv   = NamedGate (UserDefinedGate "MyGate") True          [0]    []
+
+test34 = TestCase (assertEqual "elimCtrlsTransformer supports inverses."
+                               output
+                               (apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_h_inv     ++ "\n" ++
+                  ascii_s_inv     ++ "\n" ++
+                  ascii_w_inv     ++ "\n" ++
+                  ascii_omega_inv ++ "\n" ++
+                  ascii_rot_inv   ++ "\n" ++
+                  ascii_user_inv  ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+          output = [abs_h_inv,
+                    abs_s_inv,
+                    abs_w_inv,
+                    abs_omega_inv,
+                    abs_rot_inv,
+                    abs_user_inv]
+
+test35 = TestCase (assertEqual "elimCtrlsTransformer on C(S)*."
+                               output
+                               (apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                   ascii_cs_inv ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+          output = [NamedGate GateT True  [0] [],
+                    NamedGate GateT True  [1] [],
+                    NamedGate GateX True  [1] [Pos 0],
+                    NamedGate GateT False [1] [],
+                    NamedGate GateX True  [1] [Pos 0]]
+
+test36 = TestCase (assertEqual "elimCtrlsTransformer on C(W)*."
+                               output
+                               (apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                   ascii_cw_inv ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+          output = [NamedGate GateX True  [1] [Pos 0],
+                    NamedGate GateS True  [0] [],
+                    NamedGate GateH True  [0] [],
+                    NamedGate GateT True  [0] [],
+                    NamedGate GateH True  [0] [],
+                    NamedGate GateX True  [2] [Pos 1],
+                    NamedGate GateX True  [0] [Pos 2],
+                    NamedGate GateX True  [1] [Pos 0],
+                    NamedGate GateT False [2] [],
+                    NamedGate GateT False [1] [],
+                    NamedGate GateX True  [1] [Pos 2],
+                    NamedGate GateT True  [0] [],
+                    NamedGate GateT False [1] [],
+                    NamedGate GateX True  [0] [Pos 2],
+                    NamedGate GateX True  [1] [Pos 0],
+                    NamedGate GateX True  [2] [Pos 1],
+                    NamedGate GateT True  [2] [],
+                    NamedGate GateT True  [1] [],
+                    NamedGate GateT True  [0] [],
+                    NamedGate GateH True  [0] [],
+                    NamedGate GateT False [0] [],
+                    NamedGate GateH True  [0] [],
+                    NamedGate GateS False [0] [],
+                    NamedGate GateX True  [1] [Pos 0]]
+
+test37 = TestCase (assertEqual "elimCtrlsTransformer on C(omega)*."
+                               [abs_comega_inv]
+                               (apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                   ascii_comega_inv ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+
+test38 = TestCase (assertEqual "elimCtrlsTransformer on C(expZt)*."
+                               output
+                               (apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                   ascii_crot_inv ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+          output = [RotGate   RotExpZ       True  0.5 [0] [],
+                    NamedGate GateQMultiNot False     [0] [Pos 1],
+                    RotGate   RotExpZ       False 0.5 [0] [],
+                    NamedGate GateQMultiNot False     [0] [Pos 1]]
+
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
@@ -489,6 +588,11 @@ tests = hUnitTestToTests $ TestList [TestLabel "elimCtrlsTransformer_QGate_1" te
                                      TestLabel "elimCtrlsTransformer_QGate_30" test30,
                                      TestLabel "elimCtrlsTransformer_QGate_31" test31,
                                      TestLabel "elimCtrlsTransformer_QGate_32" test32,
-                                     TestLabel "elimCtrlsTransformer_QGate_33" test33]
+                                     TestLabel "elimCtrlsTransformer_QGate_33" test33,
+                                     TestLabel "elimCtrlsTransformer_QGate_34" test34,
+                                     TestLabel "elimCtrlsTransformer_QGate_35" test35,
+                                     TestLabel "elimCtrlsTransformer_QGate_36" test36,
+                                     TestLabel "elimCtrlsTransformer_QGate_37" test37,
+                                     TestLabel "elimCtrlsTransformer_QGate_38" test38]
 
 main = defaultMain tests
