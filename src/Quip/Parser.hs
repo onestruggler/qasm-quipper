@@ -17,6 +17,7 @@ module Quip.Parser
 
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Lazy as Map
+import Data.Maybe (catMaybes)
 import Quip.Gate
   ( Control(..)
   , Gate(..)
@@ -92,22 +93,23 @@ mergeInputs name ins gctrls
 
 -- | Helper function to convert Quipper internal gates to the gates used within
 -- the translator. If conversion fails, then an error is raised.
-abstractGate :: Quipper.Internal.Circuit.Gate -> Quip.Gate.Gate
-abstractGate (QGate name inv ins gctrls ctrls _) = gate
+abstractGate :: Quipper.Internal.Circuit.Gate -> Maybe Quip.Gate.Gate
+abstractGate (QGate name inv ins gctrls ctrls _) = Just gate
     where tname  = toGateName name
           allins = mergeInputs tname ins gctrls
           qctrls = encapsulateCtrls ctrls
           gate   = NamedGate tname inv allins qctrls
-abstractGate (QRot name inv angle ins gctrls ctrls _) = gate
+abstractGate (QRot name inv angle ins gctrls ctrls _) = Just gate
     where tname  = toRotName name
           allins = mergeInputs tname ins gctrls
           qctrls = encapsulateCtrls ctrls
           gate   = RotGate tname inv angle allins qctrls
-abstractGate (GPhase angle _ ctrls _) = gate
+abstractGate (GPhase angle _ ctrls _) = Just gate
     where qctrls = encapsulateCtrls ctrls
           gate   = PhaseGate angle qctrls
-abstractGate (QInit on wire _) = QInitGate on wire
-abstractGate (QTerm on wire _) = QTermGate on wire
+abstractGate (QInit on wire _) = Just $ QInitGate on wire
+abstractGate (QTerm on wire _) = Just $ QTermGate on wire
+abstractGate (Comment _ _ _)   = Nothing
 
 -- | Consumes the functional representation of a Quipper circuit (with optional
 -- post-processing). Returns a gate-based representation of the circuit. If the
@@ -115,7 +117,7 @@ abstractGate (QTerm on wire _) = QTermGate on wire
 quipToGates :: QuipCirc -> GateCirc
 quipToGates (QuipCirc fn sp)
     | null ns   = GateCirc { inputs  = IntMap.map arityToWire ins
-                           , gates   = map abstractGate gates
+                           , gates   = catMaybes $ map abstractGate gates
                            , outputs = IntMap.map arityToWire outs
                            , size    = sz
                            }
