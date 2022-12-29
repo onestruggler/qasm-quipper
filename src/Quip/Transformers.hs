@@ -24,13 +24,16 @@ import Quipper
   , Transformer(..)
   , controlled
   , gate_H_at
+  , gate_omega_at
   , gate_X_at
   , gate_Y_at
   , gate_Z_at
+  , global_phase
   , global_phase_anchored
   , identity_transformer
   , qmultinot_at
   , qnot_at
+  , reverse_imp_if
   , swap_at
   , transform_generic
   , without_controls_if
@@ -83,6 +86,16 @@ elimCtrlsQGate ncf n ins ctrls op =
         with_combined_controls_tof n ctrls $ \ctrls' -> do
             op `controlled` ctrls'
             return (ins, [], ctrls)
+
+-- | Implements elimCtrls for the omega QGate (a special case).
+elimCtrlsOmega :: Bool -> Bool -> Qubit -> CtrlList -> ElimCtrlsRv
+elimCtrlsOmega inv ncf q ctrls =
+    without_controls_if ncf $ do
+        if null ctrls
+        then (reverse_imp_if inv gate_omega_at) q
+        else with_combined_controls_tof 1 ctrls $ \[c] -> do
+            reverse_imp_if inv $ global_phase 0.25 `controlled` c
+        return ([q], [], ctrls)
 
 -- | Implements elimCtrls for user-defined QGates.
 elimCtrlsUserQGate :: String -> Bool -> Bool -> ElimCtrlSig
@@ -147,7 +160,8 @@ elimCtrlsTransformer (T_QGate "T" 1 0 _ _ _) = error "Missing gate: T"
 elimCtrlsTransformer (T_QGate "V" 1 0 _ _ _) = error "Missing gate: V"
 elimCtrlsTransformer (T_QGate "E" 1 0 _ _ _) = error "Missing gate: E"
 elimCtrlsTransformer (T_QGate "W" 2 0 _ _ _) = error "Missing gate: W"
-elimCtrlsTransformer (T_QGate "omega" 1 0 _ _ _) = error "Missing gate: omega"
+elimCtrlsTransformer (T_QGate "omega" 1 0 inv ncf f) = f $
+    \[q] [] ctrls -> elimCtrlsOmega inv ncf q ctrls
 elimCtrlsTransformer (T_QGate "iX" 1 0 _ _ _) = error "Missing gate: iX"
 elimCtrlsTransformer (T_QGate name _ _  inv ncf f) = f $
     \ins gens ctrls -> elimCtrlsUserQGate name inv ncf ins gens ctrls
