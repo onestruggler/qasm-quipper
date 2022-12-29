@@ -260,6 +260,66 @@ test21 = TestCase (assertEqual "elimCtrlsTransformer on CCC(omega)."
                   ascii_cccomega ++ "\n" ++
                   "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
 
+-- W QGate
+ascii_w    = "QGate[\"W\"](0,1)"
+ascii_cw   = "QGate[\"W\"](0,1) with controls=[+2]"
+ascii_ccw  = "QGate[\"W\"](0,1) with controls=[+2, +3]"
+ascii_cccw = "QGate[\"W\"](0,1) with controls=[+2, +3, +4]"
+
+abs_w  = NamedGate GateW False [0, 1] []
+
+test22 = TestCase (assertEqual "elimCtrlsTransformer on W."
+                               [abs_w]
+                               (apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit, 4:Qbit\n" ++
+                  ascii_w ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit, 4:Qbit"
+
+test23 = TestCase (assertEqual "elimCtrlsTransformer on C(W)."
+                               output
+                               (apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit, 4:Qbit\n" ++
+                  ascii_cw ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit, 4:Qbit"
+          output = [NamedGate GateX False [1] [Pos 0],
+                    NamedGate GateS True  [0] [],
+                    NamedGate GateH False [0] [],
+                    NamedGate GateT True  [0] [],
+                    NamedGate GateH False [0] [],
+                    NamedGate GateT False [0] [],
+                    NamedGate GateT False [1] [],
+                    NamedGate GateT False [2] [],
+                    NamedGate GateX False [2] [Pos 1],
+                    NamedGate GateX False [1] [Pos 0],
+                    NamedGate GateX False [0] [Pos 2],
+                    NamedGate GateT True  [1] [],
+                    NamedGate GateT False [0] [],
+                    NamedGate GateX False [1] [Pos 2],
+                    NamedGate GateT True  [1] [],
+                    NamedGate GateT True  [2] [],
+                    NamedGate GateX False [1] [Pos 0],
+                    NamedGate GateX False [0] [Pos 2],
+                    NamedGate GateX False [2] [Pos 1],
+                    NamedGate GateH False [0] [],
+                    NamedGate GateT False [0] [],
+                    NamedGate GateH False [0] [],
+                    NamedGate GateS False [0] [],
+                    NamedGate GateX False [1] [Pos 0]]
+
+test24 = TestCase (assertEqual "elimCtrlsTransformer on CC(W)."
+                               28
+                               (length $ apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit, 4:Qbit\n" ++
+                  ascii_ccw ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit, 4:Qbit"
+
+test25 = TestCase (assertEqual "elimCtrlsTransformer on CCC(W)."
+                               32
+                               (length $ apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit, 4:Qbit\n" ++
+                  ascii_cccw ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit, 4:Qbit"
+
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
@@ -283,6 +343,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "elimCtrlsTransformer_QGate_1" te
                                      TestLabel "elimCtrlsTransformer_QGate_18" test18,
                                      TestLabel "elimCtrlsTransformer_QGate_19" test19,
                                      TestLabel "elimCtrlsTransformer_QGate_20" test20,
-                                     TestLabel "elimCtrlsTransformer_QGate_21" test21]
+                                     TestLabel "elimCtrlsTransformer_QGate_21" test21,
+                                     TestLabel "elimCtrlsTransformer_QGate_22" test22,
+                                     TestLabel "elimCtrlsTransformer_QGate_23" test23,
+                                     TestLabel "elimCtrlsTransformer_QGate_24" test24,
+                                     TestLabel "elimCtrlsTransformer_QGate_25" test25]
 
 main = defaultMain tests

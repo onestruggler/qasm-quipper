@@ -25,6 +25,7 @@ import Quipper
   , controlled
   , gate_H_at
   , gate_omega_at
+  , gate_W_at
   , gate_X_at
   , gate_Y_at
   , gate_Z_at
@@ -44,7 +45,8 @@ import Quipper.Internal.Monad
   )
 import Quipper.Internal.Transformer (B_Endpoint)
 import Quipper.Libraries.GateDecompositions
-  ( toffoli_plain_at
+  ( controlled_W_at
+  , toffoli_plain_at
   , with_combined_controls
   )
 
@@ -96,6 +98,16 @@ elimCtrlsOmega inv ncf q ctrls =
         else with_combined_controls_tof 1 ctrls $ \[c] -> do
             reverse_imp_if inv $ global_phase 0.25 `controlled` c
         return ([q], [], ctrls)
+
+-- | Implements elimCtrls for the W QGate (a special case).
+elimCtrlsW :: Bool -> Bool -> Qubit -> Qubit -> CtrlList -> ElimCtrlsRv
+elimCtrlsW inv ncf q0 q1 ctrls =
+    without_controls_if ncf $ do
+        if null ctrls
+        then (reverse_imp_if inv gate_W_at) q0 q1
+        else with_combined_controls_tof 1 ctrls $ \[c] -> do
+            (reverse_imp_if inv controlled_W_at) q0 q1 c
+        return ([q0, q1], [], ctrls)
 
 -- | Implements elimCtrls for user-defined QGates.
 elimCtrlsUserQGate :: String -> Bool -> Bool -> ElimCtrlSig
@@ -159,7 +171,8 @@ elimCtrlsTransformer (T_QGate "S" 1 0 _ _ _) = error "Missing gate: S"
 elimCtrlsTransformer (T_QGate "T" 1 0 _ _ _) = error "Missing gate: T"
 elimCtrlsTransformer (T_QGate "V" 1 0 _ _ _) = error "Missing gate: V"
 elimCtrlsTransformer (T_QGate "E" 1 0 _ _ _) = error "Missing gate: E"
-elimCtrlsTransformer (T_QGate "W" 2 0 _ _ _) = error "Missing gate: W"
+elimCtrlsTransformer (T_QGate "W" 2 0 inv ncf f) = f $
+    \[q0, q1] [] ctrls -> elimCtrlsW inv ncf q0 q1 ctrls
 elimCtrlsTransformer (T_QGate "omega" 1 0 inv ncf f) = f $
     \[q] [] ctrls -> elimCtrlsOmega inv ncf q ctrls
 elimCtrlsTransformer (T_QGate "iX" 1 0 _ _ _) = error "Missing gate: iX"
