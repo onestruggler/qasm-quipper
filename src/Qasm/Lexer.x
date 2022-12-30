@@ -22,33 +22,40 @@ $greek      = [\x370-\x3FF]
 $idchars    = ['_' $alpha $greek]
 
 tokens :-
-    $white+                                 ;
+    <0>             $white+                           ;
+    -- Comment Parsing.
+    <0>             \/\/                              { begin commentsl }
+    <0>             \/\*                              { begin commentml }
+    <commentsl>     \n                                { begin 0 }
+    <commentsl>     .                                 ;
+    <commentml>     \*\/                              { begin 0 }
+    <commentml>     [.\n]                             ;
     -- Gates and Modifiers.
-    ctrl                                    { constLex TokenCtrl }
-    negctrl                                 { constLex TokenNegCtrl }
-    inv                                     { constLex TokenInv }
-    pow                                     { constLex TokenPow }
-    gphase                                  { constLex TokenGPhase }
+    <0>             ctrl                              { constLex TokenCtrl }
+    <0>             negctrl                           { constLex TokenNegCtrl }
+    <0>             inv                               { constLex TokenInv }
+    <0>             pow                               { constLex TokenPow }
+    <0>             gphase                            { constLex TokenGPhase }
     -- Type Keywords.
-    qreg                                    { constLex TokenQReg }
-    qubit                                   { constLex TokenQubit }
+    <0>             qreg                              { constLex TokenQReg }
+    <0>             qubit                             { constLex TokenQubit }
     -- Literals and Identifiers.
-    ($decimal '_'?)* $decimal               { charLex TokenDecInt }
-    \x3C0 | pi                              { charLex TokenPi }
-    $idchars [$idchars $decimal]*           { charLex TokenID }
+    <0>             ($decimal '_'?)* $decimal         { charLex TokenDecInt }
+    <0>             \x3C0 | pi                        { charLex TokenPi }
+    <0>             $idchars [$idchars $decimal]*     { charLex TokenID }
     -- Operators.
-    \@                                      { constLex TokenAt }
-    \+                                      { constLex TokenPlus }
-    \-                                      { constLex TokenMinus }
-    \*                                      { constLex TokenStar }
-    \/                                      { constLex TokenSlash }
+    <0>             \@                                { constLex TokenAt }
+    <0>             \+                                { constLex TokenPlus }
+    <0>             \-                                { constLex TokenMinus }
+    <0>             \*                                { constLex TokenStar }
+    <0>             \/                                { constLex TokenSlash }
     -- Braces.
-    \(                                      { constLex TokenLParen }
-    \)                                      { constLex TokenRParen }
-    \[                                      { constLex TokenLBrack }
-    \]                                      { constLex TokenRBrack }
-    \,                                      { constLex TokenComma }
-    \;                                      { constLex TokenSemicolon }
+    <0>             \(                                { constLex TokenLParen }
+    <0>             \)                                { constLex TokenRParen }
+    <0>             \[                                { constLex TokenLBrack }
+    <0>             \]                                { constLex TokenRBrack }
+    <0>             \,                                { constLex TokenComma }
+    <0>             \;                                { constLex TokenSemicolon }
 
 {
 -- File path is maintained to improve error messages.
