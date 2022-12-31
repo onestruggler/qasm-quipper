@@ -8,6 +8,9 @@ module Qasm.Passes
   , toAst
   ) where
 
+-------------------------------------------------------------------------------
+-- * Import Section.
+
 import Qasm.AST (AstStmt(..))
 import Qasm.Expression
   ( ExprErr

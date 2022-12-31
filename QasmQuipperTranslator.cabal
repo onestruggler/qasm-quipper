@@ -29,6 +29,7 @@ library
                        Quip.Parser
                        Quip.Transformers
                        Quip.Wire
+                       QuipToQasm.Translator
   other-modules:       Qasm.Lexer
   build-tools:         happy,
                        alex
@@ -119,6 +120,12 @@ test-suite quip-transformers-tests
   import:              basic-unit-test-props
   main-is:             Quip-Transformers-Tests.hs
   build-depends:       quipper-language
+  type:                exitcode-stdio-1.0
+
+test-suite quiptoqasm-translator-tests
+  import:              basic-unit-test-props
+  main-is:             QuipToQasm-Translator-Tests.hs
+  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite quip-wire-tests
