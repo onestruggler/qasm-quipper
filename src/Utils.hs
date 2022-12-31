@@ -3,15 +3,25 @@
 module Utils
   ( maybeAppend
   , maybeWrap
+  , setMaybe
   ) where
 
 -------------------------------------------------------------------------------
 -- * Import Section.
 
-import Data.Maybe (maybe)
+import Data.Maybe
+  ( isNothing
+  , maybe
+  )
 
 -------------------------------------------------------------------------------
 -- * Maybe Utilities.
+
+-- | Takes as input a value v of type T and maybe a value u also of type T. If
+-- v is nothing, then just u is returned. Otherwise, v is returned.
+setMaybe :: a -> Maybe a -> Maybe a
+setMaybe u Nothing = Just u
+setMaybe _ v       = v
 
 -- | Takes as input maybe a value v. If v is just a value, then just [v] is
 -- returned. Otherwise, nothing is returned.

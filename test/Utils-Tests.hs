@@ -36,6 +36,25 @@ test6 = TestCase (assertEqual "maybeAppend supports constructor Just (type Strin
                               (maybeAppend "Hello" (Just ["World"] :: Maybe [String])))
 
 -----------------------------------------------------------------------------------------
+-- setMaybe
+
+test7 = TestCase (assertEqual "setMaybe supports constructor Nothing (1/2)."
+                              (Just 5)
+                              (setMaybe 5 Nothing))
+
+test8 = TestCase (assertEqual "setMaybe supports constructor Nothing (2/2)."
+                              (Just "Hello")
+                              (setMaybe "Hello" Nothing))
+
+test9 = TestCase (assertEqual "setMaybe supports constructor Just (1/2)."
+                              (Just 42)
+                              (setMaybe 5 (Just 42)))
+
+test10 = TestCase (assertEqual "setMaybe supports constructor Just (2/2)."
+                               (Just "Goodbye")
+                               (setMaybe "Hello" (Just "Goodbye")))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "maybeWrap_Nothing" test1,
@@ -43,6 +62,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "maybeWrap_Nothing" test1,
                                      TestLabel "maybeWrap_JustStr" test3,
                                      TestLabel "maybeAppend_Nothing" test4,
                                      TestLabel "maybeAppend_JustInt" test5,
-                                     TestLabel "maybeAppend_JustStr" test6]
+                                     TestLabel "maybeAppend_JustStr" test6,
+                                     TestLabel "setMaybe_NothingInt" test7,
+                                     TestLabel "setMaybe_NothingStr" test8,
+                                     TestLabel "setMaybe_JustInt" test9,
+                                     TestLabel "setMaybe_JustStr" test10]
 
 main = defaultMain tests
