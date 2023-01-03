@@ -16,6 +16,8 @@ module QasmToQuip.Wire
   , initWire
   , isOutput
   , termWire
+  , toQuipperInputs
+  , toQuipperOutputs
   , useWire
   , wireIndex
   ) where
@@ -138,7 +140,7 @@ initialAllocations = WireAllocMap 0 Map.empty
 -- | Helper function to allocate wires of an array.
 populateWires :: Int -> Int -> IntMap.IntMap WireState
 populateWires wct size = foldr f IntMap.empty [0..(size - 1)]
-    where f idx = IntMap.insert idx (allocateWire $ size + idx)
+    where f idx = IntMap.insert idx (allocateWire $ wct + idx)
 
 -- | Takes as input a declaration identifier (name), the declaration size when
 -- applicable (size), and a wire allocation map. If (name, size) describes a
@@ -164,3 +166,45 @@ getDeclType name (WireAllocMap _ map) =
         Nothing                -> Undeclared
         Just (ty, Left _)      -> Scalar ty
         Just (ty, Right cells) -> Array ty (IntMap.size cells)
+
+-------------------------------------------------------------------------------
+-- * Conversions From WireAllocMaps to Quipper IO.
+
+-- | A predicate over wire states.
+type WirePred = WireState -> Bool
+
+-- | A mapping from wire indices to wire types.
+type WireSubset = IntMap.IntMap WireType
+
+-- | Helper function to add a wire to the subset, if and only if it satisfies
+-- the predicate which defines the subset.
+addToSubset :: WirePred -> WireType -> WireState -> WireSubset -> WireSubset
+addToSubset pred ty wire subset = if pred wire
+                                  then IntMap.insert (wireIndex wire) ty subset
+                                  else subset
+
+-- | Helper function to fold over the wire state of each declaration. Each wire
+-- is added to the subset, if and only if it satisfies the predicate which
+-- defines the subset.
+wireFold :: WirePred -> (WireType, DeclWireState) -> WireSubset -> WireSubset
+wireFold pred (ty, (Left wire))   subset = addToSubset pred ty wire subset
+wireFold pred (ty, (Right cells)) subset = IntMap.foldr f subset cells
+    where f = addToSubset pred ty
+
+-- | Helper function to compute the subset of a WireAllocMap defined by a
+-- wire predicate. For each wire in the allocation map, if the wire satisfies
+-- the predicate, then (n, ty) is added to the subset, where n is the wire
+-- index and ty is the type associated with the wire.
+toWireSubset :: WirePred -> WireAllocMap -> WireSubset
+toWireSubset pred (WireAllocMap _ map) = Map.foldr f IntMap.empty map
+    where f = wireFold pred
+
+-- | Takes as input a wire allocation map. Returns a mapping from wire indices
+-- to wire types, where each wire corresponds to a Quipper input.
+toQuipperInputs :: WireAllocMap -> WireSubset
+toQuipperInputs = toWireSubset isInput
+
+-- | Takes as input a wire allocation map. Returns a mapping from wire indices
+-- to wire types, where each wire corresponds to a Quipper output.
+toQuipperOutputs :: WireAllocMap -> IntMap.IntMap WireType
+toQuipperOutputs = toWireSubset isOutput

@@ -1,5 +1,6 @@
 module Main where
 
+import qualified Data.IntMap.Strict as IntMap
 import Data.Maybe
 import Test.Framework
 import Test.Framework.Providers.HUnit
@@ -297,6 +298,62 @@ test68 = TestCase (assertEqual "WireAllocMap: double initialize (6/6)."
                                (allocate QWire "decl4" Nothing alloc4))
 
 -----------------------------------------------------------------------------------------
+-- WireAllocMaps to Quipper IO Without Wire Interactions.
+
+io0 = IntMap.empty :: IntMap.IntMap WireType
+io1 = IntMap.insert 0 QWire io0
+io2 = IntMap.insert 1 CWire
+    $ IntMap.insert 2 CWire
+    $ IntMap.insert 3 CWire
+    $ IntMap.insert 4 CWire
+    $ IntMap.insert 5 CWire io1
+io3 = IntMap.insert 6 QWire
+    $ IntMap.insert 7 QWire
+    $ IntMap.insert 8 QWire
+    $ IntMap.insert 9 QWire io2
+io4 = IntMap.insert 10 CWire io3
+
+test69 = TestCase (assertEqual "WireAllocMap: basic input cases (1/5)."
+                               io0
+                               (toQuipperInputs alloc0))
+
+test70 = TestCase (assertEqual "WireAllocMap: basic input cases (2/5)."
+                               io1
+                               (toQuipperInputs alloc1))
+
+test71 = TestCase (assertEqual "WireAllocMap: basic input cases (3/5)."
+                               io2
+                               (toQuipperInputs alloc2))
+
+test72 = TestCase (assertEqual "WireAllocMap: basic input cases (4/5)."
+                               io3
+                               (toQuipperInputs alloc3))
+
+test73 = TestCase (assertEqual "WireAllocMap: basic input cases (5/5)."
+                               io4
+                               (toQuipperInputs alloc4))
+
+test74 = TestCase (assertEqual "WireAllocMap: basic output cases (1/5)."
+                               io0
+                               (toQuipperOutputs alloc0))
+
+test75 = TestCase (assertEqual "WireAllocMap: basic output cases (2/5)."
+                               io1
+                               (toQuipperOutputs alloc1))
+
+test76 = TestCase (assertEqual "WireAllocMap: basic output cases (3/5)."
+                               io2
+                               (toQuipperOutputs alloc2))
+
+test77 = TestCase (assertEqual "WireAllocMap: basic output cases (4/5)."
+                               io3
+                               (toQuipperOutputs alloc3))
+
+test78 = TestCase (assertEqual "WireAllocMap: basic output cases (5/5)."
+                               io4
+                               (toQuipperOutputs alloc4))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "WireAPI_UniqueStates_1" test1,
@@ -366,6 +423,16 @@ tests = hUnitTestToTests $ TestList [TestLabel "WireAPI_UniqueStates_1" test1,
                                      TestLabel "WireAllocMap_Unique_3" test65,
                                      TestLabel "WireAllocMap_Unique_4" test66,
                                      TestLabel "WireAllocMap_Unique_5" test67,
-                                     TestLabel "WireAllocMap_Unique_6" test68]
+                                     TestLabel "WireAllocMap_Unique_6" test68,
+                                     TestLabel "WireAllocMap_BasicIn_1" test69,
+                                     TestLabel "WireAllocMap_BasicIn_2" test70,
+                                     TestLabel "WireAllocMap_BasicIn_3" test71,
+                                     TestLabel "WireAllocMap_BasicIn_4" test72,
+                                     TestLabel "WireAllocMap_BasicIn_5" test73,
+                                     TestLabel "WireAllocMap_BasicOut_1" test74,
+                                     TestLabel "WireAllocMap_BasicOut_2" test75,
+                                     TestLabel "WireAllocMap_BasicOut_3" test76,
+                                     TestLabel "WireAllocMap_BasicOut_4" test77,
+                                     TestLabel "WireAllocMap_BasicOut_5" test78]
 
 main = defaultMain tests
