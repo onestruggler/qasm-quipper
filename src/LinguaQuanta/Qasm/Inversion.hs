@@ -10,6 +10,10 @@ module LinguaQuanta.Qasm.Inversion
 -------------------------------------------------------------------------------
 -- * Import Section.
 
+import LinguaQuanta.Maybe
+  ( maybeAppend
+  , maybeWrap 
+  )
 import LinguaQuanta.Qasm.Expression
   ( avgExpr
   , negateExpr
@@ -30,10 +34,6 @@ import LinguaQuanta.Qasm.GateName
 import LinguaQuanta.Qasm.Language
   ( Expr(..)
   , GateOperand
-  )
-import LinguaQuanta.Maybe
-  ( maybeAppend
-  , maybeWrap 
   )
 
 -------------------------------------------------------------------------------

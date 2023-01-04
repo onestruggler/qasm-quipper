@@ -576,6 +576,76 @@ test115 = TestCase (assertEqual "WireAllocMap: array updates require in-bounds i
                                 (initCell "decl2" 10 alloc4))
 
 -----------------------------------------------------------------------------------------
+-- toSize: fresh allocations
+
+test116 = TestCase (assertEqual "WireAllocMap: toSize on fresh allocations (1/5)."
+                                0
+                                (toSize alloc0))
+
+test117 = TestCase (assertEqual "WireAllocMap: toSize on fresh allocations (2/5)."
+                                1
+                                (toSize alloc1))
+
+test118 = TestCase (assertEqual "WireAllocMap: toSize on fresh allocations (3/5)."
+                                6
+                                (toSize alloc2))
+
+test119 = TestCase (assertEqual "WireAllocMap: toSize on fresh allocations (4/5)."
+                                10
+                                (toSize alloc3))
+
+test120 = TestCase (assertEqual "WireAllocMap: toSize on fresh allocations (5/5)."
+                                11
+                                (toSize alloc4))
+
+-----------------------------------------------------------------------------------------
+-- toSize: example trace
+
+trace1 = fromJust $ initScalar "decl1"   alloc2
+trace2 = fromJust $ termCell   "decl2" 1 trace1
+trace3 = fromJust $ termCell   "decl2" 3 trace2
+
+trace4 = fromJust $ allocate QWire "decl3" (Just 4) trace3
+
+trace5 = fromJust $ initCell "decl2" 1 trace4
+trace6 = fromJust $ termCell "decl3" 0 trace5
+trace7 = fromJust $ useCell  "decl3" 2 trace6
+
+trace8 = fromJust $ allocate QWire "decl4" (Just 10) trace7
+
+test121 = TestCase (assertEqual "WireAllocMap: toSize on a trace of updates (1/8)."
+                                6
+                                (toSize trace1))
+
+test122 = TestCase (assertEqual "WireAllocMap: toSize on a trace of updates (2/8)."
+                                6
+                                (toSize trace2))
+
+test123 = TestCase (assertEqual "WireAllocMap: toSize on a trace of updates (3/8)."
+                                6
+                                (toSize trace3))
+
+test124 = TestCase (assertEqual "WireAllocMap: toSize on a trace of updates (4/8)."
+                                8
+                                (toSize trace4))
+
+test125 = TestCase (assertEqual "WireAllocMap: toSize on a trace of updates (5/8)."
+                                9
+                                (toSize trace5))
+
+test126 = TestCase (assertEqual "WireAllocMap: toSize on a trace of updates (6/8)."
+                                9
+                                (toSize trace6))
+
+test127 = TestCase (assertEqual "WireAllocMap: toSize on a trace of updates (7/8)."
+                                9
+                                (toSize trace7))
+
+test128 = TestCase (assertEqual "WireAllocMap: toSize on a trace of updates (8/8)."
+                                18
+                                (toSize trace8))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "WireAPI_UniqueStates_1" test1,
@@ -692,6 +762,19 @@ tests = hUnitTestToTests $ TestList [TestLabel "WireAPI_UniqueStates_1" test1,
                                      TestLabel "WireAllocMap_CArrayOut_4" test112,
                                      TestLabel "WireAllocMap_ScalarAsArrayErr" test113,
                                      TestLabel "WireAllocMap_ArrayUndefErr" test114,
-                                     TestLabel "WireAllocMap_BoundsErr" test115]
+                                     TestLabel "WireAllocMap_BoundsErr" test115,
+                                     TestLabel "WireAllocMap_toSize_Initial_1" test116,
+                                     TestLabel "WireAllocMap_toSize_Initial_2" test117,
+                                     TestLabel "WireAllocMap_toSize_Initial_3" test118,
+                                     TestLabel "WireAllocMap_toSize_Initial_4" test119,
+                                     TestLabel "WireAllocMap_toSize_Initial_5" test120,
+                                     TestLabel "WireAllocMap_toSize_Trace_1" test121,
+                                     TestLabel "WireAllocMap_toSize_Trace_2" test122,
+                                     TestLabel "WireAllocMap_toSize_Trace_3" test123,
+                                     TestLabel "WireAllocMap_toSize_Trace_4" test124,
+                                     TestLabel "WireAllocMap_toSize_Trace_5" test125,
+                                     TestLabel "WireAllocMap_toSize_Trace_6" test126,
+                                     TestLabel "WireAllocMap_toSize_Trace_7" test127,
+                                     TestLabel "WireAllocMap_toSize_Trace_8" test128]
 
 main = defaultMain tests

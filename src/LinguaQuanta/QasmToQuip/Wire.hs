@@ -22,6 +22,7 @@ module LinguaQuanta.QasmToQuip.Wire
   , termWire
   , toQuipperInputs
   , toQuipperOutputs
+  , toSize
   , useCell
   , useScalar
   , useWire
@@ -37,11 +38,17 @@ import Data.Maybe
   ( isJust
   , maybe
   )
-import LinguaQuanta.Quip.Wire (WireType)
+import LinguaQuanta.MaxTracker
+  ( MaxTracker
+  , initTracker
+  , maxval
+  , updateTracker
+  )
 import LinguaQuanta.Maybe
   ( branchJust
   , setMaybe
   )
+import LinguaQuanta.Quip.Wire (WireType)
 
 -------------------------------------------------------------------------------
 -- * Wire Allocation Data.
@@ -136,7 +143,10 @@ type DeclWireState = Either WireState (IntMap.IntMap WireState)
 type DeclWireStateMap = Map.Map String (WireType, DeclWireState)
 
 -- | Maintains a mapping from declarartions to WireStates.
-data WireAllocMap = WireAllocMap Int Int DeclWireStateMap deriving (Eq, Show)
+data WireAllocMap = WireAllocMap Int
+                                 (MaxTracker Int)
+                                 DeclWireStateMap
+                                 deriving (Eq, Show)
 
 -- | Helper type for fuctions taht try to update WireAllocMaps, with the
 -- possibility of failure.
@@ -151,7 +161,7 @@ data DeclType = Undeclared
 
 -- | Returns an empty wire allocation map.
 initialAllocations :: WireAllocMap
-initialAllocations = WireAllocMap 0 0 Map.empty
+initialAllocations = WireAllocMap 0 (initTracker 0) Map.empty
 
 -- | Helper function to allocate wires of an array.
 populateWires :: Int -> Int -> IntMap.IntMap WireState
@@ -170,10 +180,10 @@ allocate ty name size (WireAllocMap tot cur map) =
     if Map.member name map
     then Nothing
     else case size of
-        Nothing -> add 1 (Left $ allocateWire cur)
-        Just n  -> add n (Right $ populateWires cur n)
+        Nothing -> add 1 (Left $ allocateWire tot)
+        Just n  -> add n (Right $ populateWires tot n)
     where add c st = Just $ WireAllocMap (tot + c)
-                                         (cur + c) 
+                                         (updateTracker cur $ \x -> x + c) 
                                          (Map.insert name (ty, st) map)
 
 -- | Takes as input a declaration name and a wire allocation map. Returns the
@@ -234,7 +244,8 @@ applyToScalar pred update name map =
 initScalar :: String -> TryMapUpdate
 initScalar name (WireAllocMap tot cur map) =
     branchJust (applyToScalar initPred initWire name map) $ \(b, map') ->
-        Just $ WireAllocMap tot (cur + fromEnum b) map'
+        let cur' = updateTracker cur $ \x -> x + fromEnum b
+        in Just $ WireAllocMap tot cur' map'
 
 -- | Takes as input a declaration name (name) and a wire allocation map (map).
 -- If map contains a declaration (ty, w) of type Scalar, then replaces the
@@ -246,7 +257,8 @@ initScalar name (WireAllocMap tot cur map) =
 termScalar :: String -> TryMapUpdate
 termScalar name (WireAllocMap tot cur map) =
     branchJust (applyToScalar isOutput termWire name map) $ \(b, map') ->
-        Just $ WireAllocMap tot (cur - fromEnum b) map'
+        let cur' = updateTracker cur $ \x -> x - fromEnum b
+        in Just $ WireAllocMap tot cur' map'
 
 -- | Takes as input a declaration name (name) and a wire allocation map (map).
 -- If map contains a declaration (ty, w) of type Scalar, then replaces the
@@ -289,7 +301,8 @@ applyToCell pred update name idx map =
 initCell :: String -> Int -> TryMapUpdate
 initCell name idx (WireAllocMap tot cur map) =
     branchJust (applyToCell initPred initWire name idx map) $ \(b, map') ->
-        Just $ WireAllocMap tot (cur + fromEnum b) map'
+        let cur' = updateTracker cur $ \x -> x + fromEnum b
+        in Just $ WireAllocMap tot cur' map'
 
 -- | Takes as input a declaration name (name), an array index (idx), and a wire
 -- allocation map (map). If map contains a declaration (ty, w) of type Array of
@@ -302,7 +315,8 @@ initCell name idx (WireAllocMap tot cur map) =
 termCell :: String -> Int -> TryMapUpdate
 termCell name idx (WireAllocMap tot cur map) =
     branchJust (applyToCell isOutput termWire name idx map) $ \(b, map') ->
-        Just $ WireAllocMap tot (cur - fromEnum b) map'
+        let cur' = updateTracker cur $ \x -> x - fromEnum b
+        in Just $ WireAllocMap tot cur' map'
 
 -- | Takes as input a declaration name (name), an array index (idx) and a wire
 -- allocation map (map). If map contains a declaration (ty, w) of type Array of
@@ -354,3 +368,7 @@ toQuipperInputs = toWireSubset isInput
 -- to wire types, where each wire corresponds to a Quipper output.
 toQuipperOutputs :: WireAllocMap -> IntMap.IntMap WireType
 toQuipperOutputs = toWireSubset isOutput
+
+-- | Returns the size of a Quipper circuit, as indicated by a WireAllocMap.
+toSize :: WireAllocMap -> Int
+toSize (WireAllocMap _ cur _) = maxval cur
