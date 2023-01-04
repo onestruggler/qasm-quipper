@@ -25,12 +25,13 @@ library
                        LinguaQuanta.Qasm.Passes
                        LinguaQuanta.Qasm.Parser
                        LinguaQuanta.Qasm.Printer
+                       LinguaQuanta.QasmToQuip.Translator
+                       LinguaQuanta.QasmToQuip.Wire
                        LinguaQuanta.Quip.Gate
                        LinguaQuanta.Quip.GateName
                        LinguaQuanta.Quip.Quipper
                        LinguaQuanta.Quip.Transformers
                        LinguaQuanta.Quip.Wire
-                       LinguaQuanta.QasmToQuip.Wire
                        LinguaQuanta.QuipToQasm.Translator
   other-modules:       LinguaQuanta.Qasm.Lexer
   build-tools:         happy,
@@ -116,6 +117,12 @@ test-suite qasm-parser-tests
 test-suite qasm-passes-tests
   import:              basic-unit-test-props
   main-is:             Qasm-Passes-Tests.hs
+  type:                exitcode-stdio-1.0
+
+test-suite qasmtoquip-translator-tests
+  import:              basic-unit-test-props
+  main-is:             QasmToQuip-Translator-Tests.hs
+  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-wire-tests
