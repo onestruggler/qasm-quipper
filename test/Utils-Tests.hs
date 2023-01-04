@@ -55,6 +55,23 @@ test10 = TestCase (assertEqual "setMaybe supports constructor Just (2/2)."
                                (setMaybe "Hello" (Just "Goodbye")))
 
 -----------------------------------------------------------------------------------------
+-- branchJust
+
+test11 = TestCase (assertEqual "branchJust supports constructor Nothing."
+                               (Nothing :: Maybe Int)
+                               (branchJust Nothing id))
+
+test12 = TestCase (assertEqual "branchJust supports constructor Just (type Int)."
+                               (Just 7 :: Maybe Int)
+                               (branchJust (Just 5 :: Maybe Int) f))
+    where f x = Just $ x + 2
+
+test13 = TestCase (assertEqual "branchJust supports constructor Just (type String)."
+                               (Just "Hello World" :: Maybe String)
+                               (branchJust (Just "Hello" :: Maybe String) f))
+    where f str = Just $ str ++ " World"
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "maybeWrap_Nothing" test1,
@@ -66,6 +83,9 @@ tests = hUnitTestToTests $ TestList [TestLabel "maybeWrap_Nothing" test1,
                                      TestLabel "setMaybe_NothingInt" test7,
                                      TestLabel "setMaybe_NothingStr" test8,
                                      TestLabel "setMaybe_JustInt" test9,
-                                     TestLabel "setMaybe_JustStr" test10]
+                                     TestLabel "setMaybe_JustStr" test10,
+                                     TestLabel "branchJust_Nothing" test11,
+                                     TestLabel "branchJust_JustInt" test12,
+                                     TestLabel "branchJust_JustStr" test13]
 
 main = defaultMain tests

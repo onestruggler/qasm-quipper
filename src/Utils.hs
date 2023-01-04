@@ -1,7 +1,8 @@
 -- | General-purpose utility functions.
 
 module Utils
-  ( maybeAppend
+  ( branchJust
+  , maybeAppend
   , maybeWrap
   , setMaybe
   ) where
@@ -32,3 +33,10 @@ maybeWrap = maybe Nothing (\x -> Just [x])
 -- list, then just v:vs is returned. Otherwise, nothing is returned.
 maybeAppend :: a -> Maybe [a] -> Maybe [a]
 maybeAppend v = maybe Nothing (\vs -> Just (v:vs))
+
+-- | Consumes a (Maybe a) value and a function f from type a to type (Maybe b). If the
+-- Maybe argument wraps a value x of type a, then (f x) is returned. Otherwise, nothing
+-- is returned.
+branchJust :: Maybe a -> (a -> Maybe b) -> Maybe b
+branchJust Nothing  _ = Nothing
+branchJust (Just x) f = f x

@@ -38,7 +38,10 @@ import Data.Maybe
   , maybe
   )
 import Quip.Wire (WireType)
-import Utils (setMaybe)
+import Utils
+  ( branchJust
+  , setMaybe
+  )
 
 -------------------------------------------------------------------------------
 -- * Wire Allocation Data.
@@ -190,6 +193,9 @@ getDeclType name (WireAllocMap _ _ map) =
 -- indicating whether the update changes the current circuit size.
 type ScalarUpdate = DeclWireStateMap -> Maybe (Bool, DeclWireStateMap)
 
+-- | Helper predicate for init updates.
+initPred = not. isOutput
+
 -- | Helper method to apply a wire update to a wire state. Assumes that the
 -- update is valid, and reports an error otherwise. The declaration name and
 -- (when applicable) index are used in error reporting.
@@ -212,12 +218,11 @@ applyUpdate name maybeIdx update wire =
 -- exists and the update is not applicable, then an error is reported.
 applyToScalar :: WirePred -> WireUpdate -> String -> ScalarUpdate
 applyToScalar pred update name map =
-    case Map.lookup name map of
-        Nothing           -> Nothing
-        Just (_, Right _) -> Nothing
-        Just (ty, Left w) -> let w'   = applyUpdate name Nothing update w
-                                 map' = Map.insert name (ty, Left w') map
-                             in Just (pred w, map')
+    branchJust (Map.lookup name map) $ \(ty, st) -> case st of
+        Right _   -> Nothing
+        Left wire -> let wire' = applyUpdate name Nothing update wire
+                         map'  = Map.insert name (ty, Left wire') map
+                     in Just (pred wire, map')
 
 -- | Takes as input a declaration name (name) and a wire allocation map (map).
 -- If map contains a declaration (ty, w) of type Scalar, then replaces the
@@ -228,9 +233,8 @@ applyToScalar pred update name map =
 -- exists and the update is not applicable, then an error is reported.
 initScalar :: String -> TryMapUpdate
 initScalar name (WireAllocMap tot cur map) =
-    case applyToScalar (not . isOutput) initWire name map of
-        Nothing        -> Nothing
-        Just (b, map') -> Just $ WireAllocMap tot (cur + fromEnum b)  map'
+    branchJust (applyToScalar initPred initWire name map) $ \(b, map') ->
+        Just $ WireAllocMap tot (cur + fromEnum b) map'
 
 -- | Takes as input a declaration name (name) and a wire allocation map (map).
 -- If map contains a declaration (ty, w) of type Scalar, then replaces the
@@ -241,9 +245,8 @@ initScalar name (WireAllocMap tot cur map) =
 -- exists and the update is not applicable, then an error is reported.
 termScalar :: String -> TryMapUpdate
 termScalar name (WireAllocMap tot cur map) =
-    case applyToScalar isOutput termWire name map of
-        Nothing        -> Nothing
-        Just (b, map') -> Just $ WireAllocMap tot (cur - fromEnum b) map'
+    branchJust (applyToScalar isOutput termWire name map) $ \(b, map') ->
+        Just $ WireAllocMap tot (cur - fromEnum b) map'
 
 -- | Takes as input a declaration name (name) and a wire allocation map (map).
 -- If map contains a declaration (ty, w) of type Scalar, then replaces the
@@ -253,9 +256,8 @@ termScalar name (WireAllocMap tot cur map) =
 -- exists and the update is not applicable, then an error is reported.
 useScalar :: String -> TryMapUpdate
 useScalar name (WireAllocMap tot cur map) =
-    case applyToScalar isWire useWire name map of
-        Nothing        -> Nothing
-        Just (_, map') -> Just $ WireAllocMap tot cur map'
+    branchJust (applyToScalar isWire useWire name map) $ \(_, map') ->
+        Just $ WireAllocMap tot cur map'
 
 -- | Helper method to interact with array declarations. Takes as input a wire
 -- predicate (pred), a wire updater (update), a declaration name (name), an
@@ -268,15 +270,13 @@ useScalar name (WireAllocMap tot cur map) =
 -- exists and the update is not applicable, then an error is reported.
 applyToCell :: WirePred -> WireUpdate -> String -> Int -> ScalarUpdate 
 applyToCell pred update name idx map =
-    case Map.lookup name map of
-        Nothing            -> Nothing
-        Just (_, Left _)   -> Nothing
-        Just (ty, Right c) -> case IntMap.lookup idx c of
-            Nothing -> Nothing
-            Just w  -> let w'   = applyUpdate name (Just idx) update w
-                           c'   = IntMap.insert idx w' c
-                           map' = Map.insert name (ty, Right c') map
-                         in Just (pred w, map')
+    branchJust (Map.lookup name map) $ \(ty, st) -> case st of
+        Left _     -> Nothing
+        Right cell -> branchJust (IntMap.lookup idx cell) $ \wire ->
+            let wire'  = applyUpdate name (Just idx) update wire
+                cells' = IntMap.insert idx wire' cell
+                map'   = Map.insert name (ty, Right cells') map
+            in Just (pred wire, map')
 
 -- | Takes as input a declaration name (name), an array index (idx), and a wire
 -- allocation map (map). If map contains a declaration (ty, w) of type Array of
@@ -288,9 +288,8 @@ applyToCell pred update name idx map =
 -- exists and the update is not applicable, then an error is reported.
 initCell :: String -> Int -> TryMapUpdate
 initCell name idx (WireAllocMap tot cur map) =
-    case applyToCell (not . isOutput) initWire name idx map of
-        Nothing        -> Nothing
-        Just (b, map') -> Just $ WireAllocMap tot (cur + fromEnum b) map'
+    branchJust (applyToCell initPred initWire name idx map) $ \(b, map') ->
+        Just $ WireAllocMap tot (cur + fromEnum b) map'
 
 -- | Takes as input a declaration name (name), an array index (idx), and a wire
 -- allocation map (map). If map contains a declaration (ty, w) of type Array of
@@ -302,9 +301,8 @@ initCell name idx (WireAllocMap tot cur map) =
 -- exists and the update is not applicable, then an error is reported.
 termCell :: String -> Int -> TryMapUpdate
 termCell name idx (WireAllocMap tot cur map) =
-    case applyToCell isOutput termWire name idx map of
-        Nothing        -> Nothing
-        Just (b, map') -> Just $ WireAllocMap tot (cur - fromEnum b) map'
+    branchJust (applyToCell isOutput termWire name idx map) $ \(b, map') ->
+        Just $ WireAllocMap tot (cur - fromEnum b) map'
 
 -- | Takes as input a declaration name (name), an array index (idx) and a wire
 -- allocation map (map). If map contains a declaration (ty, w) of type Array of
@@ -315,9 +313,8 @@ termCell name idx (WireAllocMap tot cur map) =
 -- exists and the update is not applicable, then an error is reported.
 useCell :: String -> Int -> TryMapUpdate
 useCell name idx (WireAllocMap tot cur map) =
-    case applyToCell isWire useWire name idx map of
-        Nothing        -> Nothing
-        Just (_, map') -> Just $ WireAllocMap tot cur map'
+    branchJust (applyToCell isWire useWire name idx map) $ \(_, map') ->
+        Just $ WireAllocMap tot cur map'
 
 -------------------------------------------------------------------------------
 -- * Conversions From WireAllocMaps to Quipper IO.
