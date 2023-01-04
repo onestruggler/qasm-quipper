@@ -7,14 +7,14 @@ module Main where
 -------------------------------------------------------------------------------
 -- * Import Section.
 
-import Qasm.AST (AstStmt)
-import Qasm.Parser (parseQasm)
-import Qasm.Passes
+import LinguaQuanta.Qasm.AST (AstStmt)
+import LinguaQuanta.Qasm.Parser (parseQasm)
+import LinguaQuanta.Qasm.Passes
   ( elimInv
   , elimPow
   , toAst
   )
-import Qasm.Printer (printAst)
+import LinguaQuanta.Qasm.Printer (printAst)
 import QasmTools.CmdLn
   ( QasmTools(..)
   , getToolArgs

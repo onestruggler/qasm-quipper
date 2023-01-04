@@ -1,6 +1,6 @@
 -- | Named gates and associated data.
 
-module Qasm.GateName where
+module LinguaQuanta.Qasm.GateName where
 
 -------------------------------------------------------------------------------
 -- * Gate Name Declarations.

@@ -1,6 +1,6 @@
 cabal-version:       2.2
 
-name:                QasmQuipperTranslator
+name:                LinguaQuanta
 version:             0.1.0.0
 synopsis:            Parsing and translation tools for Quipper and OpenQASM 3.
 -- description:
@@ -14,24 +14,24 @@ build-type:          Simple
 extra-source-files:  CHANGELOG.md, README.md
 
 library
-  exposed-modules:     Utils
-                       Qasm.AST
-                       Qasm.Expression
-                       Qasm.Gate
-                       Qasm.GateName
-                       Qasm.Inversion
-                       Qasm.Language
-                       Qasm.Passes
-                       Qasm.Parser
-                       Qasm.Printer
-                       Quip.Gate
-                       Quip.GateName
-                       Quip.Parser
-                       Quip.Transformers
-                       Quip.Wire
-                       QasmToQuip.Wire
-                       QuipToQasm.Translator
-  other-modules:       Qasm.Lexer
+  exposed-modules:     LinguaQuanta.Utils
+                       LinguaQuanta.Qasm.AST
+                       LinguaQuanta.Qasm.Expression
+                       LinguaQuanta.Qasm.Gate
+                       LinguaQuanta.Qasm.GateName
+                       LinguaQuanta.Qasm.Inversion
+                       LinguaQuanta.Qasm.Language
+                       LinguaQuanta.Qasm.Passes
+                       LinguaQuanta.Qasm.Parser
+                       LinguaQuanta.Qasm.Printer
+                       LinguaQuanta.Quip.Gate
+                       LinguaQuanta.Quip.GateName
+                       LinguaQuanta.Quip.Quipper
+                       LinguaQuanta.Quip.Transformers
+                       LinguaQuanta.Quip.Wire
+                       LinguaQuanta.QasmToQuip.Wire
+                       LinguaQuanta.QuipToQasm.Translator
+  other-modules:       LinguaQuanta.Qasm.Lexer
   build-tools:         happy,
                        alex
   build-depends:       base,
@@ -54,8 +54,8 @@ executable qasm_tools
   build-depends:       base,
                        cmdargs,
                        directory,
-                       pretty-simple,
-                       QasmQuipperTranslator
+                       LinguaQuanta,
+                       pretty-simple
   hs-source-dirs:      exe
   default-language:    Haskell2010
 
@@ -68,8 +68,8 @@ executable quip_tools
   build-depends:       base,
                        cmdargs,
                        directory,
-                       pretty-simple,
-                       QasmQuipperTranslator
+                       LinguaQuanta,
+                       pretty-simple
   hs-source-dirs:      exe
   default-language:    Haskell2010
 
@@ -80,7 +80,12 @@ common basic-unit-test-props
                        test-framework,
                        test-framework-hunit,
                        HUnit,
-                       QasmQuipperTranslator
+                       LinguaQuanta
+
+test-suite utils-tests
+  import:              basic-unit-test-props
+  main-is:             Utils-Tests.hs
+  type:                exitcode-stdio-1.0
 
 test-suite qasm-expression-tests
   import:              basic-unit-test-props
@@ -97,19 +102,14 @@ test-suite qasm-inversion-tests
   main-is:             Qasm-Inversion-Tests.hs
   type:                exitcode-stdio-1.0
 
-test-suite utils-tests
+test-suite qasm-parser-tests
   import:              basic-unit-test-props
-  main-is:             Utils-Tests.hs
+  main-is:             Qasm-Parser-Tests.hs
   type:                exitcode-stdio-1.0
 
 test-suite qasm-passes-tests
   import:              basic-unit-test-props
   main-is:             Qasm-Passes-Tests.hs
-  type:                exitcode-stdio-1.0
-
-test-suite qasm-parser-tests
-  import:              basic-unit-test-props
-  main-is:             Qasm-Parser-Tests.hs
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-wire-tests
@@ -118,9 +118,9 @@ test-suite qasmtoquip-wire-tests
   build-depends:       containers
   type:                exitcode-stdio-1.0
 
-test-suite quip-parser-tests
+test-suite quip-quipper-tests
   import:              basic-unit-test-props
-  main-is:             Quip-Parser-Tests.hs
+  main-is:             Quip-Quipper-Tests.hs
   type:                exitcode-stdio-1.0
 
 test-suite quip-transformers-tests
@@ -129,14 +129,14 @@ test-suite quip-transformers-tests
   build-depends:       quipper-language
   type:                exitcode-stdio-1.0
 
-test-suite quiptoqasm-translator-tests
-  import:              basic-unit-test-props
-  main-is:             QuipToQasm-Translator-Tests.hs
-  build-depends:       containers
-  type:                exitcode-stdio-1.0
-
 test-suite quip-wire-tests
   import:              basic-unit-test-props
   main-is:             Quip-Wire-Tests.hs
+  build-depends:       containers
+  type:                exitcode-stdio-1.0
+
+test-suite quiptoqasm-translator-tests
+  import:              basic-unit-test-props
+  main-is:             QuipToQasm-Translator-Tests.hs
   build-depends:       containers
   type:                exitcode-stdio-1.0

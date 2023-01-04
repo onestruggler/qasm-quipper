@@ -6,9 +6,9 @@ module Main where
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit
-import Quip.Gate
-import Quip.GateName
-import Quip.Parser
+import LinguaQuanta.Quip.Gate
+import LinguaQuanta.Quip.GateName
+import LinguaQuanta.Quip.Quipper
 
 -----------------------------------------------------------------------------------------
 -- Testing Baseline

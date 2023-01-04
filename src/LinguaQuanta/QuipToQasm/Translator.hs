@@ -1,11 +1,14 @@
 -- | The top-level functions to translate Quipper to OpenQASM.
 
-module QuipToQasm.Translator (translate) where
+module LinguaQuanta.QuipToQasm.Translator (translate) where
 
-import Qasm.AST (AstStmt(..))
-import Quip.Gate (Gate(..))
-import Quip.Parser (GateCirc(..))
-import Quip.Wire (countQWires, countCWires)
+-------------------------------------------------------------------------------
+-- * Import Section.
+
+import LinguaQuanta.Qasm.AST (AstStmt(..))
+import LinguaQuanta.Quip.Gate (Gate(..))
+import LinguaQuanta.Quip.Quipper (GateCirc(..))
+import LinguaQuanta.Quip.Wire (countQWires, countCWires)
 
 -------------------------------------------------------------------------------
 -- * Functions to Translate Gates

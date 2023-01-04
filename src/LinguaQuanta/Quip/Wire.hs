@@ -1,6 +1,6 @@
 -- | Provides types and functions to work with wires in Quipper.
 
-module Quip.Wire
+module LinguaQuanta.Quip.Wire
   ( WireType(..)
   , countCWires
   , countQWires

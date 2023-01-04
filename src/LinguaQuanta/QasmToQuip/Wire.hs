@@ -1,7 +1,7 @@
 -- | Functions and data types to track the allocation states of OpenQASM
 -- registers, and to map said registers to Quipper wires.
 
-module QasmToQuip.Wire
+module LinguaQuanta.QasmToQuip.Wire
   ( WireState
   , WireError(..)
   , WireAllocMap
@@ -37,8 +37,8 @@ import Data.Maybe
   ( isJust
   , maybe
   )
-import Quip.Wire (WireType)
-import Utils
+import LinguaQuanta.Quip.Wire (WireType)
+import LinguaQuanta.Utils
   ( branchJust
   , setMaybe
   )

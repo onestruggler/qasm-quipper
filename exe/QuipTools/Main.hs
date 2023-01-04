@@ -7,7 +7,7 @@ module Main where
 -------------------------------------------------------------------------------
 -- * Import Section.
 
-import Quip.Parser
+import LinguaQuanta.Quip.Quipper
   ( GateCirc
   , gatesToAscii
   , parseQuip

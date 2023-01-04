@@ -3,10 +3,10 @@ module Main where
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit
-import Qasm.Expression
-import Qasm.Gate
-import Qasm.GateName
-import Qasm.Language
+import LinguaQuanta.Qasm.Expression
+import LinguaQuanta.Qasm.Gate
+import LinguaQuanta.Qasm.GateName
+import LinguaQuanta.Qasm.Language
 
 -----------------------------------------------------------------------------------------
 -- Gate Modifiers

@@ -5,8 +5,8 @@ import Data.Maybe
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit
-import Quip.Wire
-import QasmToQuip.Wire
+import LinguaQuanta.Quip.Wire
+import LinguaQuanta.QasmToQuip.Wire
 
 -----------------------------------------------------------------------------------------
 -- Tests DFA refinement of the WireState API.

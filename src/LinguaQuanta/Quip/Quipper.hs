@@ -3,7 +3,7 @@
 -- refactoring). This design improves maintainability, since changes to the
 -- Quipper internal library will only impact this single module.
 
-module Quip.Parser
+module LinguaQuanta.Quip.Quipper
   ( GateCirc(..)
   , QuipCirc(..)
   , WireType(..)
@@ -18,17 +18,17 @@ module Quip.Parser
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Lazy as Map
 import Data.Maybe (catMaybes)
-import Quip.Gate
+import LinguaQuanta.Quip.Gate
   ( Control(..)
   , Gate(..)
   , Wire
   )
-import Quip.GateName 
+import LinguaQuanta.Quip.GateName 
   ( NamedOp(..)
   , toGateName
   , toRotName
   )
-import Quip.Wire (WireType(..))
+import LinguaQuanta.Quip.Wire (WireType(..))
 import Quipper
   ( Circ
   , Endpoint
@@ -50,7 +50,7 @@ import Quipper.Libraries.QuipperASCIIParser (parse_circuit)
 -- | A gate-representation of a Quipper circuit. This is an abstract Quipper
 -- circuit.
 data GateCirc = GateCirc { inputs  :: IntMap.IntMap WireType
-                         , gates   :: [Quip.Gate.Gate]
+                         , gates   :: [LinguaQuanta.Quip.Gate.Gate]
                          , outputs :: IntMap.IntMap WireType
                          , size    :: Int
                          } deriving (Show, Eq)
@@ -93,7 +93,7 @@ mergeInputs name ins gctrls
 
 -- | Helper function to convert Quipper internal gates to the gates used within
 -- the translator. If conversion fails, then an error is raised.
-abstractGate :: Quipper.Internal.Circuit.Gate -> Maybe Quip.Gate.Gate
+abstractGate :: Quipper.Internal.Circuit.Gate -> Maybe LinguaQuanta.Quip.Gate.Gate
 abstractGate (QGate name inv ins gctrls ctrls _) = Just gate
     where tname  = toGateName name
           allins = mergeInputs tname ins gctrls
@@ -116,11 +116,11 @@ abstractGate (Comment _ _ _)   = Nothing
 -- conversion fails, then an error is raised.
 quipToGates :: QuipCirc -> GateCirc
 quipToGates (QuipCirc fn sp)
-    | null ns   = GateCirc { inputs  = IntMap.map arityToWire ins
-                           , gates   = catMaybes $ map abstractGate gates
-                           , outputs = IntMap.map arityToWire outs
-                           , size    = sz
-                           }
+    | null ns = GateCirc { inputs  = IntMap.map arityToWire ins
+                         , gates   = catMaybes $ map abstractGate gates
+                         , outputs = IntMap.map arityToWire outs
+                         , size    = sz
+                         }
     | otherwise = error "Subroutines are not supported."
     where efn msg                = "quipToGates: encapsulate_generic: " ++ msg
           (_, bcirc, _)          = encapsulate_generic efn fn sp
@@ -148,7 +148,7 @@ exposeCtrls = map exposeCtrl
 
 -- | Helper function to convert an abstract gate used within translation to the
 -- best approximated Quipper gate.
-concretizeGate :: Quip.Gate.Gate -> Quipper.Internal.Circuit.Gate
+concretizeGate :: LinguaQuanta.Quip.Gate.Gate -> Quipper.Internal.Circuit.Gate
 concretizeGate (NamedGate name inv ins ctrls) = gate
     where sname  = printGate name
           qctrls = exposeCtrls ctrls

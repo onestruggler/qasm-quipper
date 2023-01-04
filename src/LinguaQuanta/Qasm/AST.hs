@@ -1,12 +1,12 @@
 -- | Abstract representation of an OpenQASM 3 program.
 
-module Qasm.AST where
+module LinguaQuanta.Qasm.AST where
 
 -------------------------------------------------------------------------------
 -- * Import Section.
 
-import Qasm.Gate (Gate(..))
-import Qasm.Language (Type(..))
+import LinguaQuanta.Qasm.Gate (Gate(..))
+import LinguaQuanta.Qasm.Language (Type(..))
 
 -------------------------------------------------------------------------------
 -- * AST Types.

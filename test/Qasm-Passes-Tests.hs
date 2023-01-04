@@ -7,12 +7,12 @@ module Main where
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit
-import Qasm.AST
-import Qasm.Expression
-import Qasm.Gate
-import Qasm.GateName
-import Qasm.Language
-import Qasm.Passes
+import LinguaQuanta.Qasm.AST
+import LinguaQuanta.Qasm.Expression
+import LinguaQuanta.Qasm.Gate
+import LinguaQuanta.Qasm.GateName
+import LinguaQuanta.Qasm.Language
+import LinguaQuanta.Qasm.Passes
 
 -------------------------------------------------------------------------------
 -- toAst

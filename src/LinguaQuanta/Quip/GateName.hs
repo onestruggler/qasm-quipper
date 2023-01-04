@@ -1,6 +1,6 @@
 -- | Named gates and associated data.
 
-module Quip.GateName
+module LinguaQuanta.Quip.GateName
   ( GateName(..)
   , NamedOp(..)
   , RotName(..)

@@ -4,11 +4,11 @@ import Data.Maybe
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit
-import Qasm.Expression
-import Qasm.Gate
-import Qasm.GateName
-import Qasm.Inversion
-import Qasm.Language
+import LinguaQuanta.Qasm.Expression
+import LinguaQuanta.Qasm.Gate
+import LinguaQuanta.Qasm.GateName
+import LinguaQuanta.Qasm.Inversion
+import LinguaQuanta.Qasm.Language
 
 -----------------------------------------------------------------------------------------
 -- Useful Constructions

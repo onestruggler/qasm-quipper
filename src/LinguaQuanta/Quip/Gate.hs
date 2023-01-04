@@ -1,6 +1,6 @@
 -- | Abstract representation of Quipper gates.
 
-module Quip.Gate
+module LinguaQuanta.Quip.Gate
   ( Control(..)
   , Gate(..)
   , Wire
@@ -9,7 +9,7 @@ module Quip.Gate
 -------------------------------------------------------------------------------
 -- * Import Section.
 
-import Quip.GateName
+import LinguaQuanta.Quip.GateName
   ( GateName(..)
   , RotName(..)
   )

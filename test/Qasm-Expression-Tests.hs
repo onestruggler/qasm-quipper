@@ -3,8 +3,8 @@ module Main where
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit
-import Qasm.Expression
-import Qasm.Language
+import LinguaQuanta.Qasm.Expression
+import LinguaQuanta.Qasm.Language
 
 -----------------------------------------------------------------------------------------
 -- Useful Constructions

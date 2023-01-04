@@ -1,6 +1,6 @@
 -- | Haskell representation of the OpenQASM 3 grammar.
 
-module Qasm.Language where
+module LinguaQuanta.Qasm.Language where
 
 -------------------------------------------------------------------------------
 -- * Expressions.

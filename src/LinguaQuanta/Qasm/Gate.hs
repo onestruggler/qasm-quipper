@@ -1,9 +1,6 @@
 -- | Abstract representation of OpenQasm 3 gates and their modifiers.
 
--------------------------------------------------------------------------------
--- * Import Section.
-
-module Qasm.Gate
+module LinguaQuanta.Qasm.Gate
   ( Gate(..)
   , GateMod(..)
   , GateSummaryErr(..)
@@ -21,17 +18,20 @@ module Qasm.Gate
   , validateGate
   ) where
 
-import Qasm.Expression
+-------------------------------------------------------------------------------
+-- * Import Section.
+
+import LinguaQuanta.Qasm.Expression
   ( ExprErr(..)
   , toConstInt
   )
-import Qasm.GateName
+import LinguaQuanta.Qasm.GateName
   ( GateName
   , toGateName
   , toParamCount
   , toOperandCount
   )
-import Qasm.Language
+import LinguaQuanta.Qasm.Language
   ( Expr(..)
   , GateOperand(..)
   , GateExpr(..)

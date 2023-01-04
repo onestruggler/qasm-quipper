@@ -3,7 +3,7 @@
 
 {-# LANGUAGE Rank2Types #-}
 
-module Quip.Transformers
+module LinguaQuanta.Quip.Transformers
   ( applyTransformer
   , elimCtrlsTransformer
   ) where
@@ -12,7 +12,7 @@ module Quip.Transformers
 -- * Import Section.
 
 import Data.Algebra.Boolean (xor)
-import Quip.Parser (QuipCirc(..))
+import LinguaQuanta.Quip.Quipper (QuipCirc(..))
 import Quipper
   ( Bit
   , Circ(..)

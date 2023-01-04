@@ -1,6 +1,6 @@
 -- | Methods to simplify or intrepret expressions.
 
-module Qasm.Expression
+module LinguaQuanta.Qasm.Expression
   ( ExprErr(..)
   , avgExpr
   , negateExpr
@@ -12,7 +12,7 @@ module Qasm.Expression
 -------------------------------------------------------------------------------
 -- * Import Section.
 
-import Qasm.Language (Expr(..))
+import LinguaQuanta.Qasm.Language (Expr(..))
 
 -------------------------------------------------------------------------------
 -- * Evaluation and Error Handling Types.

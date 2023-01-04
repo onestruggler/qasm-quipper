@@ -1,9 +1,9 @@
 -- Monad template from: https://github.com/dagit/happy-plus-alex/
 {
-module Qasm.Parser (parseQasm) where
+module LinguaQuanta.Qasm.Parser (parseQasm) where
 
-import Qasm.Lexer
-import Qasm.Language
+import LinguaQuanta.Qasm.Lexer
+import LinguaQuanta.Qasm.Language
 }
 
 %name parse

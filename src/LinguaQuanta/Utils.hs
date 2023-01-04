@@ -1,6 +1,6 @@
 -- | General-purpose utility functions.
 
-module Utils
+module LinguaQuanta.Utils
   ( branchJust
   , maybeAppend
   , maybeWrap

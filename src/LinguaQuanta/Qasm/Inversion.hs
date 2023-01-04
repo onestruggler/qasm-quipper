@@ -1,6 +1,6 @@
 -- | Functions to compute inverse gates.
 
-module Qasm.Inversion
+module LinguaQuanta.Qasm.Inversion
   ( invertGate
   , negateParams
   , oneParamInversion
@@ -10,28 +10,28 @@ module Qasm.Inversion
 -------------------------------------------------------------------------------
 -- * Import Section.
 
-import Qasm.Expression
+import LinguaQuanta.Qasm.Expression
   ( avgExpr
   , negateExpr
   , zero
   )
-import Qasm.Gate
+import LinguaQuanta.Qasm.Gate
   ( Gate(..)
   , GateMod
   , invert
   , isInverted
   )
-import Qasm.GateName
+import LinguaQuanta.Qasm.GateName
   ( GateName(..)
   , isParamInverse
   , isSelfInverse
   , toOperandCount
   )
-import Qasm.Language
+import LinguaQuanta.Qasm.Language
   ( Expr(..)
   , GateOperand
   )
-import Utils
+import LinguaQuanta.Utils
   ( maybeAppend
   , maybeWrap 
   )

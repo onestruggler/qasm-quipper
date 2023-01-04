@@ -3,9 +3,9 @@ module Main where
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit
-import Qasm.AST
-import Quip.Parser
-import QuipToQasm.Translator
+import LinguaQuanta.Qasm.AST
+import LinguaQuanta.Quip.Quipper
+import LinguaQuanta.QuipToQasm.Translator
 
 import qualified Data.IntMap.Strict as IntMap
 

@@ -6,8 +6,8 @@ module Main where
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit
-import Qasm.Language
-import Qasm.Parser
+import LinguaQuanta.Qasm.Language
+import LinguaQuanta.Qasm.Parser
 
 -----------------------------------------------------------------------------------------
 -- Test Cases

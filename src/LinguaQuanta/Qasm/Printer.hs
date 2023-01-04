@@ -1,19 +1,19 @@
 -- | Printing functions for the OpenQASM 3 AST.
 
-module Qasm.Printer (printAst) where
+module LinguaQuanta.Qasm.Printer (printAst) where
 
 -------------------------------------------------------------------------------
 -- * Import Section.
 
 import Data.List (intercalate)
-import Qasm.AST (AstStmt(..))
-import Qasm.Gate
+import LinguaQuanta.Qasm.AST (AstStmt(..))
+import LinguaQuanta.Qasm.Gate
   ( Gate(..)
   , GateMod(..)
   , Sign(..)
   )
-import Qasm.GateName (GateName(..))
-import Qasm.Language
+import LinguaQuanta.Qasm.GateName (GateName(..))
+import LinguaQuanta.Qasm.Language
   ( Expr(..)
   , GateOperand(..)
   )

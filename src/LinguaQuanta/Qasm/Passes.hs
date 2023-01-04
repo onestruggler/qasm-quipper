@@ -1,6 +1,6 @@
 -- | Static analysis passes for OpenQASM 3 compilation.
 
-module Qasm.Passes
+module LinguaQuanta.Qasm.Passes
   ( AbstractionErr(..)
   , InversionErr(..)
   , elimInv
@@ -11,20 +11,20 @@ module Qasm.Passes
 -------------------------------------------------------------------------------
 -- * Import Section.
 
-import Qasm.AST (AstStmt(..))
-import Qasm.Expression
+import LinguaQuanta.Qasm.AST (AstStmt(..))
+import LinguaQuanta.Qasm.Expression
   ( ExprErr
   , toConstInt
   )
-import Qasm.Inversion (invertGate)
-import Qasm.Gate
+import LinguaQuanta.Qasm.Inversion (invertGate)
+import LinguaQuanta.Qasm.Gate
   ( Gate(NamedGate)
   , GateSummaryErr
   , exprToGate
   , validateGate
   )
-import Qasm.GateName (GateName(UserDefined))
-import Qasm.Language
+import LinguaQuanta.Qasm.GateName (GateName(UserDefined))
+import LinguaQuanta.Qasm.Language
   ( Expr
   , GateExpr
   , Stmt(..)
