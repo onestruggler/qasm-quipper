@@ -14,7 +14,8 @@ build-type:          Simple
 extra-source-files:  CHANGELOG.md, README.md
 
 library
-  exposed-modules:     LinguaQuanta.Utils
+  exposed-modules:     LinguaQuanta.MaxTracker
+                       LinguaQuanta.Maybe
                        LinguaQuanta.Qasm.AST
                        LinguaQuanta.Qasm.Expression
                        LinguaQuanta.Qasm.Gate
@@ -82,9 +83,14 @@ common basic-unit-test-props
                        HUnit,
                        LinguaQuanta
 
-test-suite utils-tests
+test-suite maxtracker-tests
   import:              basic-unit-test-props
-  main-is:             Utils-Tests.hs
+  main-is:             MaxTracker-Tests.hs
+  type:                exitcode-stdio-1.0
+
+test-suite maybe-tests
+  import:              basic-unit-test-props
+  main-is:             Maybe-Tests.hs
   type:                exitcode-stdio-1.0
 
 test-suite qasm-expression-tests

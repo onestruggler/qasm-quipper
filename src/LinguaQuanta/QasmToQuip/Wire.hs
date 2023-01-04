@@ -38,7 +38,7 @@ import Data.Maybe
   , maybe
   )
 import LinguaQuanta.Quip.Wire (WireType)
-import LinguaQuanta.Utils
+import LinguaQuanta.Maybe
   ( branchJust
   , setMaybe
   )

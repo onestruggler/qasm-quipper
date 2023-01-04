@@ -31,7 +31,7 @@ import LinguaQuanta.Qasm.Language
   ( Expr(..)
   , GateOperand
   )
-import LinguaQuanta.Utils
+import LinguaQuanta.Maybe
   ( maybeAppend
   , maybeWrap 
   )
