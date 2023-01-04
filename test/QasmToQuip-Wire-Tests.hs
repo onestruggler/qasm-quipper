@@ -458,9 +458,122 @@ test95 = TestCase (assertEqual "WireAllocMap: cannot apply scalar updates to arr
                                Nothing
                                (initScalar "decl2" alloc4))
 
-test96 = TestCase (assertEqual "WireAllocMap: scalar updates require allocated variables."
+test96 = TestCase (assertEqual "WireAllocMap: scalar updates require allocated vars."
                                Nothing
                                (initScalar "decl5" alloc4))
+
+-----------------------------------------------------------------------------------------
+-- Array Updates to WireAllocMaps with Quipper IO.
+
+-- QWire case.
+arrayRes1 = fromJust $ initCell "decl3" 2 alloc4
+arrayRes2 = fromJust $ termCell "decl3" 2 alloc4
+arrayRes3 = fromJust $ useCell  "decl3" 2 alloc4
+arrayRes4 = fromJust $ termCell "decl3" 2 arrayRes1
+
+arrayIn1 = IntMap.delete 8 io4
+arrayIn2 = io4
+arrayIn3 = io4
+arrayIn4 = arrayIn1
+
+arrayOut1 = io4
+arrayOut2 = IntMap.delete 8 io4
+arrayOut3 = io4
+arrayOut4 = IntMap.delete 8 arrayOut1
+
+test97 = TestCase (assertEqual "WireAllocMap: qwire array inputs updates (1/4)."
+                               arrayIn1
+                               (toQuipperInputs arrayRes1))
+
+test98 = TestCase (assertEqual "WireAllocMap: qwire array inputs updates (2/4)."
+                               arrayIn2
+                               (toQuipperInputs arrayRes2))
+
+test99 = TestCase (assertEqual "WireAllocMap: qwire array inputs updates (3/4)."
+                               arrayIn3
+                               (toQuipperInputs arrayRes3))
+
+test100 = TestCase (assertEqual "WireAllocMap: qwire array inputs updates (4/4)."
+                                arrayIn4
+                                (toQuipperInputs arrayRes4))
+
+test101 = TestCase (assertEqual "WireAllocMap: qwire array output updates (1/4)."
+                                arrayOut1
+                                (toQuipperOutputs arrayRes1))
+
+test102 = TestCase (assertEqual "WireAllocMap: qwire array output updates (2/4)."
+                                arrayOut2
+                                (toQuipperOutputs arrayRes2))
+
+test103 = TestCase (assertEqual "WireAllocMap: qwire array output updates (3/4)."
+                                arrayOut3
+                                (toQuipperOutputs arrayRes3))
+
+test104 = TestCase (assertEqual "WireAllocMap: qwire array output updates (4/4)."
+                                arrayOut4
+                                (toQuipperOutputs arrayRes4))
+
+-- CWire case.
+arrayRes5 = fromJust $ initCell "decl2" 3 arrayRes4
+arrayRes6 = fromJust $ termCell "decl2" 3 arrayRes4
+arrayRes7 = fromJust $ useCell  "decl2" 3 arrayRes4
+arrayRes8 = fromJust $ termCell "decl2" 3 arrayRes5
+
+arrayIn5 = IntMap.delete 4 arrayIn4
+arrayIn6 = arrayIn4
+arrayIn7 = arrayIn4
+arrayIn8 = arrayIn5
+
+arrayOut5 = arrayOut4
+arrayOut6 = IntMap.delete 4 arrayOut4
+arrayOut7 = arrayOut4
+arrayOut8 = IntMap.delete 4 arrayOut5
+
+test105 = TestCase (assertEqual "WireAllocMap: cwire array inputs updates (1/4)."
+                                arrayIn5
+                                (toQuipperInputs arrayRes5))
+
+test106 = TestCase (assertEqual "WireAllocMap: cwire array inputs updates (2/4)."
+                                arrayIn6
+                                (toQuipperInputs arrayRes6))
+
+test107 = TestCase (assertEqual "WireAllocMap: cwire array inputs updates (3/4)."
+                                arrayIn7
+                                (toQuipperInputs arrayRes7))
+
+test108 = TestCase (assertEqual "WireAllocMap: cwire array inputs updates (4/4)."
+                                arrayIn8
+                                (toQuipperInputs arrayRes8))
+
+test109 = TestCase (assertEqual "WireAllocMap: cwire array output updates (1/4)."
+                                arrayOut5
+                                (toQuipperOutputs arrayRes5))
+
+test110 = TestCase (assertEqual "WireAllocMap: cwire array output updates (2/4)."
+                                arrayOut6
+                                (toQuipperOutputs arrayRes6))
+
+test111 = TestCase (assertEqual "WireAllocMap: cwire array output updates (3/4)."
+                                arrayOut7
+                                (toQuipperOutputs arrayRes7))
+
+test112 = TestCase (assertEqual "WireAllocMap: cwire array output updates (4/4)."
+                                arrayOut8
+                                (toQuipperOutputs arrayRes8))
+
+-- Invalid uses.
+
+test113 = TestCase (assertEqual "WireAllocMap: cannot apply array updates to scalars."
+                                Nothing
+                                (initCell "decl1" 0 alloc4))
+
+test114 = TestCase (assertEqual "WireAllocMap: array updates require allocated vars."
+                                Nothing
+                                (initCell "decl5" 0 alloc4))
+
+test115 = TestCase (assertEqual "WireAllocMap: array updates require in-bounds index."
+                                Nothing
+                                (initCell "decl2" 10 alloc4))
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
@@ -560,6 +673,25 @@ tests = hUnitTestToTests $ TestList [TestLabel "WireAPI_UniqueStates_1" test1,
                                      TestLabel "WireAllocMap_CScalarOut_3" test93,
                                      TestLabel "WireAllocMap_CScalarOut_4" test94,
                                      TestLabel "WireAllocMap_ArrayAsScalarErr" test95,
-                                     TestLabel "WireAllocMap_ScalarUndefErr" test96]
+                                     TestLabel "WireAllocMap_ScalarUndefErr" test96,
+                                     TestLabel "WireAllocMap_QArrayIn_1" test97,
+                                     TestLabel "WireAllocMap_QArrayIn_2" test98,
+                                     TestLabel "WireAllocMap_QArrayIn_3" test99,
+                                     TestLabel "WireAllocMap_QArrayIn_4" test100,
+                                     TestLabel "WireAllocMap_QArrayOut_1" test101,
+                                     TestLabel "WireAllocMap_QArrayOut_2" test102,
+                                     TestLabel "WireAllocMap_QArrayOut_3" test103,
+                                     TestLabel "WireAllocMap_QArrayOut_4" test104,
+                                     TestLabel "WireAllocMap_CArrayIn_1" test105,
+                                     TestLabel "WireAllocMap_CArrayIn_2" test106,
+                                     TestLabel "WireAllocMap_CArrayIn_3" test107,
+                                     TestLabel "WireAllocMap_CArrayIn_4" test108,
+                                     TestLabel "WireAllocMap_CArrayOut_1" test109,
+                                     TestLabel "WireAllocMap_CArrayOut_2" test110,
+                                     TestLabel "WireAllocMap_CArrayOut_3" test111,
+                                     TestLabel "WireAllocMap_CArrayOut_4" test112,
+                                     TestLabel "WireAllocMap_ScalarAsArrayErr" test113,
+                                     TestLabel "WireAllocMap_ArrayUndefErr" test114,
+                                     TestLabel "WireAllocMap_BoundsErr" test115]
 
 main = defaultMain tests

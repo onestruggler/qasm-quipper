@@ -13,13 +13,16 @@ module QasmToQuip.Wire
   , getDeclType
   , isInput
   , initialAllocations
+  , initCell
   , initScalar
   , initWire
   , isOutput
+  , termCell
   , termScalar
   , termWire
   , toQuipperInputs
   , toQuipperOutputs
+  , useCell
   , useScalar
   , useWire
   , wireIndex
@@ -154,7 +157,7 @@ populateWires wct size = foldr f IntMap.empty [0..(size - 1)]
 
 -- | Takes as input a declaration identifier (name), the declaration size when
 -- applicable (size), and a wire allocation map. If (name, size) describes a
--- scalar declaration (i.e., size is Nothing) not found in the map, then adds a
+-- Scalar declaration (i.e., size is Nothing) not found in the map, then adds a
 -- new wire to the map associated to name. If (name, size) describes an array
 -- declaration (i.e., size is Just n) not found in the map, then adds new wires
 -- to the map associated to each of name[0] through to name[n-1]. Otherwise,
@@ -182,7 +185,9 @@ getDeclType name (WireAllocMap _ _ map) =
 -------------------------------------------------------------------------------
 -- * Update Declarations in WireAllocMaps.
 
--- |
+-- | A function that updates a single cell in a DeclWireStateMap. If the update
+-- fails, then nothing is returned. Otherwise, returns the new map, and a flag
+-- indicating whether the update changes the current circuit size.
 type ScalarUpdate = DeclWireStateMap -> Maybe (Bool, DeclWireStateMap)
 
 -- | Helper method to apply a wire update to a wire state. Assumes that the
@@ -212,11 +217,11 @@ applyToScalar pred update name map =
         Just (_, Right _) -> Nothing
         Just (ty, Left w) -> let w'   = applyUpdate name Nothing update w
                                  map' = Map.insert name (ty, Left w') map
-                             in Just $ (pred w, map')
+                             in Just (pred w, map')
 
 -- | Takes as input a declaration name (name) and a wire allocation map (map).
--- If map contains a declaration (ty, w) of type scalar, then replaces the
--- entry (name (ty, w)) with (name, (ty, initWire w)) to obtain map'. The size
+-- If map contains a declaration (ty, w) of type Scalar, then replaces the
+-- entry (name, (ty, w)) with (name, (ty, initWire w)) to obtain map'. The size
 -- of map' is incremented when w is not an output. Otherwise, returns nothing.
 --
 -- Note: This method assumes that update is applicable to w. If the declaration
@@ -225,11 +230,10 @@ initScalar :: String -> TryMapUpdate
 initScalar name (WireAllocMap tot cur map) =
     case applyToScalar (not . isOutput) initWire name map of
         Nothing        -> Nothing
-        Just (b, map') -> let cur' = if b then cur + 1 else cur
-                          in Just $ WireAllocMap tot cur' map'
+        Just (b, map') -> Just $ WireAllocMap tot (cur + fromEnum b)  map'
 
 -- | Takes as input a declaration name (name) and a wire allocation map (map).
--- If map contains a declaration (ty, w) of type scalar, then replaces the
+-- If map contains a declaration (ty, w) of type Scalar, then replaces the
 -- entry (name, (ty, w)) with (name, (ty, termWire w)) to obtain map'. The size
 -- of map' is decremented when w is an output. Otherwise, returns nothing.
 --
@@ -239,18 +243,79 @@ termScalar :: String -> TryMapUpdate
 termScalar name (WireAllocMap tot cur map) =
     case applyToScalar isOutput termWire name map of
         Nothing        -> Nothing
-        Just (b, map') -> let cur' = if b then cur - 1 else cur
-                          in Just $ WireAllocMap tot cur' map'
+        Just (b, map') -> Just $ WireAllocMap tot (cur - fromEnum b) map'
 
 -- | Takes as input a declaration name (name) and a wire allocation map (map).
--- If map contains a declaration (ty, w) of type scalar, then replaces the
--- entry (name, (ty, w)) with (name, (ty, termWire w)) to obtain map'.
+-- If map contains a declaration (ty, w) of type Scalar, then replaces the
+-- entry (name, (ty, w)) with (name, (ty, useWire w)) to obtain map'.
 --
 -- Note: This method assumes that update is applicable to w. If the declaration
 -- exists and the update is not applicable, then an error is reported.
 useScalar :: String -> TryMapUpdate
 useScalar name (WireAllocMap tot cur map) =
     case applyToScalar isWire useWire name map of
+        Nothing        -> Nothing
+        Just (_, map') -> Just $ WireAllocMap tot cur map'
+
+-- | Helper method to interact with array declarations. Takes as input a wire
+-- predicate (pred), a wire updater (update), a declaration name (name), an
+-- array index (idx), and a DeclWireStateMap (map). If map contains a
+-- declaration (ty, w) name of type Array, then replaces (name[idx], (ty, w))
+-- with (name[idx], (ty, update w)) to obtain map', and returns (pred w, map').
+-- Otherwise, returns nothing.
+--
+-- Note: This method assumes that update is applicable to w. If the declaration
+-- exists and the update is not applicable, then an error is reported.
+applyToCell :: WirePred -> WireUpdate -> String -> Int -> ScalarUpdate 
+applyToCell pred update name idx map =
+    case Map.lookup name map of
+        Nothing            -> Nothing
+        Just (_, Left _)   -> Nothing
+        Just (ty, Right c) -> case IntMap.lookup idx c of
+            Nothing -> Nothing
+            Just w  -> let w'   = applyUpdate name (Just idx) update w
+                           c'   = IntMap.insert idx w' c
+                           map' = Map.insert name (ty, Right c') map
+                         in Just (pred w, map')
+
+-- | Takes as input a declaration name (name), an array index (idx), and a wire
+-- allocation map (map). If map contains a declaration (ty, w) of type Array of
+-- size at least idx + 1, then replaces the entry (name[idx], (ty, w)) with
+-- (name[idx], (ty, initWire w)) to obtain map'. The size of map' is incremented
+-- when w is not an output. Otherwise, returns nothing.
+--
+-- Note: This method assumes that update is applicable to w. If the declaration
+-- exists and the update is not applicable, then an error is reported.
+initCell :: String -> Int -> TryMapUpdate
+initCell name idx (WireAllocMap tot cur map) =
+    case applyToCell (not . isOutput) initWire name idx map of
+        Nothing        -> Nothing
+        Just (b, map') -> Just $ WireAllocMap tot (cur + fromEnum b) map'
+
+-- | Takes as input a declaration name (name), an array index (idx), and a wire
+-- allocation map (map). If map contains a declaration (ty, w) of type Array of
+-- size at least idx + 1, then replaces the entry (name[idx], (ty, w)) with
+-- (name[idx], (ty, termWire w)) to obtain map'. The size of map' is
+-- decremented when w is an output. Otherwise, returns nothing.
+--
+-- Note: This method assumes that update is applicable to w. If the declaration
+-- exists and the update is not applicable, then an error is reported.
+termCell :: String -> Int -> TryMapUpdate
+termCell name idx (WireAllocMap tot cur map) =
+    case applyToCell isOutput termWire name idx map of
+        Nothing        -> Nothing
+        Just (b, map') -> Just $ WireAllocMap tot (cur - fromEnum b) map'
+
+-- | Takes as input a declaration name (name), an array index (idx) and a wire
+-- allocation map (map). If map contains a declaration (ty, w) of type Array of
+-- size at least idx + 1, then replaces the entry (name[idx], (ty, w)) with
+-- (name[idx], (ty, useWire w)) to obtain map'.
+--
+-- Note: This method assumes that update is applicable to w. If the declaration
+-- exists and the update is not applicable, then an error is reported.
+useCell :: String -> Int -> TryMapUpdate
+useCell name idx (WireAllocMap tot cur map) =
+    case applyToCell isWire useWire name idx map of
         Nothing        -> Nothing
         Just (_, map') -> Just $ WireAllocMap tot cur map'
 
