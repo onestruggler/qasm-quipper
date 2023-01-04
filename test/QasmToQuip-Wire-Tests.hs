@@ -354,6 +354,115 @@ test78 = TestCase (assertEqual "WireAllocMap: basic output cases (5/5)."
                                (toQuipperOutputs alloc4))
 
 -----------------------------------------------------------------------------------------
+-- Scalar Updates to WireAllocMaps with Quipper IO.
+
+-- QWire case.
+scalarRes1 = fromJust $ initScalar "decl1" alloc4
+scalarRes2 = fromJust $ termScalar "decl1" alloc4
+scalarRes3 = fromJust $ useScalar  "decl1" alloc4
+scalarRes4 = fromJust $ termScalar "decl1" scalarRes1
+
+scalarIn1 = IntMap.delete 0 io4
+scalarIn2 = io4
+scalarIn3 = io4
+scalarIn4 = scalarIn1
+
+scalarOut1 = io4
+scalarOut2 = IntMap.delete 0 io4
+scalarOut3 = io4
+scalarOut4 = IntMap.delete 0 scalarOut1
+
+test79 = TestCase (assertEqual "WireAllocMap: qwire scalar inputs updates (1/4)."
+                               scalarIn1
+                               (toQuipperInputs scalarRes1))
+
+test80 = TestCase (assertEqual "WireAllocMap: qwire scalar inputs updates (2/4)."
+                               scalarIn2
+                               (toQuipperInputs scalarRes2))
+
+test81 = TestCase (assertEqual "WireAllocMap: qwire scalar inputs updates (3/4)."
+                               scalarIn3
+                               (toQuipperInputs scalarRes3))
+
+test82 = TestCase (assertEqual "WireAllocMap: qwire scalar inputs updates (4/4)."
+                               scalarIn4
+                               (toQuipperInputs scalarRes4))
+
+test83 = TestCase (assertEqual "WireAllocMap: qwire scalar output updates (1/4)."
+                               scalarOut1
+                               (toQuipperOutputs scalarRes1))
+
+test84 = TestCase (assertEqual "WireAllocMap: qwire scalar output updates (2/4)."
+                               scalarOut2
+                               (toQuipperOutputs scalarRes2))
+
+test85 = TestCase (assertEqual "WireAllocMap: qwire scalar output updates (3/4)."
+                               scalarOut3
+                               (toQuipperOutputs scalarRes3))
+
+test86 = TestCase (assertEqual "WireAllocMap: qwire scalar output updates (4/4)."
+                               scalarOut4
+                               (toQuipperOutputs scalarRes4))
+
+-- CWire case.
+scalarRes5 = fromJust $ initScalar "decl4" scalarRes4
+scalarRes6 = fromJust $ termScalar "decl4" scalarRes4
+scalarRes7 = fromJust $ useScalar  "decl4" scalarRes4
+scalarRes8 = fromJust $ termScalar "decl4" scalarRes5
+
+scalarIn5 = IntMap.delete 10 scalarIn4
+scalarIn6 = scalarIn4
+scalarIn7 = scalarIn4
+scalarIn8 = scalarIn5
+
+scalarOut5 = scalarOut4
+scalarOut6 = IntMap.delete 10 scalarOut4
+scalarOut7 = scalarOut4
+scalarOut8 = IntMap.delete 10 scalarOut5
+
+test87 = TestCase (assertEqual "WireAllocMap: cwire scalar inputs updates (1/4)."
+                               scalarIn5
+                               (toQuipperInputs scalarRes5))
+
+test88 = TestCase (assertEqual "WireAllocMap: cwire scalar inputs updates (2/4)."
+                               scalarIn6
+                               (toQuipperInputs scalarRes6))
+
+test89 = TestCase (assertEqual "WireAllocMap: cwire scalar inputs updates (3/4)."
+                               scalarIn7
+                               (toQuipperInputs scalarRes7))
+
+test90 = TestCase (assertEqual "WireAllocMap: cwire scalar inputs updates (4/4)."
+                               scalarIn8
+                               (toQuipperInputs scalarRes8))
+
+test91 = TestCase (assertEqual "WireAllocMap: cwire scalar output updates (1/4)."
+                               scalarOut5
+                               (toQuipperOutputs scalarRes5))
+
+test92 = TestCase (assertEqual "WireAllocMap: cwire scalar output updates (2/4)."
+                               scalarOut6
+                               (toQuipperOutputs scalarRes6))
+
+test93 = TestCase (assertEqual "WireAllocMap: cwire scalar output updates (3/4)."
+                               scalarOut7
+                               (toQuipperOutputs scalarRes7))
+
+test94 = TestCase (assertEqual "WireAllocMap: cwire scalar output updates (4/4)."
+                               scalarOut8
+                               (toQuipperOutputs scalarRes8))
+
+-- Invalid uses.
+
+test95 = TestCase (assertEqual "WireAllocMap: cannot apply scalar updates to arrays."
+                               Nothing
+                               (initScalar "decl2" alloc4))
+
+test96 = TestCase (assertEqual "WireAllocMap: scalar updates require allocated variables."
+                               Nothing
+                               (initScalar "decl5" alloc4))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "WireAPI_UniqueStates_1" test1,
@@ -433,6 +542,24 @@ tests = hUnitTestToTests $ TestList [TestLabel "WireAPI_UniqueStates_1" test1,
                                      TestLabel "WireAllocMap_BasicOut_2" test75,
                                      TestLabel "WireAllocMap_BasicOut_3" test76,
                                      TestLabel "WireAllocMap_BasicOut_4" test77,
-                                     TestLabel "WireAllocMap_BasicOut_5" test78]
+                                     TestLabel "WireAllocMap_BasicOut_5" test78,
+                                     TestLabel "WireAllocMap_QScalarIn_1" test79,
+                                     TestLabel "WireAllocMap_QScalarIn_2" test80,
+                                     TestLabel "WireAllocMap_QScalarIn_3" test81,
+                                     TestLabel "WireAllocMap_QScalarIn_4" test82,
+                                     TestLabel "WireAllocMap_QScalarOut_1" test83,
+                                     TestLabel "WireAllocMap_QScalarOut_2" test84,
+                                     TestLabel "WireAllocMap_QScalarOut_3" test85,
+                                     TestLabel "WireAllocMap_QScalarOut_4" test86,
+                                     TestLabel "WireAllocMap_CScalarIn_1" test87,
+                                     TestLabel "WireAllocMap_CScalarIn_2" test88,
+                                     TestLabel "WireAllocMap_CScalarIn_3" test89,
+                                     TestLabel "WireAllocMap_CScalarIn_4" test90,
+                                     TestLabel "WireAllocMap_CScalarOut_1" test91,
+                                     TestLabel "WireAllocMap_CScalarOut_2" test92,
+                                     TestLabel "WireAllocMap_CScalarOut_3" test93,
+                                     TestLabel "WireAllocMap_CScalarOut_4" test94,
+                                     TestLabel "WireAllocMap_ArrayAsScalarErr" test95,
+                                     TestLabel "WireAllocMap_ScalarUndefErr" test96]
 
 main = defaultMain tests

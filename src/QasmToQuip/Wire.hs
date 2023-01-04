@@ -13,11 +13,14 @@ module QasmToQuip.Wire
   , getDeclType
   , isInput
   , initialAllocations
+  , initScalar
   , initWire
   , isOutput
+  , termScalar
   , termWire
   , toQuipperInputs
   , toQuipperOutputs
+  , useScalar
   , useWire
   , wireIndex
   ) where
@@ -44,6 +47,9 @@ data WireState = WireState { wireIndex :: Int
                            , termAtEnd :: Bool
                            } deriving (Show, Eq)
 
+-- | A predicate over wire states.
+type WirePred = WireState -> Bool
+
 -- | Consumes an integer n. Initializes a new wire, with label n, that is not
 -- yet initialized nor terminated. Initializing a wire from this state will
 -- create an ancilla. Otherwise, the wire is taken to be an input to the
@@ -55,12 +61,16 @@ allocateWire n = WireState { wireIndex = n
                            , termAtEnd = False
                            }
 
+-- | Returns true for all wires.
+isWire :: WirePred
+isWire _ = True
+
 -- | Returns true if the wire is taken as an input.
-isInput :: WireState -> Bool
+isInput :: WirePred
 isInput = maybe True not . initFirst
 
 -- | Returns true if the wire is returned as an output.
-isOutput :: WireState -> Bool
+isOutput :: WirePred
 isOutput = not . termAtEnd
 
 -------------------------------------------------------------------------------
@@ -120,7 +130,7 @@ type DeclWireState = Either WireState (IntMap.IntMap WireState)
 type DeclWireStateMap = Map.Map String (WireType, DeclWireState)
 
 -- | Maintains a mapping from declarartions to WireStates.
-data WireAllocMap = WireAllocMap Int DeclWireStateMap deriving (Eq, Show)
+data WireAllocMap = WireAllocMap Int Int DeclWireStateMap deriving (Eq, Show)
 
 -- | Helper type for fuctions taht try to update WireAllocMaps, with the
 -- possibility of failure.
@@ -135,7 +145,7 @@ data DeclType = Undeclared
 
 -- | Returns an empty wire allocation map.
 initialAllocations :: WireAllocMap
-initialAllocations = WireAllocMap 0 Map.empty
+initialAllocations = WireAllocMap 0 0 Map.empty
 
 -- | Helper function to allocate wires of an array.
 populateWires :: Int -> Int -> IntMap.IntMap WireState
@@ -150,28 +160,102 @@ populateWires wct size = foldr f IntMap.empty [0..(size - 1)]
 -- to the map associated to each of name[0] through to name[n-1]. Otherwise,
 -- nothing is returned.
 allocate :: WireType -> String -> (Maybe Int) -> TryMapUpdate
-allocate ty name size (WireAllocMap n map) =
+allocate ty name size (WireAllocMap tot cur map) =
     if Map.member name map
     then Nothing
     else case size of
-        Nothing -> add 1 (Left $ allocateWire n)
-        Just m  -> add m (Right $ populateWires n m)
-    where add c st = Just $ WireAllocMap (n + c) (Map.insert name (ty, st) map)
+        Nothing -> add 1 (Left $ allocateWire cur)
+        Just n  -> add n (Right $ populateWires cur n)
+    where add c st = Just $ WireAllocMap (tot + c)
+                                         (cur + c) 
+                                         (Map.insert name (ty, st) map)
 
 -- | Takes as input a declaration name and a wire allocation map. Returns the
 -- type of the declaration, according to the declaration map.
 getDeclType :: String -> WireAllocMap -> DeclType
-getDeclType name (WireAllocMap _ map) =
+getDeclType name (WireAllocMap _ _ map) =
     case Map.lookup name map of
         Nothing                -> Undeclared
         Just (ty, Left _)      -> Scalar ty
         Just (ty, Right cells) -> Array ty (IntMap.size cells)
 
 -------------------------------------------------------------------------------
--- * Conversions From WireAllocMaps to Quipper IO.
+-- * Update Declarations in WireAllocMaps.
 
--- | A predicate over wire states.
-type WirePred = WireState -> Bool
+-- |
+type ScalarUpdate = DeclWireStateMap -> Maybe (Bool, DeclWireStateMap)
+
+-- | Helper method to apply a wire update to a wire state. Assumes that the
+-- update is valid, and reports an error otherwise. The declaration name and
+-- (when applicable) index are used in error reporting.
+applyUpdate :: String -> Maybe Int -> WireUpdate -> WireState -> WireState
+applyUpdate name maybeIdx update wire =
+    case update wire of
+        Left DoubleInit    -> error $ "Double initialization at: " ++ decl
+        Left DoubleTerm    -> error $ "Double termination at: " ++ decl
+        Left UseBeforeInit -> error $ "Use before initialization at: " ++ decl
+        Right wire'        -> wire'
+    where decl = maybe name (\idx -> name ++ "[" ++ show idx ++ "]") maybeIdx
+
+-- | Helper method to interact with scalar declarations. Takes as input a wire
+-- predicate (pred), a wire updater (update), a declaration name (name), and a
+-- DeclWireStateMap (map). If map contains a declaration (ty, w) name of type
+-- Scalar, then replaces (name, (ty, w)) with (name, (ty, update w)) to obtain
+-- map', and returns (pred w, map'). Otherwise, returns nothing.
+--
+-- Note: This method assumes that update is applicable to w. If the declaration
+-- exists and the update is not applicable, then an error is reported.
+applyToScalar :: WirePred -> WireUpdate -> String -> ScalarUpdate
+applyToScalar pred update name map =
+    case Map.lookup name map of
+        Nothing           -> Nothing
+        Just (_, Right _) -> Nothing
+        Just (ty, Left w) -> let w'   = applyUpdate name Nothing update w
+                                 map' = Map.insert name (ty, Left w') map
+                             in Just $ (pred w, map')
+
+-- | Takes as input a declaration name (name) and a wire allocation map (map).
+-- If map contains a declaration (ty, w) of type scalar, then replaces the
+-- entry (name (ty, w)) with (name, (ty, initWire w)) to obtain map'. The size
+-- of map' is incremented when w is not an output. Otherwise, returns nothing.
+--
+-- Note: This method assumes that update is applicable to w. If the declaration
+-- exists and the update is not applicable, then an error is reported.
+initScalar :: String -> TryMapUpdate
+initScalar name (WireAllocMap tot cur map) =
+    case applyToScalar (not . isOutput) initWire name map of
+        Nothing        -> Nothing
+        Just (b, map') -> let cur' = if b then cur + 1 else cur
+                          in Just $ WireAllocMap tot cur' map'
+
+-- | Takes as input a declaration name (name) and a wire allocation map (map).
+-- If map contains a declaration (ty, w) of type scalar, then replaces the
+-- entry (name, (ty, w)) with (name, (ty, termWire w)) to obtain map'. The size
+-- of map' is decremented when w is an output. Otherwise, returns nothing.
+--
+-- Note: This method assumes that update is applicable to w. If the declaration
+-- exists and the update is not applicable, then an error is reported.
+termScalar :: String -> TryMapUpdate
+termScalar name (WireAllocMap tot cur map) =
+    case applyToScalar isOutput termWire name map of
+        Nothing        -> Nothing
+        Just (b, map') -> let cur' = if b then cur - 1 else cur
+                          in Just $ WireAllocMap tot cur' map'
+
+-- | Takes as input a declaration name (name) and a wire allocation map (map).
+-- If map contains a declaration (ty, w) of type scalar, then replaces the
+-- entry (name, (ty, w)) with (name, (ty, termWire w)) to obtain map'.
+--
+-- Note: This method assumes that update is applicable to w. If the declaration
+-- exists and the update is not applicable, then an error is reported.
+useScalar :: String -> TryMapUpdate
+useScalar name (WireAllocMap tot cur map) =
+    case applyToScalar isWire useWire name map of
+        Nothing        -> Nothing
+        Just (_, map') -> Just $ WireAllocMap tot cur map'
+
+-------------------------------------------------------------------------------
+-- * Conversions From WireAllocMaps to Quipper IO.
 
 -- | A mapping from wire indices to wire types.
 type WireSubset = IntMap.IntMap WireType
@@ -196,7 +280,7 @@ wireFold pred (ty, (Right cells)) subset = IntMap.foldr f subset cells
 -- the predicate, then (n, ty) is added to the subset, where n is the wire
 -- index and ty is the type associated with the wire.
 toWireSubset :: WirePred -> WireAllocMap -> WireSubset
-toWireSubset pred (WireAllocMap _ map) = Map.foldr f IntMap.empty map
+toWireSubset pred (WireAllocMap _ _ map) = Map.foldr f IntMap.empty map
     where f = wireFold pred
 
 -- | Takes as input a wire allocation map. Returns a mapping from wire indices
