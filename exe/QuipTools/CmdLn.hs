@@ -12,10 +12,16 @@ module QuipTools.CmdLn
 -- * Import Section.
 
 import LinguaQuantaExe.CmdLnFlags
-  ( outFlags
+  ( def
+  , outFlags
   , srcFlags
   )
-import System.Console.CmdArgs
+import LinguaQuantaExe.CmdLnParser
+  ( Data
+  , Typeable
+  , addModeAnnotations
+  , parseCmdLnArgs
+  )
 
 -------------------------------------------------------------------------------
 -- * Argument Data Type.
@@ -27,40 +33,32 @@ data QuipTools
     | Writer { src :: String 
              , out :: String
              }
-    deriving (Show,Eq,Data,Typeable)
+    deriving (Show, Eq, Data, Typeable)
 
 -------------------------------------------------------------------------------
 -- * Program Modes.
 
 parserMode :: QuipTools
-parserMode = Parser
-    { src = srcFlags def
-    , out = outFlags def
-    } &= details ["Parser:",
-                  "Parses a Quipper program as abstract gates."]
+parserMode = addModeAnnotations title desc ctor
+    where title = "Parser"
+          desc  = "Parses a Quipper program as abstract gates."
+          ctor  = Parser { src = srcFlags def
+                         , out = outFlags def
+                         }
 
 writerMode :: QuipTools
-writerMode = Writer
-    { src       = srcFlags def
-    , out       = outFlags def
-    } &= details ["Writer:",
-                  "Computes the image of a Quipper program."]
+writerMode = addModeAnnotations title desc ctor
+    where title = "Writer"
+          desc  = "Computes the image of a Quipper program."
+          ctor  = Writer { src = srcFlags def
+                         , out = outFlags def
+                         }
 
 -------------------------------------------------------------------------------
 -- * CmdArgs Mode Declaration.
 
-toolModes :: Mode (CmdArgs QuipTools)
-toolModes = cmdArgsMode $ modes [parserMode, writerMode]
-    &= summary info
-    &= help desc
-    &= versionArg [explicit, name "version", name "v", summary vers]
-    &= verbosityArgs [explicit, name "Verbose", name "V"] []
-    &= helpArg [explicit, name "help", name "h"]
-    where summ = "Quipper Transpilation Tools"
-          vers = "1.0.0"
-          info = summ ++ " version " ++ vers
-          desc = "A cmdln interface to the Quipper transpiler pipeline."
-
--- | Returns all command-line arguments as a QuipTools value.
 getToolArgs :: IO (QuipTools)
-getToolArgs = cmdArgsRun toolModes
+getToolArgs = parseCmdLnArgs title desc ctors
+    where title = "Quipper Inspection Tools"
+          desc  = "A command-line interface to the Quipper parsing phases."
+          ctors = [parserMode, writerMode]

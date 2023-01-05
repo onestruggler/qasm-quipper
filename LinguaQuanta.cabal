@@ -55,6 +55,7 @@ library
 
 library LinguaQuantaExe
   exposed-modules:     LinguaQuantaExe.CmdLnFlags
+                       LinguaQuantaExe.CmdLnParser
                        LinguaQuantaExe.IOUtils
                        LinguaQuantaExe.SetupTools
   build-depends:       base,
@@ -67,7 +68,6 @@ executable qasm_tools
   main-is:             QasmTools/Main.hs
   other-modules:       QasmTools.CmdLn
   build-depends:       base,
-                       cmdargs,
                        directory,
                        LinguaQuanta,
                        LinguaQuantaExe,
@@ -79,7 +79,6 @@ executable quip_tools
   main-is:             QuipTools/Main.hs
   other-modules:       QuipTools.CmdLn
   build-depends:       base,
-                       cmdargs,
                        directory,
                        LinguaQuanta,
                        LinguaQuantaExe,

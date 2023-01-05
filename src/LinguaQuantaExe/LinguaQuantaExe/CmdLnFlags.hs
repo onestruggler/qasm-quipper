@@ -1,7 +1,8 @@
 -- | Shared flags between command-line parsers.
 
 module LinguaQuantaExe.CmdLnFlags
-  ( srcFlags
+  ( def
+  , srcFlags
   , outFlags
   , legacyFlags
   , inlinePowFlags
@@ -12,6 +13,11 @@ module LinguaQuantaExe.CmdLnFlags
 -- * Import Section.
 
 import System.Console.CmdArgs
+  ( (&=)
+  , def
+  , help
+  , typFile
+  )
 
 -------------------------------------------------------------------------------
 -- * Input/Output Flags.

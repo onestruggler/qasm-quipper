@@ -12,13 +12,19 @@ module QasmTools.CmdLn
 -- * Import Section.
 
 import LinguaQuantaExe.CmdLnFlags
-  ( inlineInvFlags
+  ( def
+  , inlineInvFlags
   , inlinePowFlags
   , legacyFlags
   , outFlags
   , srcFlags
   )
-import System.Console.CmdArgs
+import LinguaQuantaExe.CmdLnParser
+  ( Data
+  , Typeable
+  , addModeAnnotations
+  , parseCmdLnArgs
+  )
 
 -------------------------------------------------------------------------------
 -- * Argument Data Type.
@@ -38,52 +44,45 @@ data QasmTools
              , inlineInv :: Bool
              , legacy    :: Bool
              }
-    deriving (Show,Eq,Data,Typeable)
+    deriving (Show, Eq, Data, Typeable)
 
 -------------------------------------------------------------------------------
 -- * Program Modes.
 
 parserMode :: QasmTools
-parserMode = Parser
-    { src = srcFlags def
-    , out = outFlags def
-    } &= details ["Parser:",
-                  "Parses an OpenQasm program."]
+parserMode = addModeAnnotations title desc ctor
+    where title = "Parser"
+          desc  = "Parses an OpenQasm program."
+          ctor  = Parser { src = srcFlags def
+                         , out = outFlags def
+                         }
 
 analyzerMode :: QasmTools
-analyzerMode = Analyzer
-    { src = srcFlags def
-    , out = outFlags def
-    , inlinePow = inlinePowFlags def
-    , inlineInv = inlineInvFlags def
-    } &= details ["Analyzer:",
-                  "Computes the internal represntation of an OpenQASM program."]
+analyzerMode = addModeAnnotations title desc ctor
+    where title = "Analyzer"
+          desc  = "Computes the internal represntation of an OpenQASM program."
+          ctor  = Analyzer { src       = srcFlags def
+                           , out       = outFlags def
+                           , inlinePow = inlinePowFlags def
+                           , inlineInv = inlineInvFlags def
+                           }
 
 writerMode :: QasmTools
-writerMode = Writer
-    { src       = srcFlags def
-    , out       = outFlags def
-    , inlinePow = inlinePowFlags def
-    , inlineInv = inlineInvFlags def
-    , legacy    = legacyFlags def
-    } &= details ["Writer:",
-                  "Computes the image of an OpenQASM program."]
+writerMode = addModeAnnotations title desc ctor
+    where title = "Writer"
+          desc  = "Computes the image of an OpenQASM program."
+          ctor  = Writer { src       = srcFlags def
+                         , out       = outFlags def
+                         , inlinePow = inlinePowFlags def
+                         , inlineInv = inlineInvFlags def
+                         , legacy    = legacyFlags def
+                         }
 
 -------------------------------------------------------------------------------
 -- * CmdArgs Mode Declaration.
 
-toolModes :: Mode (CmdArgs QasmTools)
-toolModes = cmdArgsMode $ modes [parserMode, analyzerMode, writerMode]
-    &= summary info
-    &= help desc
-    &= versionArg [explicit, name "version", name "v", summary vers]
-    &= verbosityArgs [explicit, name "Verbose", name "V"] []
-    &= helpArg [explicit, name "help", name "h"]
-    where summ = "OpenQASM Transpilation Tools"
-          vers = "1.0.0"
-          info = summ ++ " version " ++ vers
-          desc = "A cmdln interface to the OpenQASM transpiler pipeline."
-
--- | Returns all command-line arguments as a QasmTools value.
 getToolArgs :: IO (QasmTools)
-getToolArgs = cmdArgsRun toolModes
+getToolArgs = parseCmdLnArgs title desc ctors
+    where title = "OpenQASM Inspection Tools"
+          desc  = "A command-line interface to the OpenQASM parsing phases."
+          ctors = [parserMode, analyzerMode, writerMode]
