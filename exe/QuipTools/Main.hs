@@ -13,14 +13,14 @@ import LinguaQuanta.Quip.Quipper
   , parseQuip
   , quipToGates
   )
-import QuipTools.CmdLn
-  ( QuipTools(..)
-  , getToolArgs
-  )
-import SetupTools
+import LinguaQuantaExe.SetupTools
   ( DoTaskFn
   , DisplayFn
   , setupTool
+  )
+import QuipTools.CmdLn
+  ( QuipTools(..)
+  , getToolArgs
   )
 import System.IO (hPutStr)
 import Text.Pretty.Simple (pHPrint)

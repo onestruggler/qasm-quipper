@@ -2,7 +2,7 @@
 
 {-# LANGUAGE TupleSections #-}
 
-module IOUtils
+module LinguaQuantaExe.IOUtils
   ( readSrc
   , withOut
   ) where
@@ -20,7 +20,7 @@ import System.IO
   )
 
 -------------------------------------------------------------------------------
--- * Helper Methods.
+-- * Basic Input and Output.
 
 -- | Takes as input the input source. If the source is empty, then (text, file)
 -- is returned where text is all contents pending on stdin, and file is set to

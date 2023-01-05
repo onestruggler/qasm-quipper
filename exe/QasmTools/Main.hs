@@ -15,16 +15,16 @@ import LinguaQuanta.Qasm.Passes
   , toAst
   )
 import LinguaQuanta.Qasm.Printer (printAst)
+import LinguaQuantaExe.SetupTools
+  ( DoTaskFn
+  , DisplayFn
+  , setupTool
+  )
 import QasmTools.CmdLn
   ( QasmTools(..)
   , getToolArgs
   )
 import System.IO (hPutStrLn)
-import SetupTools
-  ( DoTaskFn
-  , DisplayFn
-  , setupTool
-  )
 import Text.Pretty.Simple (pHPrint)
 
 -------------------------------------------------------------------------------

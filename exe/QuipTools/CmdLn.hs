@@ -11,7 +11,7 @@ module QuipTools.CmdLn
 -------------------------------------------------------------------------------
 -- * Import Section.
 
-import CmdLnFlags
+import LinguaQuantaExe.CmdLnFlags
   ( outFlags
   , srcFlags
   )

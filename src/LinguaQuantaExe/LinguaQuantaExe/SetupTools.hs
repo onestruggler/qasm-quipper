@@ -1,6 +1,6 @@
 -- | General-purpose functions to pass along source files to tools.
 
-module SetupTools
+module LinguaQuantaExe.SetupTools
   ( DoTaskFn
   , DisplayFn
   , setupTool
@@ -9,7 +9,7 @@ module SetupTools
 -------------------------------------------------------------------------------
 -- * Import Section.
 
-import IOUtils
+import LinguaQuantaExe.IOUtils
   ( readSrc
   , withOut
   )

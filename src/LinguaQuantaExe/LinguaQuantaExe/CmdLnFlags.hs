@@ -1,6 +1,6 @@
 -- | Shared flags between command-line parsers.
 
-module CmdLnFlags
+module LinguaQuantaExe.CmdLnFlags
   ( srcFlags
   , outFlags
   , legacyFlags

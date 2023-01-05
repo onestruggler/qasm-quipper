@@ -11,7 +11,7 @@ module QasmTools.CmdLn
 -------------------------------------------------------------------------------
 -- * Import Section.
 
-import CmdLnFlags
+import LinguaQuantaExe.CmdLnFlags
   ( inlineInvFlags
   , inlinePowFlags
   , legacyFlags
