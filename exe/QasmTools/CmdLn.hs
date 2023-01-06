@@ -13,8 +13,6 @@ module QasmTools.CmdLn
 
 import LinguaQuantaExe.CmdLnFlags
   ( def
-  , inlineInvFlags
-  , inlinePowFlags
   , legacyFlags
   , outFlags
   , srcFlags
@@ -33,16 +31,12 @@ data QasmTools
     = Parser { src :: String
              , out :: String
              }
-    | Analyzer { src       :: String
-               , out       :: String
-               , inlinePow :: Bool
-               , inlineInv :: Bool
+    | Analyzer { src :: String
+               , out :: String
                }
-    | Writer { src       :: String 
-             , out       :: String
-             , inlinePow :: Bool
-             , inlineInv :: Bool
-             , legacy    :: Bool
+    | Writer { src    :: String 
+             , out    :: String
+             , legacy :: Bool
              }
     deriving (Show, Eq, Data, Typeable)
 
@@ -61,27 +55,23 @@ analyzerMode :: QasmTools
 analyzerMode = addModeAnnotations title desc ctor
     where title = "Analyzer"
           desc  = "Computes the internal represntation of an OpenQASM program."
-          ctor  = Analyzer { src       = srcFlags def
-                           , out       = outFlags def
-                           , inlinePow = inlinePowFlags def
-                           , inlineInv = inlineInvFlags def
+          ctor  = Analyzer { src = srcFlags def
+                           , out = outFlags def
                            }
 
 writerMode :: QasmTools
 writerMode = addModeAnnotations title desc ctor
     where title = "Writer"
           desc  = "Computes the image of an OpenQASM program."
-          ctor  = Writer { src       = srcFlags def
-                         , out       = outFlags def
-                         , inlinePow = inlinePowFlags def
-                         , inlineInv = inlineInvFlags def
-                         , legacy    = legacyFlags def
+          ctor  = Writer { src    = srcFlags def
+                         , out    = outFlags def
+                         , legacy = legacyFlags def
                          }
 
 -------------------------------------------------------------------------------
 -- * CmdArgs Mode Declaration.
 
-getToolArgs :: IO (QasmTools)
+getToolArgs :: IO QasmTools
 getToolArgs = parseCmdLnArgs title desc ctors
     where title = "OpenQASM Inspection Tools"
           desc  = "A command-line interface to the OpenQASM parsing phases."

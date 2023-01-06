@@ -57,10 +57,12 @@ library LinguaQuantaExe
   exposed-modules:     LinguaQuantaExe.CmdLnFlags
                        LinguaQuantaExe.CmdLnParser
                        LinguaQuantaExe.IOUtils
+                       LinguaQuantaExe.QasmUtils
                        LinguaQuantaExe.SetupTools
   build-depends:       base,
                        cmdargs,
-                       directory
+                       directory,
+                       LinguaQuanta
   hs-source-dirs:      src/LinguaQuantaExe
   default-language:    Haskell2010
 
@@ -68,7 +70,6 @@ executable qasm_tools
   main-is:             QasmTools/Main.hs
   other-modules:       QasmTools.CmdLn
   build-depends:       base,
-                       directory,
                        LinguaQuanta,
                        LinguaQuantaExe,
                        pretty-simple
@@ -79,7 +80,6 @@ executable quip_tools
   main-is:             QuipTools/Main.hs
   other-modules:       QuipTools.CmdLn
   build-depends:       base,
-                       directory,
                        LinguaQuanta,
                        LinguaQuantaExe,
                        pretty-simple

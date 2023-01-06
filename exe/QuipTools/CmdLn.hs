@@ -57,7 +57,7 @@ writerMode = addModeAnnotations title desc ctor
 -------------------------------------------------------------------------------
 -- * CmdArgs Mode Declaration.
 
-getToolArgs :: IO (QuipTools)
+getToolArgs :: IO QuipTools
 getToolArgs = parseCmdLnArgs title desc ctors
     where title = "Quipper Inspection Tools"
           desc  = "A command-line interface to the Quipper parsing phases."
