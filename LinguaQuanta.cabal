@@ -66,6 +66,33 @@ library LinguaQuantaExe
   hs-source-dirs:      src/LinguaQuantaExe
   default-language:    Haskell2010
 
+executable elim_ctrls
+  main-is:             ElimCtrls/Main.hs
+  other-modules:       ElimCtrls.CmdLn
+  build-depends:       base,
+                       LinguaQuanta,
+                       LinguaQuantaExe
+  hs-source-dirs:      exe
+  default-language:    Haskell2010
+
+executable elim_invs
+  main-is:             ElimInvs/Main.hs
+  other-modules:       ElimInvs.CmdLn
+  build-depends:       base,
+                       LinguaQuanta,
+                       LinguaQuantaExe
+  hs-source-dirs:      exe
+  default-language:    Haskell2010
+
+executable elim_pows
+  main-is:             ElimPows/Main.hs
+  other-modules:       ElimPows.CmdLn
+  build-depends:       base,
+                       LinguaQuanta,
+                       LinguaQuantaExe
+  hs-source-dirs:      exe
+  default-language:    Haskell2010
+
 executable qasm_tools
   main-is:             QasmTools/Main.hs
   other-modules:       QasmTools.CmdLn

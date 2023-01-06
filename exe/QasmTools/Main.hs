@@ -31,7 +31,7 @@ codegen :: Bool -> DoTaskFn [String]
 codegen legacy file text =
     case parseQasmAST file text of
         Left err  -> Left err
-        Right ast -> Right (printAst legacy ast)
+        Right ast -> Right $ printAst legacy ast
 
 -------------------------------------------------------------------------------
 -- * Entry Point.

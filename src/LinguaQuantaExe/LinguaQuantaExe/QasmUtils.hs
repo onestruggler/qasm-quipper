@@ -3,6 +3,7 @@
 module LinguaQuantaExe.QasmUtils
   ( parseQasmAST
   , printLines
+  , printQasmAST
   ) where
 
 -------------------------------------------------------------------------------
@@ -11,6 +12,7 @@ module LinguaQuantaExe.QasmUtils
 import LinguaQuanta.Qasm.AST (AstStmt)
 import LinguaQuanta.Qasm.Parser (parseQasm)
 import LinguaQuanta.Qasm.Passes (toAst)
+import LinguaQuanta.Qasm.Printer (printAst)
 import LinguaQuantaExe.SetupTools
   ( DoTaskFn
   , DisplayFn
@@ -41,3 +43,8 @@ printLines _   []           = return ()
 printLines hdl (line:lines) = do
     hPutStrLn hdl line
     printLines hdl lines
+
+-- | Takes as input a list of OpenQASM AST statements. Prints each statement
+-- (in order) to a new line, and then returns nothing.
+printQasmAST :: Bool -> DisplayFn [AstStmt]
+printQasmAST legacy hdl = printLines hdl . printAst legacy

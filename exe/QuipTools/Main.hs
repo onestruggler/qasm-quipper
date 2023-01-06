@@ -31,7 +31,7 @@ import Text.Pretty.Simple (pHPrint)
 -- | Composes parsing functions to convert a Quipper ASCII circuit into an
 -- abstract gate circuit.
 readQuip :: DoTaskFn GateCirc
-readQuip file text = Right (quipToGates $ parseQuip file text)
+readQuip file text = Right $ quipToGates $ parseQuip file text
 
 -------------------------------------------------------------------------------
 -- * Writer Interface.
@@ -43,7 +43,7 @@ writeQuip :: DoTaskFn String
 writeQuip file text =
     case readQuip file text of
         Left  err  -> Left err
-        Right circ -> Right (gatesToAscii circ)
+        Right circ -> Right $ gatesToAscii circ
 
 -------------------------------------------------------------------------------
 -- * Entry Point.
