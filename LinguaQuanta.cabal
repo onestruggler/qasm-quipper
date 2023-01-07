@@ -112,6 +112,15 @@ executable format_quip
   hs-source-dirs:      exe
   default-language:    Haskell2010
 
+executable qasm_to_quip
+  main-is:             QasmToQuip/Main.hs
+  other-modules:       QasmToQuip.CmdLn
+  build-depends:       base,
+                       LinguaQuanta,
+                       LinguaQuantaExe
+  hs-source-dirs:      exe
+  default-language:    Haskell2010
+
 executable qasm_tools
   main-is:             QasmTools/Main.hs
   other-modules:       QasmTools.CmdLn
@@ -119,6 +128,15 @@ executable qasm_tools
                        LinguaQuanta,
                        LinguaQuantaExe,
                        pretty-simple
+  hs-source-dirs:      exe
+  default-language:    Haskell2010
+
+executable quip_to_qasm
+  main-is:             QuipToQasm/Main.hs
+  other-modules:       QuipToQasm.CmdLn
+  build-depends:       base,
+                       LinguaQuanta,
+                       LinguaQuantaExe
   hs-source-dirs:      exe
   default-language:    Haskell2010
 
