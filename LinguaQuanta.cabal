@@ -93,6 +93,25 @@ executable elim_pows
   hs-source-dirs:      exe
   default-language:    Haskell2010
 
+executable format_qasm
+  main-is:             FormatQasm/Main.hs
+  other-modules:       FormatQasm.CmdLn
+  build-depends:       base,
+                       LinguaQuanta,
+                       LinguaQuantaExe
+  hs-source-dirs:      exe
+  default-language:    Haskell2010
+
+executable format_quip
+  main-is:             FormatQuip/Main.hs
+  other-modules:       FormatQuip.CmdLn
+  build-depends:       base,
+                       LinguaQuantaExe,
+                       quipper-language,
+                       quipper-libraries
+  hs-source-dirs:      exe
+  default-language:    Haskell2010
+
 executable qasm_tools
   main-is:             QasmTools/Main.hs
   other-modules:       QasmTools.CmdLn

@@ -3,7 +3,7 @@
 module LinguaQuantaExe.CmdLnParser
   ( Data
   , Typeable
-  ,addModeAnnotations
+  , addModeAnnotations
   , parseCmdLnArgs
   ) where
 

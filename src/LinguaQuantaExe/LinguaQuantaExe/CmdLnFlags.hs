@@ -1,18 +1,29 @@
 -- | Shared flags between command-line parsers.
 
+{-# LANGUAGE DeriveDataTypeable #-}
+
 module LinguaQuantaExe.CmdLnFlags
-  ( def
-  , srcFlags
+  ( QuipVizFormat(..)
+  , def
   , outFlags
+  , quipVizFlags
+  , srcFlags
   , legacyFlags
   ) where
 
 -------------------------------------------------------------------------------
 -- * Import Section.
 
+import Data.List
+  ( concat
+  , intersperse
+  )
 import System.Console.CmdArgs
-  ( (&=)
+  ( Data
+  , Typeable
+  , (&=)
   , def
+  , typ
   , help
   , typFile
   )
@@ -34,6 +45,22 @@ outFlags x = x &= help "Output destination (defaults to stdout)."
 
 -------------------------------------------------------------------------------
 -- * Output Format Flags.
+
+-- | Enumeration of supported Quipper formats.
+data QuipVizFormat = PDF
+                   | PS
+                   | EPS
+                   | GateCount
+                   deriving (Show, Eq, Data, Typeable, Enum)
+
+-- | Returns the flags for the --viz argument. The default value is taken as an
+-- argument, since flags are impure.
+quipVizFlags :: QuipVizFormat -> QuipVizFormat
+quipVizFlags x = x &= help ("Options: " ++ names)
+                   &= typ "FORMAT"
+    where elist = enumFrom $ toEnum 0 :: [QuipVizFormat]
+          slist = map show elist
+          names = concat $ intersperse ", " slist
 
 -- | Returns the flags for the --legacy argument. The default value is taken as
 -- an argument, since flags are impure.
