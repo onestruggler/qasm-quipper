@@ -4,12 +4,18 @@
 
 module LinguaQuantaExe.IOUtils
   ( readSrc
+  , redirectStdout
   , withOut
   ) where
 
 -------------------------------------------------------------------------------
 -- * Import Section.
 
+import GHC.IO.Handle
+  ( hClose
+  , hDuplicate
+  , hDuplicateTo
+  )
 import System.Exit (die)
 import System.Directory (doesFileExist)
 import System.IO
@@ -40,3 +46,20 @@ readSrc src = do
 withOut :: String -> (Handle -> IO ()) -> IO ()
 withOut ""  cb = cb stdout
 withOut out cb = withFile out WriteMode cb
+
+-------------------------------------------------------------------------------
+-- * Stream Manipulation.
+
+-- | Takes as input a file handle (hdl) and a nullary IO function (f). Invokes
+-- f with stdout redirected to hdl. After f has terminated, the original handle
+-- for stdout is restored.
+redirectStdout :: Handle -> (() -> IO ()) -> IO ()
+redirectStdout hdl f = do
+    if stdout == hdl
+    then f ()
+    else do
+        bk <- hDuplicate stdout
+        hDuplicateTo hdl stdout
+        f ()
+        hDuplicateTo bk stdout
+        hClose bk
