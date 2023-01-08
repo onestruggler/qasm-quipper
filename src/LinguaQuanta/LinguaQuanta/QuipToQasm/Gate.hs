@@ -71,6 +71,17 @@ toNamedGateStmt wmap name inv ins ctrls = [AstGateStmt 1 gate]
           mods = toGateMod inv ctrls
           gate = NamedGate name [] ops mods
 
+-- | Like toNamedGateStmt, but consumes the first control as an explicit
+-- argument. The control is promoted to an input wire. If the polarity of the
+-- control is negative, then the negations are inlined.
+toNamedCtrl :: WireLookup -> Qasm.GateName -> Bool -> Control -> GateGenerator
+toNamedCtrl wmap name inv (Pos w) ins ctrls = stmts
+    where stmts = toNamedGateStmt wmap name inv (w:ins) ctrls
+toNamedCtrl wmap name inv (Neg w) ins ctrls = stmts
+    where invwStmts = namedGateTransl wmap Quip.GateX False [w] []
+          gateStmts = toNamedCtrl wmap name inv (Pos w) ins ctrls
+          stmts     = invwStmts ++ gateStmts ++ invwStmts
+
 -- | Takes as input a map from Quipper wires to OpenQASM declarations (wmap),
 -- together with the description of a Quipper NamedGate (name, inv, in, ctrls).
 -- Returns a list of equivalent OpenQASM statements.
@@ -86,5 +97,16 @@ namedGateTransl wmap Quip.GateH _ ins [] = stmts
     where stmts = toNamedGateStmt wmap Qasm.GateH False ins []
 namedGateTransl wmap Quip.GateSwap _ ins [] = stmts
     where stmts = toNamedGateStmt wmap Qasm.GateSwap False ins []
+-- Controlled gates with named singly controlled instances.
+namedGateTransl wmap Quip.GateX _ ins [c] = stmts
+    where stmts = toNamedCtrl wmap Qasm.GateCX False c ins []
+namedGateTransl wmap Quip.GateY _ ins (c:ctrls) = stmts
+    where stmts = toNamedCtrl wmap Qasm.GateCY False c ins ctrls
+namedGateTransl wmap Quip.GateZ _ ins (c:ctrls) = stmts
+    where stmts = toNamedCtrl wmap Qasm.GateCZ False c ins ctrls
+namedGateTransl wmap Quip.GateH _ ins (c:ctrls) = stmts
+    where stmts = toNamedCtrl wmap Qasm.GateCH False c ins ctrls
+namedGateTransl wmap Quip.GateSwap _ ins (c:ctrls) = stmts
+    where stmts = toNamedCtrl wmap Qasm.GateCSwap False c ins ctrls
 -- Unimplemented cases.
 namedGateTransl _ _ _ _ _ = error "Unimplemented gate translation case."
