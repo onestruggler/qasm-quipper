@@ -36,6 +36,7 @@ library
                        LinguaQuanta.Quip.Transformers
                        LinguaQuanta.Quip.Wire
                        LinguaQuanta.QuipToQasm.Translator
+                       LinguaQuanta.QuipToQasm.Wire
   other-modules:       LinguaQuanta.Qasm.Lexer
   build-tools:         happy,
                        alex
@@ -229,5 +230,11 @@ test-suite quip-wire-tests
 test-suite quiptoqasm-translator-tests
   import:              basic-unit-test-props
   main-is:             QuipToQasm-Translator-Tests.hs
+  build-depends:       containers
+  type:                exitcode-stdio-1.0
+
+test-suite quiptoqasm-wire-tests
+  import:              basic-unit-test-props
+  main-is:             QuipToQasm-Wire-Tests.hs
   build-depends:       containers
   type:                exitcode-stdio-1.0

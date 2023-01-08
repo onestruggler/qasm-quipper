@@ -9,38 +9,34 @@ import LinguaQuanta.Qasm.AST (AstStmt(..))
 import LinguaQuanta.Quip.Gate (Gate(..))
 import LinguaQuanta.Quip.Quipper (GateCirc(..))
 import LinguaQuanta.Quip.Wire (countQWires, countCWires)
+import LinguaQuanta.QuipToQasm.Wire
+  ( translateQWireInputs
+  , translateCWireInputs
+  )
 
 -------------------------------------------------------------------------------
 -- * Functions to Translate Gates
 
--- | Consumes the body of a Quipper circuit or subroutine (a list of gates).
--- Returns the body of an equivalent OpenQASM program (a list of statements).
+-- | Takes as input a Quipper gate. Returns an equivalent sequence of OpenQASM
+-- statements (given by a list of AST statements).
+translateGate :: Gate -> [AstStmt]
+translateGate (NamedGate name inv ins ctrls) = error msg
+    where msg = "NamedGate translation not implemented."
+translateGate (RotGate name inv angle ins ctrls) = error msg
+    where msg = "RotGate translation not implemented."
+translateGate (PhaseGate angle ctrls) = error msg
+    where msg = "PhaseGate translation not implemented."
+translateGate (QInitGate isOn id) = error msg
+    where msg = "QInitGate translation not implemented."
+translateGate (QTermGate isOn id) = error msg
+    where msg = "QTermGate translation not implemented."
+
+-- | Takes as input the body of a Quipper circuit or subroutine (given by a
+-- list of gates). Returns the body of an equivalent OpenQASM program (given by
+-- a list of AST statements).
 translateGates :: [Gate] -> [AstStmt]
-translateGates [] = []
-translateGates _  = error "Gate translation not yet supported."
-
--------------------------------------------------------------------------------
--- * Functions to Translate Inputs
-
--- | The global register for all input qubits.
-_IN_QWIRE_REG :: String
-_IN_QWIRE_REG = "input_qwires"
-
--- | The global register for all input classical bits.
-_IN_CWIRE_REG :: String
-_IN_CWIRE_REG = "input_cwires"
-
--- | Consumes the number of input qubits. Returns a list of AST statements to
--- declare the corresponding register.
-translateQWireInputs :: Int -> [AstStmt]
-translateQWireInputs 0 = []
-translateQWireInputs n = [AstQubitDecl (Just n) _IN_QWIRE_REG]
-
--- | Consumes the number of input classical bits. Returns a list of AST
--- statements to declare the corresponding register.
-translateCWireInputs :: Int -> [AstStmt]
-translateCWireInputs 0 = []
-translateCWireInputs _ = error "Classical wires not yet supported."
+translateGates []          = []
+translateGates (gate:rest) = translateGate gate ++ translateGates rest
 
 -------------------------------------------------------------------------------
 -- * Top-Level Translation Functions
