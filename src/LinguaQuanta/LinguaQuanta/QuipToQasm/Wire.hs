@@ -2,8 +2,10 @@
 -- declarations.
 
 module LinguaQuanta.QuipToQasm.Wire
-  ( allocateInputWires
+  ( WireLookup
+  , allocateInputWires
   , getAllocation
+  , getState
   , translateQWireInputs
   , translateCWireInputs
   ) where
@@ -12,6 +14,7 @@ module LinguaQuanta.QuipToQasm.Wire
 -- * Import Section.
 
 import qualified Data.IntMap.Strict as IntMap
+import LinguaQuanta.Maybe (branchJust)
 import LinguaQuanta.Qasm.AST (AstStmt(..))
 import LinguaQuanta.Quip.Wire (WireType(..))
 import LinguaQuanta.Qasm.Language
@@ -49,6 +52,7 @@ translateCWireInputs _ = error "Classical wires not yet supported."
 -- Quipper wire may have both a qalloc and a calloc if type conversions occur.
 data DeclAllocation = DeclAllocation { qalloc :: Maybe GateOperand
                                      , calloc :: Maybe GateOperand
+                                     , state  :: WireType
                                      } deriving (Show, Eq)
 
 -- | Maps wire identifies to their corresponding OpenQASM variables.
@@ -71,12 +75,14 @@ allocHelper ((id, QWire):pairs) qs cs map = allocHelper pairs (qs + 1) cs map'
     where index = DecInt $ show qs
           alloc = DeclAllocation { qalloc = Just (QReg _IN_QWIRE_REG index)
                                  , calloc = Nothing
+                                 , state  = QWire
                                  }
           map' = IntMap.insert id alloc map
 allocHelper ((id, CWire):pairs) qs cs map = allocHelper pairs qs (cs + 1) map'
     where index = DecInt $ show cs
           alloc = DeclAllocation { qalloc = Nothing
                                  , calloc = Just (QReg _IN_CWIRE_REG index)
+                                 , state  = CWire
                                  }
           map' = IntMap.insert id alloc map
 
@@ -93,3 +99,7 @@ getAllocation ty id (WireLookup map) =
         Just entry -> case ty of
             QWire -> qalloc entry
             CWire -> calloc entry
+
+-- | Returns the current state of the wire.
+getState :: Int -> WireLookup -> Maybe WireType
+getState id (WireLookup map) = branchJust (IntMap.lookup id map) (Just . state)

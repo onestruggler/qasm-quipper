@@ -89,13 +89,28 @@ test14 = TestCase (assertEqual "WireLookup retrieval from empty wire map (7/7)."
                                (getAllocation CWire 44 allocMixed))
     where expt = Just (QReg "input_cwires" (DecInt "2")) :: Maybe GateOperand
 
-test15 = TestCase (assertEqual "WireLookup retrieval Fails with invalid type."
+test15 = TestCase (assertEqual "WireLookup retrieval fails with invalid type."
                                (Nothing :: Maybe GateOperand)
                                (getAllocation CWire 1 allocMixed))
 
-test16 = TestCase (assertEqual "WireLookup retrieval Fails with invalid identifier."
+test16 = TestCase (assertEqual "WireLookup retrieval fails with invalid identifier."
                                (Nothing :: Maybe GateOperand)
                                (getAllocation QWire 256 allocMixed))
+
+-----------------------------------------------------------------------------------------
+-- getState: After allocation
+
+test17 = TestCase (assertEqual "getState supports QWire allocations."
+                               (Just QWire :: Maybe WireType)
+                               (getState 1 allocMixed))
+
+test18 = TestCase (assertEqual "getState supports CWire allocations."
+                               (Just CWire :: Maybe WireType)
+                               (getState 9 allocMixed))
+
+test19 = TestCase (assertEqual "getState handles missing allocations."
+                               (Nothing :: Maybe WireType)
+                               (getState 256 allocMixed))
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
@@ -115,6 +130,9 @@ tests = hUnitTestToTests $ TestList [TestLabel "Empty_Allocation_1" test1,
                                      TestLabel "Mixed_Allocation_6" test13,
                                      TestLabel "Mixed_Allocation_7" test14,
                                      TestLabel "Mixed_Allocation_BadType" test15,
-                                     TestLabel "Mixed_Allocation_BadID" test16]
+                                     TestLabel "Mixed_Allocation_BadID" test16,
+                                     TestLabel "getState_QWire" test17,
+                                     TestLabel "getState_CWire" test18,
+                                     TestLabel "getState_BadID" test19]
 
 main = defaultMain tests
