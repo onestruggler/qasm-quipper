@@ -362,6 +362,51 @@ test38 = TestCase (assertEqual "namedGateTransl: uncontrolled Toffoli gates (7/7
           gate  = Qasm.NamedGate Qasm.GateCCX [] ops mod
 
 -----------------------------------------------------------------------------------------
+-- Translating QMultiNot gates.
+
+test39 = TestCase (assertEqual "namedGateTransl: QMultiNot (1/4)."
+                               [AstGateStmt 1 gate]
+                               (namedGateTransl qalloc Quip.GateQMultiNot False [1] []))
+    where decl = QReg "input_qwires" (DecInt "0")
+          gate = Qasm.NamedGate Qasm.GateX [] [decl] nullGateMod
+
+test40 = TestCase (assertEqual "namedGateTransl: QMultiNot (2/4)."
+                               [AstGateStmt 1 gate]
+                               (namedGateTransl qalloc Quip.GateQMultiNot True [1] ctrls))
+    where ctrls = [Quip.Pos 2]
+          decl1 = QReg "input_qwires" (DecInt "1")
+          decl2 = QReg "input_qwires" (DecInt "0")
+          gate  = Qasm.NamedGate Qasm.GateCX [] [decl1, decl2] nullGateMod
+
+test41 = TestCase (assertEqual "namedGateTransl: QMultiNot (3/4)."
+                               [AstGateStmt 1 gate1,
+                                AstGateStmt 1 gate2,
+                                AstGateStmt 1 gate3]
+                               (namedGateTransl qalloc Quip.GateQMultiNot False ins []))
+    where ins   = [1, 2, 3]
+          decl1 = QReg "input_qwires" (DecInt "0")
+          decl2 = QReg "input_qwires" (DecInt "1")
+          decl3 = QReg "input_qwires" (DecInt "2")
+          gate1 = Qasm.NamedGate Qasm.GateX [] [decl1] nullGateMod
+          gate2 = Qasm.NamedGate Qasm.GateX [] [decl2] nullGateMod
+          gate3 = Qasm.NamedGate Qasm.GateX [] [decl3] nullGateMod
+
+test42 = TestCase (assertEqual "namedGateTransl: QMultiNot (4/4)."
+                               [AstGateStmt 1 gate1,
+                                AstGateStmt 1 gate2,
+                                AstGateStmt 1 gate3]
+                               (namedGateTransl qalloc Quip.GateQMultiNot True ins ctrls))
+    where ins   = [1, 2, 3]
+          ctrls = [Quip.Pos 4]
+          decl1 = QReg "input_qwires" (DecInt "0")
+          decl2 = QReg "input_qwires" (DecInt "1")
+          decl3 = QReg "input_qwires" (DecInt "2")
+          decl4 = QReg "input_qwires" (DecInt "3")
+          gate1 = Qasm.NamedGate Qasm.GateCX [] [decl4, decl1] nullGateMod
+          gate2 = Qasm.NamedGate Qasm.GateCX [] [decl4, decl2] nullGateMod
+          gate3 = Qasm.NamedGate Qasm.GateCX [] [decl4, decl3] nullGateMod
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "GateX_NoCtrl_NoInv_Q1" test1,
@@ -401,6 +446,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateX_NoCtrl_NoInv_Q1" test1,
                                      TestLabel "Tof_NegNeg_NoInv_Q3Q2Q1" test35,
                                      TestLabel "Tof_PosPos_Inv_Q3Q2Q1" test36,
                                      TestLabel "Tof_PosPos_NoInv_Q6Q5Q3" test37,
-                                     TestLabel "Tof_PosPosPos_NoInv_Q3Q2Q1" test38]
+                                     TestLabel "Tof_PosPosPos_NoInv_Q3Q2Q1" test38,
+                                     TestLabel "QMultiNot_NoCtrls_NoInv_Q1" test39,
+                                     TestLabel "QMultiNot_Pos2_Inv_Q2" test40,
+                                     TestLabel "QMultiNot_NoCtrls_NoInv_Q1Q2Q3" test41,
+                                     TestLabel "QMultiNot_Pos4_Inv_Q1Q2Q3" test42]
 
 main = defaultMain tests

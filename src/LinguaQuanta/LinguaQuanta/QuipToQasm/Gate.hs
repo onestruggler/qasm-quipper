@@ -40,7 +40,7 @@ toGateMod True  []              = negateMod nullGateMod
 toGateMod inv   ((Pos _):ctrls) = addCtrlsToMod 1 $ toGateMod inv ctrls
 toGateMod inv   ((Neg _):ctrls) = addNegCtrlsToMod 1 $ toGateMod inv ctrls
 
--- | Takes as input a map from Quipper wires to OpenQASM declarations (wrap),
+-- | Takes as input a map from Quipper wires to OpenQASM declarations (wmap),
 -- a list of Quipper controls (ctrls), and a list of Quipper input wires (ins).
 -- Returns an equivalent list of OpenQASM 3 gate operands, such that each wire
 -- maps to the corresponding declaration in wmap.
@@ -55,7 +55,7 @@ mergeCtrlsAndIns wmap ctrls ins = map f $ toWires ctrls ++ ins
                         Nothing   -> error "Undefined quantum control wire."
                         Just decl -> decl
 
--- | Takes as input a map from Quipper wires to OpenQASM declarations (wrap), a
+-- | Takes as input a map from Quipper wires to OpenQASM declarations (wmap), a
 -- wire (w), and a list of OpenQASM statements (stmts). Returns stmts
 -- conjugated by: X w.
 conjugateByNots :: WireLookup -> Wire -> [AstStmt] -> [AstStmt]
@@ -69,7 +69,7 @@ conjugateByNots wmap w stmts = notStmts ++ stmts ++ notStmts
 -- and controls. This is a utility to improve function type readability.
 type GateGenerator = [Wire] -> [Control] -> [AstStmt]
 
--- | Takes as input a map from Quipper wires to OpenQASM declarations (wrap),
+-- | Takes as input a map from Quipper wires to OpenQASM declarations (wmap),
 -- an OpenQASM gate name, and the description of a Quipper NAmedGate (excluding
 -- the name). Returns an equivalent OpenQASM gate with the provided name.
 toNamedGateStmt :: WireLookup -> Qasm.GateName -> Bool -> GateGenerator
@@ -94,6 +94,16 @@ translToffoli wmap c (Pos w) ins ctrls = stmts
     where stmts = toNamedCtrl wmap Qasm.GateCCX False c (w:ins) ctrls
 translToffoli wmap c (Neg w) ins ctrls = conjugateByNots wmap w stmts
     where stmts = translToffoli wmap c (Pos w) ins ctrls
+
+-- | Takes as input a map from Quipper wires to OpenQASM declarations (wmap),
+-- a list of n input wires, and a list of controls. The wires and controls are
+-- inputs to a MultiQNot. Implements the controlled QMultiNot gate using n
+-- controlled Paul-X gates. Returns the Pauli-X gates as AST statements.
+unfoldQMultiNot :: WireLookup -> GateGenerator
+unfoldQMultiNot wmap []      ctrls = []
+unfoldQMultiNot wmap (q:ins) ctrls = gate ++ rest
+    where gate = namedGateTransl wmap Quip.GateX False [q] ctrls
+          rest = unfoldQMultiNot wmap ins ctrls
 
 -- | Takes as input a map from Quipper wires to OpenQASM declarations (wmap),
 -- together with the description of a Quipper NamedGate (name, inv, in, ctrls).
@@ -139,5 +149,9 @@ namedGateTransl wmap Quip.GateE inv ins ctrls = stmts
 -- Special case: Toffoli gate.
 namedGateTransl wmap Quip.GateX _ ins (c1:c2:ctrls) = stmts
     where stmts = translToffoli wmap c1 c2 ins ctrls
--- Unimplemented cases.
-namedGateTransl _ _ _ _ _ = error "Unimplemented gate translation case."
+-- Special case: QMultiNot gate.
+namedGateTransl wmap Quip.GateQMultiNot _ ins ctrls = transl
+    where transl = unfoldQMultiNot wmap ins ctrls
+-- Special case: User-defined gate.
+namedGateTransl _ (Quip.UserDefinedGate _) _ _ _ = error msg
+    where msg = "User-defined gate translation implemented."
