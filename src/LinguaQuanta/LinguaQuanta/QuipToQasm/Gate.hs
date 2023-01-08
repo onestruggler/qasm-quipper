@@ -108,5 +108,20 @@ namedGateTransl wmap Quip.GateH _ ins (c:ctrls) = stmts
     where stmts = toNamedCtrl wmap Qasm.GateCH False c ins ctrls
 namedGateTransl wmap Quip.GateSwap _ ins (c:ctrls) = stmts
     where stmts = toNamedCtrl wmap Qasm.GateCSwap False c ins ctrls
+-- Built-in gates without named controlled instances.
+namedGateTransl wmap Quip.GateV inv ins ctrls = stmts
+    where stmts = toNamedGateStmt wmap Qasm.GateSX inv ins ctrls
+namedGateTransl wmap Quip.GateS inv ins ctrls = stmts
+    where stmts = toNamedGateStmt wmap Qasm.GateS inv ins ctrls
+namedGateTransl wmap Quip.GateT inv ins ctrls = stmts
+    where stmts = toNamedGateStmt wmap Qasm.GateT inv ins ctrls
+namedGateTransl wmap Quip.GateIX inv ins ctrls = stmts
+    where stmts = toNamedGateStmt wmap Qasm.GateQuipIX inv ins ctrls
+namedGateTransl wmap Quip.GateOmega inv ins ctrls = stmts
+    where stmts = toNamedGateStmt wmap Qasm.GateQuipOmega inv ins ctrls
+namedGateTransl wmap Quip.GateW inv ins ctrls = stmts
+    where stmts = toNamedGateStmt wmap Qasm.GateQuipW inv ins ctrls
+namedGateTransl wmap Quip.GateE inv ins ctrls = stmts
+    where stmts = toNamedGateStmt wmap Qasm.GateQuipE inv ins ctrls
 -- Unimplemented cases.
 namedGateTransl _ _ _ _ _ = error "Unimplemented gate translation case."

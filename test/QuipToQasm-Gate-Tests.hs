@@ -193,6 +193,90 @@ test20 = TestCase (assertEqual "namedGateTransl: support for singly controlled s
           gate  = Qasm.NamedGate Qasm.GateCSwap [] [decl1, decl2] nullGateMod
 
 -----------------------------------------------------------------------------------------
+-- Translating the V gate (multiple configurations).
+
+test21 = TestCase (assertEqual "namedGateTransl: support for uncontrolled V gate (1/5)."
+                               [AstGateStmt 1 gate]
+                               (namedGateTransl qalloc Quip.GateV False [1] []))
+    where decl = QReg "input_qwires" (DecInt "0")
+          gate = Qasm.NamedGate Qasm.GateSX [] [decl] nullGateMod
+
+test22 = TestCase (assertEqual "namedGateTransl: support for uncontrolled V gate (2/4)."
+                               [AstGateStmt 1 gate]
+                               (namedGateTransl qalloc Quip.GateV True [1] []))
+    where decl = QReg "input_qwires" (DecInt "0")
+          mod  = negateMod nullGateMod
+          gate = Qasm.NamedGate Qasm.GateSX [] [decl] mod
+
+test23 = TestCase (assertEqual "namedGateTransl: support for uncontrolled V gate (3/4)."
+                               [AstGateStmt 1 gate]
+                               (namedGateTransl qalloc Quip.GateV False [3] []))
+    where decl = QReg "input_qwires" (DecInt "2")
+          gate = Qasm.NamedGate Qasm.GateSX [] [decl] nullGateMod
+
+test24 = TestCase (assertEqual "namedGateTransl: support for uncontrolled V gate (4/4)."
+                               [AstGateStmt 1 gate]
+                               (namedGateTransl qalloc Quip.GateV True [3] []))
+    where decl = QReg "input_qwires" (DecInt "2")
+          mod  = negateMod nullGateMod
+          gate = Qasm.NamedGate Qasm.GateSX [] [decl] mod
+
+test25 = TestCase (assertEqual "namedGateTransl: support for 4-controlled V gate."
+                               [AstGateStmt 1 gate]
+                               (namedGateTransl qalloc Quip.GateV False [1] ctrls))
+    where ctrls = [Quip.Pos 5, Quip.Neg 4, Quip.Pos 3, Quip.Neg 2]
+          decl1 = QReg "input_qwires" (DecInt "4")
+          decl2 = QReg "input_qwires" (DecInt "3")
+          decl3 = QReg "input_qwires" (DecInt "2")
+          decl4 = QReg "input_qwires" (DecInt "1")
+          decl5 = QReg "input_qwires" (DecInt "0")
+          ops   = [decl1, decl2, decl3, decl4, decl5]
+          mod   = addCtrlsToMod 1 $ addNegCtrlsToMod 1
+                                  $ addCtrlsToMod 1
+                                  $ addNegCtrlsToMod 1
+                                  $ nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateSX [] ops mod
+
+-----------------------------------------------------------------------------------------
+-- Translating gates without named controlled instances (single configuration).
+
+test26 = TestCase (assertEqual "namedGateTransl: support for the S gate."
+                               [AstGateStmt 1 gate]
+                               (namedGateTransl qalloc Quip.GateS False [1] []))
+    where decl = QReg "input_qwires" (DecInt "0")
+          gate = Qasm.NamedGate Qasm.GateS [] [decl] nullGateMod
+
+test27 = TestCase (assertEqual "namedGateTransl: support for the T gate."
+                               [AstGateStmt 1 gate]
+                               (namedGateTransl qalloc Quip.GateT False [1] []))
+    where decl = QReg "input_qwires" (DecInt "0")
+          gate = Qasm.NamedGate Qasm.GateT [] [decl] nullGateMod
+
+test28 = TestCase (assertEqual "namedGateTransl: support for the iX gate."
+                               [AstGateStmt 1 gate]
+                               (namedGateTransl qalloc Quip.GateIX False [1] []))
+    where decl = QReg "input_qwires" (DecInt "0")
+          gate = Qasm.NamedGate Qasm.GateQuipIX [] [decl] nullGateMod
+
+test29 = TestCase (assertEqual "namedGateTransl: support for the omega gate."
+                               [AstGateStmt 1 gate]
+                               (namedGateTransl qalloc Quip.GateOmega False [1] []))
+    where decl = QReg "input_qwires" (DecInt "0")
+          gate = Qasm.NamedGate Qasm.GateQuipOmega [] [decl] nullGateMod
+
+test30 = TestCase (assertEqual "namedGateTransl: support for the W gate."
+                               [AstGateStmt 1 gate]
+                               (namedGateTransl qalloc Quip.GateW False [1] []))
+    where decl = QReg "input_qwires" (DecInt "0")
+          gate = Qasm.NamedGate Qasm.GateQuipW [] [decl] nullGateMod
+
+test31 = TestCase (assertEqual "namedGateTransl: support for the E gate."
+                               [AstGateStmt 1 gate]
+                               (namedGateTransl qalloc Quip.GateE False [1] []))
+    where decl = QReg "input_qwires" (DecInt "0")
+          gate = Qasm.NamedGate Qasm.GateQuipE [] [decl] nullGateMod
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "GateX_NoCtrl_NoInv_Q1" test1,
@@ -210,10 +294,21 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateX_NoCtrl_NoInv_Q1" test1,
                                      TestLabel "GateY_Pos4_Inv_Q3" test13,
                                      TestLabel "GateY_Pos2_Pos3" test14,
                                      TestLabel "GateY_Pos2_Pos3_Neg4" test15,
-                                     TestLabel "GateY_Pos2_Pos3_Neg4_Neg5" test16,
+                                     TestLabel "GateY_Pos5_Neg4_Pos3_Neg2" test16,
                                      TestLabel "GateCX" test17,
                                      TestLabel "GateCZ" test18,
                                      TestLabel "GateCH" test19,
-                                     TestLabel "GateCSwap" test20]
+                                     TestLabel "GateCSwap" test20,
+                                     TestLabel "GateV_NoCtrl_NoInv_Q1" test21,
+                                     TestLabel "GateV_NoCtrl_NoInv_Q3" test22,
+                                     TestLabel "GateV_NoCtrl_Inv_Q1" test23,
+                                     TestLabel "GateV_NoCtrl_Inv_Q3" test24,
+                                     TestLabel "GateV_Pos2_Pos3_Neg4_Neg5" test25,
+                                     TestLabel "Gate_S" test26,
+                                     TestLabel "Gate_T" test27,
+                                     TestLabel "Gate_iX" test28,
+                                     TestLabel "Gate_Omega" test29,
+                                     TestLabel "Gate_W" test30,
+                                     TestLabel "Gate_E" test31]
 
 main = defaultMain tests
