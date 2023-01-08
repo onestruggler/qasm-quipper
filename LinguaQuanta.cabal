@@ -210,6 +210,11 @@ test-suite qasmtoquip-wire-tests
   build-depends:       containers
   type:                exitcode-stdio-1.0
 
+test-suite quip-gate-tests
+  import:              basic-unit-test-props
+  main-is:             Quip-Gate-Tests.hs
+  type:                exitcode-stdio-1.0
+
 test-suite quip-quipper-tests
   import:              basic-unit-test-props
   main-is:             Quip-Quipper-Tests.hs

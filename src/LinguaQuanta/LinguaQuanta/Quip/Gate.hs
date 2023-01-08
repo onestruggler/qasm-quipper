@@ -4,6 +4,7 @@ module LinguaQuanta.Quip.Gate
   ( Control(..)
   , Gate(..)
   , Wire
+  , toWires
   ) where
 
 -------------------------------------------------------------------------------
@@ -20,12 +21,6 @@ import LinguaQuanta.Quip.GateName
 -- | Identifies a uniuqe wire.
 type Wire = Int
 
--- | Associates a negative or positive polarity with a wire, so that it can act
--- as a control.
-data Control = Pos Wire
-             | Neg Wire
-             deriving (Show, Eq)
-
 -- | If true, then the gate is inverted.
 type InverseFlag = Bool
 
@@ -34,6 +29,22 @@ type SetOnFlag = Bool
 
 -- | The angle parameterizing a rotational gate.
 type Angle = Double
+
+-------------------------------------------------------------------------------
+-- * Control Wires.
+
+-- | Associates a negative or positive polarity with a wire, so that it can act
+-- as a control.
+data Control = Pos Wire
+             | Neg Wire
+             deriving (Show, Eq)
+
+-- | Takes as input a list of controlled wires. Returns the corresponding list
+-- of uncontrolled wires.
+toWires :: [Control] -> [Wire]
+toWires []              = []
+toWires ((Pos w):wires) = w : (toWires wires)
+toWires ((Neg w):wires) = w : (toWires wires)
 
 -------------------------------------------------------------------------------
 -- * Quipper Gates.
