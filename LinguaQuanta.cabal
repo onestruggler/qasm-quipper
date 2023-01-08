@@ -35,6 +35,7 @@ library
                        LinguaQuanta.Quip.Quipper
                        LinguaQuanta.Quip.Transformers
                        LinguaQuanta.Quip.Wire
+                       LinguaQuanta.QuipToQasm.Gate
                        LinguaQuanta.QuipToQasm.Translator
                        LinguaQuanta.QuipToQasm.Wire
   other-modules:       LinguaQuanta.Qasm.Lexer
@@ -229,6 +230,12 @@ test-suite quip-transformers-tests
 test-suite quip-wire-tests
   import:              basic-unit-test-props
   main-is:             Quip-Wire-Tests.hs
+  build-depends:       containers
+  type:                exitcode-stdio-1.0
+
+test-suite quiptoqasm-gate-tests
+  import:              basic-unit-test-props
+  main-is:             QuipToQasm-Gate-Tests.hs
   build-depends:       containers
   type:                exitcode-stdio-1.0
 

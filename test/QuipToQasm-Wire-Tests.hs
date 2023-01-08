@@ -6,9 +6,6 @@ import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit
 import LinguaQuanta.Qasm.Language
-  ( Expr(DecInt)
-  , GateOperand(..)
-  )
 import LinguaQuanta.Quip.Wire
 import LinguaQuanta.QuipToQasm.Wire
 
