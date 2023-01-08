@@ -55,6 +55,13 @@ mergeCtrlsAndIns wmap ctrls ins = map f $ toWires ctrls ++ ins
                         Nothing   -> error "Undefined quantum control wire."
                         Just decl -> decl
 
+-- | Takes as input a map from Quipper wires to OpenQASM declarations (wrap), a
+-- wire (w), and a list of OpenQASM statements (stmts). Returns stmts
+-- conjugated by: X w.
+conjugateByNots :: WireLookup -> Wire -> [AstStmt] -> [AstStmt]
+conjugateByNots wmap w stmts = notStmts ++ stmts ++ notStmts
+    where notStmts = namedGateTransl wmap Quip.GateX False [w] []
+
 -------------------------------------------------------------------------------
 -- * Named Gate Translation.
 
@@ -77,10 +84,16 @@ toNamedGateStmt wmap name inv ins ctrls = [AstGateStmt 1 gate]
 toNamedCtrl :: WireLookup -> Qasm.GateName -> Bool -> Control -> GateGenerator
 toNamedCtrl wmap name inv (Pos w) ins ctrls = stmts
     where stmts = toNamedGateStmt wmap name inv (w:ins) ctrls
-toNamedCtrl wmap name inv (Neg w) ins ctrls = stmts
-    where invwStmts = namedGateTransl wmap Quip.GateX False [w] []
-          gateStmts = toNamedCtrl wmap name inv (Pos w) ins ctrls
-          stmts     = invwStmts ++ gateStmts ++ invwStmts
+toNamedCtrl wmap name inv (Neg w) ins ctrls = conjugateByNots wmap w stmts
+    where stmts = toNamedCtrl wmap name inv (Pos w) ins ctrls
+
+-- | Like toNamedCtrl, but consumes the first two controls and is specialized
+-- to the Pauli-X gate. Each control is promoted as described by toNamedCtrl.
+translToffoli :: WireLookup -> Control -> Control -> GateGenerator
+translToffoli wmap c (Pos w) ins ctrls = stmts
+    where stmts = toNamedCtrl wmap Qasm.GateCCX False c (w:ins) ctrls
+translToffoli wmap c (Neg w) ins ctrls = conjugateByNots wmap w stmts
+    where stmts = translToffoli wmap c (Pos w) ins ctrls
 
 -- | Takes as input a map from Quipper wires to OpenQASM declarations (wmap),
 -- together with the description of a Quipper NamedGate (name, inv, in, ctrls).
@@ -123,5 +136,8 @@ namedGateTransl wmap Quip.GateW inv ins ctrls = stmts
     where stmts = toNamedGateStmt wmap Qasm.GateQuipW inv ins ctrls
 namedGateTransl wmap Quip.GateE inv ins ctrls = stmts
     where stmts = toNamedGateStmt wmap Qasm.GateQuipE inv ins ctrls
+-- Special case: Toffoli gate.
+namedGateTransl wmap Quip.GateX _ ins (c1:c2:ctrls) = stmts
+    where stmts = translToffoli wmap c1 c2 ins ctrls
 -- Unimplemented cases.
 namedGateTransl _ _ _ _ _ = error "Unimplemented gate translation case."
