@@ -269,6 +269,33 @@ test43 = TestCase (assertEqual "Cell operands must have compile-time constant in
                                (exprToGate nonConstOpGate))
 
 -----------------------------------------------------------------------------------------
+-- Control Extraction
+
+test44 = TestCase (assertEqual "getCtrlList (1/6)."
+                               []
+                               (getCtrlList mod0))
+
+test45 = TestCase (assertEqual "getCtrlList (2/6)."
+                               []
+                               (getCtrlList mod1))
+
+test46 = TestCase (assertEqual "getCtrlList (3/6)."
+                               [Pos, Pos]
+                               (getCtrlList mod2))
+
+test47 = TestCase (assertEqual "getCtrlList (4/6)."
+                               [Neg, Neg, Neg, Pos, Pos]
+                               (getCtrlList mod3))
+
+test48 = TestCase (assertEqual "getCtrlList (5/6)."
+                               [Neg, Neg, Neg, Pos, Pos]
+                               (getCtrlList mod4))
+
+test49 = TestCase (assertEqual "getCtrlList (6/6)."
+                               [Pos, Neg, Neg, Neg, Pos, Pos]
+                               (getCtrlList mod5))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "GateMod_1" test1,
@@ -313,6 +340,12 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateMod_1" test1,
                                      TestLabel "IsInverted_Gate_1" test40,
                                      TestLabel "IsInverted_Gate_2" test41,
                                      TestLabel "OperandNonNeg" test42,
-                                     TestLabel "OperandConst" test43]
+                                     TestLabel "OperandConst" test43,
+                                     TestLabel "getCtrlList_1" test44,
+                                     TestLabel "getCtrlList_2" test45,
+                                     TestLabel "getCtrlList_3" test46,
+                                     TestLabel "getCtrlList_4" test47,
+                                     TestLabel "getCtrlList_5" test48,
+                                     TestLabel "getCtrlList_6" test49]
 
 main = defaultMain tests

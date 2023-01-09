@@ -11,6 +11,7 @@ module LinguaQuanta.Qasm.Gate
   , addNegCtrls
   , addNegCtrlsToMod
   , exprToGate
+  , getCtrlList
   , hasInversionMod
   , invert
   , isInverted
@@ -77,6 +78,10 @@ addNegCtrlsToMod = addSignsToMod Neg
 -- | Returns true if the inversion modifier is active.
 hasInversionMod :: GateMod -> Bool
 hasInversionMod (GateMod inv _) = inv
+
+-- | Returns a list of control modifiers.
+getCtrlList :: GateMod -> [Sign]
+getCtrlList (GateMod _ ctrls) = ctrls
 
 -------------------------------------------------------------------------------
 -- * Gates and Decorator Functions.
