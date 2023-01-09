@@ -27,8 +27,9 @@ test2 = TestCase (assertEqual "toAst supports basic features."
     where dec1Stmt = QasmDeclStmt QubitT "v1"
           dec2Stmt = QasmDeclStmt QubitT "v2"
           dec3Stmt = QasmDeclStmt (QubitArrT (DecInt "7")) "arr"
-          operands = [QVar "v1", QVar "v2"]
-          gateExpr = PowMod (DecInt "5") (NamedGateOp "cx" [] operands)
+          preparse = [QVar "v1", QVar "v2"]
+          operands = [Scalar "v1", Scalar "v2"]
+          gateExpr = PowMod (DecInt "5") (NamedGateOp "cx" [] preparse)
           gateStmt = QasmGateStmt gateExpr
           astDecl1 = AstQubitDecl Nothing "v1"
           astDecl2 = AstQubitDecl Nothing "v2"
@@ -60,8 +61,8 @@ test6 = TestCase (assertEqual "elimInv supports empty files."
 test7 = TestCase (assertEqual "elimInv supports basic features."
                               (Left ostmts)
                               (elimInv istmts))
-    where opLen1 = [QVar "v1"]
-          opLen2 = [QVar "v1", QVar "v2"]
+    where opLen1 = [Scalar "v1"]
+          opLen2 = [Scalar "v1", Scalar "v2"]
           d1Stmt = AstQubitDecl Nothing "v1"
           d2Stmt = AstQubitDecl Nothing "v2"
           invMod = negateMod nullGateMod
@@ -86,14 +87,14 @@ test8 = TestCase (assertEqual "elimInv returns unknown user-defined inv errors."
                               (elimInv [stmt]))
     where imod = negateMod nullGateMod
           name = "asdf"
-          stmt = AstGateStmt 0 (NamedGate (UserDefined name) [] [QVar "v1"] imod)
+          stmt = AstGateStmt 0 (NamedGate (UserDefined name) [] [Scalar "v1"] imod)
 
 test9 = TestCase (assertEqual "elimInv returns unknown native inv errors."
                               (Right (UnknownNativeInv 1 GateU))
                               (elimInv [stmt]))
     where imod = negateMod nullGateMod
           name = "asdf"
-          stmt = AstGateStmt 0 (NamedGate GateU [Pi, Pi] [QVar "v1"] imod)
+          stmt = AstGateStmt 0 (NamedGate GateU [Pi, Pi] [Scalar "v1"] imod)
 
 -------------------------------------------------------------------------------
 -- elimPow
@@ -105,8 +106,8 @@ test10 = TestCase (assertEqual "elimPow supports empty files."
 test11 = TestCase (assertEqual "elimPow supports empty files."
                                [decl1, decl2, elim1, elim1, elim1, elim2, elim3]
                                (elimPow [decl1, decl2, stmt1, stmt2, stmt3]))
-    where opLn1 = [QVar "v1"]
-          opLn2 = [QVar "v1", QVar "v2"]
+    where opLn1 = [Scalar "v1"]
+          opLn2 = [Scalar "v1", Scalar "v2"]
           decl1 = AstQubitDecl Nothing "v1"
           decl2 = AstQubitDecl Nothing "v2"
           gate1 = NamedGate GateCX [] opLn2 nullGateMod

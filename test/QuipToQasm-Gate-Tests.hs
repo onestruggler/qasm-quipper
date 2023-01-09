@@ -8,7 +8,6 @@ import Test.HUnit
 import LinguaQuanta.Qasm.AST (AstStmt(..))
 import LinguaQuanta.Qasm.Gate as Qasm
 import qualified LinguaQuanta.Qasm.GateName as Qasm
-import LinguaQuanta.Qasm.Language
 import LinguaQuanta.Quip.Gate as Quip
 import qualified LinguaQuanta.Quip.GateName as Quip
 import LinguaQuanta.Quip.Wire
@@ -27,25 +26,25 @@ qalloc = allocateInputWires $ IntMap.fromList qwires
 test1 = TestCase (assertEqual "namedGateTransl: support for uncontrolled Pauli-X (1/4)."
                               [AstGateStmt 1 gate]
                               (namedGateTransl qalloc Quip.GateX False [1] []))
-    where decl = QReg "input_qwires" (DecInt "0")
+    where decl = Cell "input_qwires" 0
           gate = Qasm.NamedGate Qasm.GateX [] [decl] nullGateMod
 
 test2 = TestCase (assertEqual "namedGateTransl: support for uncontrolled Pauli-X (2/4)."
                               [AstGateStmt 1 gate]
                               (namedGateTransl qalloc Quip.GateX False [3] []))
-    where decl = QReg "input_qwires" (DecInt "2")
+    where decl = Cell "input_qwires" 2
           gate = Qasm.NamedGate Qasm.GateX [] [decl] nullGateMod
 
 test3 = TestCase (assertEqual "namedGateTransl: support for uncontrolled Pauli-X (3/4)."
                               [AstGateStmt 1 gate]
                               (namedGateTransl qalloc Quip.GateX True [1] []))
-    where decl = QReg "input_qwires" (DecInt "0")
+    where decl = Cell "input_qwires" 0
           gate = Qasm.NamedGate Qasm.GateX [] [decl] nullGateMod
 
 test4 = TestCase (assertEqual "namedGateTransl: support for uncontrolled Pauli-X (4/4)."
                               [AstGateStmt 1 gate]
                               (namedGateTransl qalloc Quip.GateX True [3] []))
-    where decl = QReg "input_qwires" (DecInt "2")
+    where decl = Cell "input_qwires" 2
           gate = Qasm.NamedGate Qasm.GateX [] [decl] nullGateMod
 
 -----------------------------------------------------------------------------------------
@@ -54,26 +53,26 @@ test4 = TestCase (assertEqual "namedGateTransl: support for uncontrolled Pauli-X
 test5 = TestCase (assertEqual "namedGateTransl: support for uncontrolled Pauli-Y."
                               [AstGateStmt 1 gate]
                               (namedGateTransl qalloc Quip.GateY False [1] []))
-    where decl = QReg "input_qwires" (DecInt "0")
+    where decl = Cell "input_qwires" 0
           gate = Qasm.NamedGate Qasm.GateY [] [decl] nullGateMod
 
 test6 = TestCase (assertEqual "namedGateTransl: support for uncontrolled Pauli-Z."
                               [AstGateStmt 1 gate]
                               (namedGateTransl qalloc Quip.GateZ False [1] []))
-    where decl = QReg "input_qwires" (DecInt "0")
+    where decl = Cell "input_qwires" 0
           gate = Qasm.NamedGate Qasm.GateZ [] [decl] nullGateMod
 
 test7 = TestCase (assertEqual "namedGateTransl: support for uncontrolled H gate."
                               [AstGateStmt 1 gate]
                               (namedGateTransl qalloc Quip.GateH False [1] []))
-    where decl = QReg "input_qwires" (DecInt "0")
+    where decl = Cell "input_qwires" 0
           gate = Qasm.NamedGate Qasm.GateH [] [decl] nullGateMod
 
 test8 = TestCase (assertEqual "namedGateTransl: support for uncontrolled swap gate."
                               [AstGateStmt 1 gate]
                               (namedGateTransl qalloc Quip.GateSwap False [1, 2] []))
-    where decl1 = QReg "input_qwires" (DecInt "0")
-          decl2 = QReg "input_qwires" (DecInt "1")
+    where decl1 = Cell "input_qwires" 0
+          decl2 = Cell "input_qwires" 1
           gate = Qasm.NamedGate Qasm.GateSwap [] [decl1, decl2] nullGateMod
 
 -----------------------------------------------------------------------------------------
@@ -83,16 +82,16 @@ test9 = TestCase (assertEqual "namedGateTransl: support for controlled Pauli-Y (
                               [AstGateStmt 1 gate]
                               (namedGateTransl qalloc Quip.GateY False [1] ctrls))
     where ctrls = [Quip.Pos 2]
-          decl1 = QReg "input_qwires" (DecInt "1")
-          decl2 = QReg "input_qwires" (DecInt "0")
+          decl1 = Cell "input_qwires" 1
+          decl2 = Cell "input_qwires" 0
           gate  = Qasm.NamedGate Qasm.GateCY [] [decl1, decl2] nullGateMod
 
 test10 = TestCase (assertEqual "namedGateTransl: support for controlled Pauli-Y (2/5)."
                                [AstGateStmt 1 neg, AstGateStmt 1 gate, AstGateStmt 1 neg]
                                (namedGateTransl qalloc Quip.GateY True [1] ctrls))
     where ctrls = [Quip.Neg 2]
-          decl1 = QReg "input_qwires" (DecInt "1")
-          decl2 = QReg "input_qwires" (DecInt "0")
+          decl1 = Cell "input_qwires" 1
+          decl2 = Cell "input_qwires" 0
           neg   = Qasm.NamedGate Qasm.GateX [] [decl1] nullGateMod
           gate  = Qasm.NamedGate Qasm.GateCY [] [decl1, decl2] nullGateMod
 
@@ -100,24 +99,24 @@ test11 = TestCase (assertEqual "namedGateTransl: support for controlled Pauli-Y 
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateY True [1] ctrls))
     where ctrls = [Quip.Pos 2]
-          decl1 = QReg "input_qwires" (DecInt "1")
-          decl2 = QReg "input_qwires" (DecInt "0")
+          decl1 = Cell "input_qwires" 1
+          decl2 = Cell "input_qwires" 0
           gate  = Qasm.NamedGate Qasm.GateCY [] [decl1, decl2] nullGateMod
 
 test12 = TestCase (assertEqual "namedGateTransl: support for controlled Pauli-Y (4/5)."
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateY False [3] ctrls))
     where ctrls = [Quip.Pos 4]
-          decl1 = QReg "input_qwires" (DecInt "3")
-          decl2 = QReg "input_qwires" (DecInt "2")
+          decl1 = Cell "input_qwires" 3
+          decl2 = Cell "input_qwires" 2
           gate  = Qasm.NamedGate Qasm.GateCY [] [decl1, decl2] nullGateMod
 
 test13 = TestCase (assertEqual "namedGateTransl: support for controlled Pauli-Y (5/5)."
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateY True [3] ctrls))
     where ctrls = [Quip.Pos 4]
-          decl1 = QReg "input_qwires" (DecInt "3")
-          decl2 = QReg "input_qwires" (DecInt "2")
+          decl1 = Cell "input_qwires" 3
+          decl2 = Cell "input_qwires" 2
           gate  = Qasm.NamedGate Qasm.GateCY [] [decl1, decl2] nullGateMod
 
 -----------------------------------------------------------------------------------------
@@ -127,9 +126,9 @@ test14 = TestCase (assertEqual "namedGateTransl: support for 2-controlled Pauli-
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateY False [1] ctrls))
     where ctrls = [Quip.Pos 2, Quip.Pos 3]
-          decl1 = QReg "input_qwires" (DecInt "2")
-          decl2 = QReg "input_qwires" (DecInt "1")
-          decl3 = QReg "input_qwires" (DecInt "0")
+          decl1 = Cell "input_qwires" 2
+          decl2 = Cell "input_qwires" 1
+          decl3 = Cell "input_qwires" 0
           mod   = addCtrlsToMod 1 nullGateMod
           gate  = Qasm.NamedGate Qasm.GateCY [] [decl1, decl2, decl3] mod
 
@@ -137,10 +136,10 @@ test15 = TestCase (assertEqual "namedGateTransl: support for 3-controlled Pauli-
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateY False [1] ctrls))
     where ctrls = [Quip.Pos 2, Quip.Pos 3, Quip.Neg 4]
-          decl1 = QReg "input_qwires" (DecInt "2")
-          decl2 = QReg "input_qwires" (DecInt "3")
-          decl3 = QReg "input_qwires" (DecInt "1")
-          decl4 = QReg "input_qwires" (DecInt "0")
+          decl1 = Cell "input_qwires" 2
+          decl2 = Cell "input_qwires" 3
+          decl3 = Cell "input_qwires" 1
+          decl4 = Cell "input_qwires" 0
           ops   = [decl1, decl2, decl3, decl4]
           mod   = addCtrlsToMod 1 $ addNegCtrlsToMod 1 $ nullGateMod
           gate  = Qasm.NamedGate Qasm.GateCY [] ops mod
@@ -149,11 +148,11 @@ test16 = TestCase (assertEqual "namedGateTransl: support for 4-controlled Pauli-
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateY False [1] ctrls))
     where ctrls = [Quip.Pos 2, Quip.Pos 3, Quip.Neg 4, Quip.Neg 5]
-          decl1 = QReg "input_qwires" (DecInt "2")
-          decl2 = QReg "input_qwires" (DecInt "3")
-          decl3 = QReg "input_qwires" (DecInt "4")
-          decl4 = QReg "input_qwires" (DecInt "1")
-          decl5 = QReg "input_qwires" (DecInt "0")
+          decl1 = Cell "input_qwires" 2
+          decl2 = Cell "input_qwires" 3
+          decl3 = Cell "input_qwires" 4
+          decl4 = Cell "input_qwires" 1
+          decl5 = Cell "input_qwires" 0
           ops   = [decl1, decl2, decl3, decl4, decl5]
           mod   = addCtrlsToMod 1 $ addNegCtrlsToMod 1 $ addNegCtrlsToMod 1 $ nullGateMod
           gate  = Qasm.NamedGate Qasm.GateCY [] ops mod
@@ -165,33 +164,33 @@ test17 = TestCase (assertEqual "namedGateTransl: support for singly controlled P
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateX False [1] ctrls))
     where ctrls = [Quip.Pos 2]
-          decl1 = QReg "input_qwires" (DecInt "1")
-          decl2 = QReg "input_qwires" (DecInt "0")
+          decl1 = Cell "input_qwires" 1
+          decl2 = Cell "input_qwires" 0
           gate  = Qasm.NamedGate Qasm.GateCX [] [decl1, decl2] nullGateMod
 
 test18 = TestCase (assertEqual "namedGateTransl: support for singly controlled Pauli-Z."
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateZ False [1] ctrls))
     where ctrls = [Quip.Pos 2]
-          decl1 = QReg "input_qwires" (DecInt "1")
-          decl2 = QReg "input_qwires" (DecInt "0")
+          decl1 = Cell "input_qwires" 1
+          decl2 = Cell "input_qwires" 0
           gate  = Qasm.NamedGate Qasm.GateCZ [] [decl1, decl2] nullGateMod
 
 test19 = TestCase (assertEqual "namedGateTransl: support for singly controlled H gate."
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateH False [1] ctrls))
     where ctrls = [Quip.Pos 2]
-          decl1 = QReg "input_qwires" (DecInt "1")
-          decl2 = QReg "input_qwires" (DecInt "0")
+          decl1 = Cell "input_qwires" 1
+          decl2 = Cell "input_qwires" 0
           gate  = Qasm.NamedGate Qasm.GateCH [] [decl1, decl2] nullGateMod
 
 test20 = TestCase (assertEqual "namedGateTransl: support for singly controlled swap gate."
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateSwap False [1, 2] ctrls))
     where ctrls = [Quip.Pos 3]
-          decl1 = QReg "input_qwires" (DecInt "2")
-          decl2 = QReg "input_qwires" (DecInt "0")
-          decl3 = QReg "input_qwires" (DecInt "1")
+          decl1 = Cell "input_qwires" 2
+          decl2 = Cell "input_qwires" 0
+          decl3 = Cell "input_qwires" 1
           gate  = Qasm.NamedGate Qasm.GateCSwap [] [decl1, decl2, decl3] nullGateMod
 
 -----------------------------------------------------------------------------------------
@@ -200,26 +199,26 @@ test20 = TestCase (assertEqual "namedGateTransl: support for singly controlled s
 test21 = TestCase (assertEqual "namedGateTransl: support for uncontrolled V gate (1/4)."
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateV False [1] []))
-    where decl = QReg "input_qwires" (DecInt "0")
+    where decl = Cell "input_qwires" 0
           gate = Qasm.NamedGate Qasm.GateSX [] [decl] nullGateMod
 
 test22 = TestCase (assertEqual "namedGateTransl: support for uncontrolled V gate (2/4)."
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateV True [1] []))
-    where decl = QReg "input_qwires" (DecInt "0")
+    where decl = Cell "input_qwires" 0
           mod  = negateMod nullGateMod
           gate = Qasm.NamedGate Qasm.GateSX [] [decl] mod
 
 test23 = TestCase (assertEqual "namedGateTransl: support for uncontrolled V gate (3/4)."
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateV False [3] []))
-    where decl = QReg "input_qwires" (DecInt "2")
+    where decl = Cell "input_qwires" 2
           gate = Qasm.NamedGate Qasm.GateSX [] [decl] nullGateMod
 
 test24 = TestCase (assertEqual "namedGateTransl: support for uncontrolled V gate (4/4)."
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateV True [3] []))
-    where decl = QReg "input_qwires" (DecInt "2")
+    where decl = Cell "input_qwires" 2
           mod  = negateMod nullGateMod
           gate = Qasm.NamedGate Qasm.GateSX [] [decl] mod
 
@@ -227,11 +226,11 @@ test25 = TestCase (assertEqual "namedGateTransl: support for 4-controlled V gate
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateV False [1] ctrls))
     where ctrls = [Quip.Pos 5, Quip.Neg 4, Quip.Pos 3, Quip.Neg 2]
-          decl1 = QReg "input_qwires" (DecInt "4")
-          decl2 = QReg "input_qwires" (DecInt "3")
-          decl3 = QReg "input_qwires" (DecInt "2")
-          decl4 = QReg "input_qwires" (DecInt "1")
-          decl5 = QReg "input_qwires" (DecInt "0")
+          decl1 = Cell "input_qwires" 4
+          decl2 = Cell "input_qwires" 3
+          decl3 = Cell "input_qwires" 2
+          decl4 = Cell "input_qwires" 1
+          decl5 = Cell "input_qwires" 0
           ops   = [decl1, decl2, decl3, decl4, decl5]
           mod   = addCtrlsToMod 1 $ addNegCtrlsToMod 1
                                   $ addCtrlsToMod 1
@@ -245,37 +244,37 @@ test25 = TestCase (assertEqual "namedGateTransl: support for 4-controlled V gate
 test26 = TestCase (assertEqual "namedGateTransl: support for the S gate."
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateS False [1] []))
-    where decl = QReg "input_qwires" (DecInt "0")
+    where decl = Cell "input_qwires" 0
           gate = Qasm.NamedGate Qasm.GateS [] [decl] nullGateMod
 
 test27 = TestCase (assertEqual "namedGateTransl: support for the T gate."
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateT False [1] []))
-    where decl = QReg "input_qwires" (DecInt "0")
+    where decl = Cell "input_qwires" 0
           gate = Qasm.NamedGate Qasm.GateT [] [decl] nullGateMod
 
 test28 = TestCase (assertEqual "namedGateTransl: support for the iX gate."
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateIX False [1] []))
-    where decl = QReg "input_qwires" (DecInt "0")
+    where decl = Cell "input_qwires" 0
           gate = Qasm.NamedGate Qasm.GateQuipIX [] [decl] nullGateMod
 
 test29 = TestCase (assertEqual "namedGateTransl: support for the omega gate."
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateOmega False [1] []))
-    where decl = QReg "input_qwires" (DecInt "0")
+    where decl = Cell "input_qwires" 0
           gate = Qasm.NamedGate Qasm.GateQuipOmega [] [decl] nullGateMod
 
 test30 = TestCase (assertEqual "namedGateTransl: support for the W gate."
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateW False [1] []))
-    where decl = QReg "input_qwires" (DecInt "0")
+    where decl = Cell "input_qwires" 0
           gate = Qasm.NamedGate Qasm.GateQuipW [] [decl] nullGateMod
 
 test31 = TestCase (assertEqual "namedGateTransl: support for the E gate."
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateE False [1] []))
-    where decl = QReg "input_qwires" (DecInt "0")
+    where decl = Cell "input_qwires" 0
           gate = Qasm.NamedGate Qasm.GateQuipE [] [decl] nullGateMod
 
 -----------------------------------------------------------------------------------------
@@ -285,9 +284,9 @@ test32 = TestCase (assertEqual "namedGateTransl: uncontrolled Toffoli gates (1/7
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateX False [1] ctrls))
     where ctrls = [Quip.Pos 3, Quip.Pos 2]
-          decl1 = QReg "input_qwires" (DecInt "2")
-          decl2 = QReg "input_qwires" (DecInt "1")
-          decl3 = QReg "input_qwires" (DecInt "0")
+          decl1 = Cell "input_qwires" 2
+          decl2 = Cell "input_qwires" 1
+          decl3 = Cell "input_qwires" 0
           ops   = [decl1, decl2, decl3]
           gate  = Qasm.NamedGate Qasm.GateCCX [] ops nullGateMod
 
@@ -295,9 +294,9 @@ test33 = TestCase (assertEqual "namedGateTransl: uncontrolled Toffoli gates (2/7
                                [AstGateStmt 1 neg, AstGateStmt 1 gate, AstGateStmt 1 neg]
                                (namedGateTransl qalloc Quip.GateX False [1] ctrls))
     where ctrls = [Quip.Neg 3, Quip.Pos 2]
-          decl1 = QReg "input_qwires" (DecInt "2")
-          decl2 = QReg "input_qwires" (DecInt "1")
-          decl3 = QReg "input_qwires" (DecInt "0")
+          decl1 = Cell "input_qwires" 2
+          decl2 = Cell "input_qwires" 1
+          decl3 = Cell "input_qwires" 0
           ops   = [decl1, decl2, decl3]
           neg   = Qasm.NamedGate Qasm.GateX [] [decl1] nullGateMod
           gate  = Qasm.NamedGate Qasm.GateCCX [] ops nullGateMod
@@ -306,9 +305,9 @@ test34 = TestCase (assertEqual "namedGateTransl: uncontrolled Toffoli gates (3/7
                                [AstGateStmt 1 neg, AstGateStmt 1 gate, AstGateStmt 1 neg]
                                (namedGateTransl qalloc Quip.GateX False [1] ctrls))
     where ctrls = [Quip.Pos 3, Quip.Neg 2]
-          decl1 = QReg "input_qwires" (DecInt "2")
-          decl2 = QReg "input_qwires" (DecInt "1")
-          decl3 = QReg "input_qwires" (DecInt "0")
+          decl1 = Cell "input_qwires" 2
+          decl2 = Cell "input_qwires" 1
+          decl3 = Cell "input_qwires" 0
           ops   = [decl1, decl2, decl3]
           neg   = Qasm.NamedGate Qasm.GateX [] [decl2] nullGateMod
           gate  = Qasm.NamedGate Qasm.GateCCX [] ops nullGateMod
@@ -321,9 +320,9 @@ test35 = TestCase (assertEqual "namedGateTransl: uncontrolled Toffoli gates (4/7
                                 AstGateStmt 1 neg2]
                                (namedGateTransl qalloc Quip.GateX False [1] ctrls))
     where ctrls = [Quip.Neg 3, Quip.Neg 2]
-          decl1 = QReg "input_qwires" (DecInt "2")
-          decl2 = QReg "input_qwires" (DecInt "1")
-          decl3 = QReg "input_qwires" (DecInt "0")
+          decl1 = Cell "input_qwires" 2
+          decl2 = Cell "input_qwires" 1
+          decl3 = Cell "input_qwires" 0
           ops   = [decl1, decl2, decl3]
           neg1  = Qasm.NamedGate Qasm.GateX [] [decl1] nullGateMod
           neg2  = Qasm.NamedGate Qasm.GateX [] [decl2] nullGateMod
@@ -333,9 +332,9 @@ test36 = TestCase (assertEqual "namedGateTransl: uncontrolled Toffoli gates (5/7
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateX True [1] ctrls))
     where ctrls = [Quip.Pos 3, Quip.Pos 2]
-          decl1 = QReg "input_qwires" (DecInt "2")
-          decl2 = QReg "input_qwires" (DecInt "1")
-          decl3 = QReg "input_qwires" (DecInt "0")
+          decl1 = Cell "input_qwires" 2
+          decl2 = Cell "input_qwires" 1
+          decl3 = Cell "input_qwires" 0
           ops   = [decl1, decl2, decl3]
           gate  = Qasm.NamedGate Qasm.GateCCX [] ops nullGateMod
 
@@ -343,9 +342,9 @@ test37 = TestCase (assertEqual "namedGateTransl: uncontrolled Toffoli gates (6/7
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateX True [4] ctrls))
     where ctrls = [Quip.Pos 6, Quip.Pos 5]
-          decl1 = QReg "input_qwires" (DecInt "5")
-          decl2 = QReg "input_qwires" (DecInt "4")
-          decl3 = QReg "input_qwires" (DecInt "3")
+          decl1 = Cell "input_qwires" 5
+          decl2 = Cell "input_qwires" 4
+          decl3 = Cell "input_qwires" 3
           ops   = [decl1, decl2, decl3]
           gate  = Qasm.NamedGate Qasm.GateCCX [] ops nullGateMod
 
@@ -353,10 +352,10 @@ test38 = TestCase (assertEqual "namedGateTransl: uncontrolled Toffoli gates (7/7
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateX True [1] ctrls))
     where ctrls = [Quip.Pos 4, Quip.Pos 3, Quip.Pos 2]
-          decl1 = QReg "input_qwires" (DecInt "1")
-          decl2 = QReg "input_qwires" (DecInt "3")
-          decl3 = QReg "input_qwires" (DecInt "2")
-          decl4 = QReg "input_qwires" (DecInt "0")
+          decl1 = Cell "input_qwires" 1
+          decl2 = Cell "input_qwires" 3
+          decl3 = Cell "input_qwires" 2
+          decl4 = Cell "input_qwires" 0
           ops   = [decl1, decl2, decl3, decl4]
           mod   = addCtrlsToMod 1 $ nullGateMod
           gate  = Qasm.NamedGate Qasm.GateCCX [] ops mod
@@ -367,15 +366,15 @@ test38 = TestCase (assertEqual "namedGateTransl: uncontrolled Toffoli gates (7/7
 test39 = TestCase (assertEqual "namedGateTransl: QMultiNot (1/4)."
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateQMultiNot False [1] []))
-    where decl = QReg "input_qwires" (DecInt "0")
+    where decl = Cell "input_qwires" 0
           gate = Qasm.NamedGate Qasm.GateX [] [decl] nullGateMod
 
 test40 = TestCase (assertEqual "namedGateTransl: QMultiNot (2/4)."
                                [AstGateStmt 1 gate]
                                (namedGateTransl qalloc Quip.GateQMultiNot True [1] ctrls))
     where ctrls = [Quip.Pos 2]
-          decl1 = QReg "input_qwires" (DecInt "1")
-          decl2 = QReg "input_qwires" (DecInt "0")
+          decl1 = Cell "input_qwires" 1
+          decl2 = Cell "input_qwires" 0
           gate  = Qasm.NamedGate Qasm.GateCX [] [decl1, decl2] nullGateMod
 
 test41 = TestCase (assertEqual "namedGateTransl: QMultiNot (3/4)."
@@ -384,9 +383,9 @@ test41 = TestCase (assertEqual "namedGateTransl: QMultiNot (3/4)."
                                 AstGateStmt 1 gate3]
                                (namedGateTransl qalloc Quip.GateQMultiNot False ins []))
     where ins   = [1, 2, 3]
-          decl1 = QReg "input_qwires" (DecInt "0")
-          decl2 = QReg "input_qwires" (DecInt "1")
-          decl3 = QReg "input_qwires" (DecInt "2")
+          decl1 = Cell "input_qwires" 0
+          decl2 = Cell "input_qwires" 1
+          decl3 = Cell "input_qwires" 2
           gate1 = Qasm.NamedGate Qasm.GateX [] [decl1] nullGateMod
           gate2 = Qasm.NamedGate Qasm.GateX [] [decl2] nullGateMod
           gate3 = Qasm.NamedGate Qasm.GateX [] [decl3] nullGateMod
@@ -398,10 +397,10 @@ test42 = TestCase (assertEqual "namedGateTransl: QMultiNot (4/4)."
                                (namedGateTransl qalloc Quip.GateQMultiNot True ins ctrls))
     where ins   = [1, 2, 3]
           ctrls = [Quip.Pos 4]
-          decl1 = QReg "input_qwires" (DecInt "0")
-          decl2 = QReg "input_qwires" (DecInt "1")
-          decl3 = QReg "input_qwires" (DecInt "2")
-          decl4 = QReg "input_qwires" (DecInt "3")
+          decl1 = Cell "input_qwires" 0
+          decl2 = Cell "input_qwires" 1
+          decl3 = Cell "input_qwires" 2
+          decl4 = Cell "input_qwires" 3
           gate1 = Qasm.NamedGate Qasm.GateCX [] [decl4, decl1] nullGateMod
           gate2 = Qasm.NamedGate Qasm.GateCX [] [decl4, decl2] nullGateMod
           gate3 = Qasm.NamedGate Qasm.GateCX [] [decl4, decl3] nullGateMod

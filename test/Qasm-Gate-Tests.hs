@@ -45,9 +45,10 @@ test6 = TestCase (assertEqual "Building gate modifiers (6/6)."
 -----------------------------------------------------------------------------------------
 -- Gate Construction
 
-pidiv2 = Div Pi (DecInt "2")
-params = [Pi, pidiv2]
-inputs = [QVar "q"]
+pidiv2    = Div Pi (DecInt "2")
+params    = [Pi, pidiv2]
+inputs    = [Scalar "q"]
+inputsRaw = [QVar "q"]
 
 gate0A = NamedGate GateX params inputs nullGateMod
 gate1A = invert gate0A
@@ -114,13 +115,14 @@ test18 = TestCase (assertEqual "Building phase gates (6/6)."
 -----------------------------------------------------------------------------------------
 -- Gate Evaluation
 
-targetAndCtrl = [QVar "v", QReg "reg" (DecInt "2")]
+targetAndCtrl    = [Scalar "v", Cell "reg" 2]
+targetAndCtrlRaw = [QVar "v", QReg "reg" (DecInt "2")]
 
 cexprVal3 = Plus (DecInt "4") (DecInt "-1")
 cexprVal2 = Times (DecInt "-1") (Minus (DecInt "1") (DecInt "3"))
 
-gateExpr1 = NamedGateOp "crx" [pidiv2] targetAndCtrl
-gateExpr2 = NamedGateOp "mygate" params inputs
+gateExpr1 = NamedGateOp "crx" [pidiv2] targetAndCtrlRaw
+gateExpr2 = NamedGateOp "mygate" params inputsRaw
 gateExpr3 = GPhaseOp pidiv2 [] 
 gateExpr4 = NegCtrlMod (Just cexprVal3) (CtrlMod (Just cexprVal2) (InvMod gateExpr1))
 gateExpr5 = NegCtrlMod (Just cexprVal3) (CtrlMod (Just cexprVal2) (InvMod gateExpr3))
@@ -185,7 +187,7 @@ test28 = TestCase (assertEqual "Catching exceptions in gate evaluations (3/3)."
 -----------------------------------------------------------------------------------------
 -- Gate Validation
 
-doubleControl = (QVar "w") : targetAndCtrl
+doubleControl = (Scalar "w") : targetAndCtrl
 
 validGate1 = NamedGate GateCRX [pidiv2] targetAndCtrl nullGateMod
 validGate2 = NamedGate GateCRX [pidiv2] doubleControl (addNegCtrlsToMod 1 nullGateMod)
@@ -250,6 +252,23 @@ test41 = TestCase (assertBool "Inverted gate detected (2/2)."
                               (isInverted gateEval4))
 
 -----------------------------------------------------------------------------------------
+-- Operand Conversion
+
+negOperandGate = NamedGateOp "x" [] [QReg "arr" (DecInt "-1")]
+nonConstOpGate = NamedGateOp "x" [] [QReg "arr" (QasmId "id")]
+
+negOperandErr = NegArrIndex (-1) (DecInt "-1")
+nonConstOpErr = NonConstArrIndex (NonConstId "id") (QasmId "id")
+
+test42 = TestCase (assertEqual "Negative operand cells are rejected."
+                               (Right negOperandErr :: Either (Int, Gate) GateSummaryErr)
+                               (exprToGate negOperandGate))
+
+test43 = TestCase (assertEqual "Cell operands must have compile-time constant indices."
+                               (Right nonConstOpErr :: Either (Int, Gate) GateSummaryErr)
+                               (exprToGate nonConstOpGate))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "GateMod_1" test1,
@@ -292,6 +311,8 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateMod_1" test1,
                                      TestLabel "IsInverted_Mod_1" test38,
                                      TestLabel "IsInverted_Mod_2" test39,
                                      TestLabel "IsInverted_Gate_1" test40,
-                                     TestLabel "IsInverted_Gate_2" test41]
+                                     TestLabel "IsInverted_Gate_2" test41,
+                                     TestLabel "OperandNonNeg" test42,
+                                     TestLabel "OperandConst" test43]
 
 main = defaultMain tests

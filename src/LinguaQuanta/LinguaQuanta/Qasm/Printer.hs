@@ -10,13 +10,11 @@ import LinguaQuanta.Qasm.AST (AstStmt(..))
 import LinguaQuanta.Qasm.Gate
   ( Gate(..)
   , GateMod(..)
+  , Operand(..)
   , Sign(..)
   )
 import LinguaQuanta.Qasm.GateName (GateName(..))
-import LinguaQuanta.Qasm.Language
-  ( Expr(..)
-  , GateOperand(..)
-  )
+import LinguaQuanta.Qasm.Language (Expr(..))
 
 -------------------------------------------------------------------------------
 -- * Expression Printing.
@@ -42,12 +40,12 @@ printParams params = "(" ++ list ++ ")"
     where list = intercalate ", " (map printExpr params)
 
 -- | Converts a gate operand to its syntactic representation.
-printOperand :: GateOperand -> String
-printOperand (QVar str)       = str
-printOperand (QReg str index) = str ++ "[" ++ printExpr index ++ "]"
+printOperand :: Operand -> String
+printOperand (Scalar str)     = str
+printOperand (Cell str index) = str ++ "[" ++ show index ++ "]"
 
 -- | Converts a list of operands to its syntactic representation.
-printOperands :: [GateOperand] -> String
+printOperands :: [Operand] -> String
 printOperands []       = ""
 printOperands operands = intercalate ", " (map printOperand operands)
 

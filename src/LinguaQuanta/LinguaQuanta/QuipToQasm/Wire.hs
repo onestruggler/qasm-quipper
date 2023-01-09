@@ -16,11 +16,8 @@ module LinguaQuanta.QuipToQasm.Wire
 import qualified Data.IntMap.Strict as IntMap
 import LinguaQuanta.Maybe (branchJust)
 import LinguaQuanta.Qasm.AST (AstStmt(..))
+import LinguaQuanta.Qasm.Gate (Operand(..))
 import LinguaQuanta.Quip.Wire (WireType(..))
-import LinguaQuanta.Qasm.Language
-  ( Expr(DecInt)
-  , GateOperand(..)
-  )
 
 -------------------------------------------------------------------------------
 -- * Functions to Translate Inputs
@@ -50,8 +47,8 @@ translateCWireInputs _ = error "Classical wires not yet supported."
 
 -- | The OpenQASM variables corresponding to a Quipper wire. Note that a
 -- Quipper wire may have both a qalloc and a calloc if type conversions occur.
-data DeclAllocation = DeclAllocation { qalloc :: Maybe GateOperand
-                                     , calloc :: Maybe GateOperand
+data DeclAllocation = DeclAllocation { qalloc :: Maybe Operand
+                                     , calloc :: Maybe Operand
                                      , state  :: WireType
                                      } deriving (Show, Eq)
 
@@ -72,16 +69,14 @@ data WireLookup = WireLookup AllocMap
 allocHelper :: [(Int, WireType)] -> Int -> Int -> AllocMap -> AllocMap
 allocHelper []        _  _  map = map
 allocHelper ((id, QWire):pairs) qs cs map = allocHelper pairs (qs + 1) cs map'
-    where index = DecInt $ show qs
-          alloc = DeclAllocation { qalloc = Just (QReg _IN_QWIRE_REG index)
+    where alloc = DeclAllocation { qalloc = Just (Cell _IN_QWIRE_REG qs)
                                  , calloc = Nothing
                                  , state  = QWire
                                  }
           map' = IntMap.insert id alloc map
 allocHelper ((id, CWire):pairs) qs cs map = allocHelper pairs qs (cs + 1) map'
-    where index = DecInt $ show cs
-          alloc = DeclAllocation { qalloc = Nothing
-                                 , calloc = Just (QReg _IN_CWIRE_REG index)
+    where alloc = DeclAllocation { qalloc = Nothing
+                                 , calloc = Just (Cell _IN_CWIRE_REG cs)
                                  , state  = CWire
                                  }
           map' = IntMap.insert id alloc map
@@ -92,7 +87,7 @@ allocateInputWires map = WireLookup allocs
     where allocs = allocHelper (IntMap.assocs map) 0 0 IntMap.empty
 
 -- | Returns the declaration associated to a wire.
-getAllocation :: WireType -> Int -> WireLookup -> Maybe GateOperand
+getAllocation :: WireType -> Int -> WireLookup -> Maybe Operand
 getAllocation ty id (WireLookup map) =
     case IntMap.lookup id map of
         Nothing    -> Nothing

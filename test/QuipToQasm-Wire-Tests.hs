@@ -5,7 +5,7 @@ import Data.Maybe
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit
-import LinguaQuanta.Qasm.Language
+import LinguaQuanta.Qasm.Gate
 import LinguaQuanta.Quip.Wire
 import LinguaQuanta.QuipToQasm.Wire
 
@@ -24,74 +24,74 @@ allocEmpty = allocateInputWires IntMap.empty
 allocMixed = allocateInputWires $ IntMap.fromList mixedWires
 
 test1 = TestCase (assertEqual "WireLookup retrieval from empty wire map (1/7)."
-                              (Nothing :: Maybe GateOperand)
+                              (Nothing :: Maybe Operand)
                               (getAllocation QWire 1 allocEmpty))
 
 test2 = TestCase (assertEqual "WireLookup retrieval from empty wire map (2/7)."
-                              (Nothing :: Maybe GateOperand)
+                              (Nothing :: Maybe Operand)
                               (getAllocation QWire 5 allocEmpty))
 
 test3 = TestCase (assertEqual "WireLookup retrieval from empty wire map (3/7)."
-                              (Nothing :: Maybe GateOperand)
+                              (Nothing :: Maybe Operand)
                               (getAllocation QWire 23 allocEmpty))
 
 test4 = TestCase (assertEqual "WireLookup retrieval from empty wire map (4/7)."
-                              (Nothing :: Maybe GateOperand)
+                              (Nothing :: Maybe Operand)
                               (getAllocation QWire 50 allocEmpty))
 
 test5 = TestCase (assertEqual "WireLookup retrieval from empty wire map (5/7)."
-                              (Nothing :: Maybe GateOperand)
+                              (Nothing :: Maybe Operand)
                               (getAllocation CWire 3 allocEmpty))
 
 test6 = TestCase (assertEqual "WireLookup retrieval from empty wire map (6/7)."
-                              (Nothing :: Maybe GateOperand)
+                              (Nothing :: Maybe Operand)
                               (getAllocation CWire 9 allocEmpty))
 
 test7 = TestCase (assertEqual "WireLookup retrieval from empty wire map (7/7)."
-                              (Nothing :: Maybe GateOperand)
+                              (Nothing :: Maybe Operand)
                               (getAllocation CWire 44 allocEmpty))
 
 test8 = TestCase (assertEqual "WireLookup retrieval from empty wire map (1/7)."
                               expt
                               (getAllocation QWire 1 allocMixed))
-    where expt = Just (QReg "input_qwires" (DecInt "0")) :: Maybe GateOperand
+    where expt = Just (Cell "input_qwires" 0) :: Maybe Operand
 
 test9 = TestCase (assertEqual "WireLookup retrieval from empty wire map (2/7)."
                               expt
                               (getAllocation QWire 5 allocMixed))
-    where expt = Just (QReg "input_qwires" (DecInt "1")) :: Maybe GateOperand
+    where expt = Just (Cell "input_qwires" 1) :: Maybe Operand
 
 test10 = TestCase (assertEqual "WireLookup retrieval from empty wire map (3/7)."
                                expt
                                (getAllocation QWire 23 allocMixed))
-    where expt = Just (QReg "input_qwires" (DecInt "2")) :: Maybe GateOperand
+    where expt = Just (Cell "input_qwires" 2) :: Maybe Operand
 
 test11 = TestCase (assertEqual "WireLookup retrieval from empty wire map (4/7)."
                                 expt
                                (getAllocation QWire 50 allocMixed))
-    where expt = Just (QReg "input_qwires" (DecInt "3")) :: Maybe GateOperand
+    where expt = Just (Cell "input_qwires" 3) :: Maybe Operand
 
 test12 = TestCase (assertEqual "WireLookup retrieval from empty wire map (5/7)."
                                expt
                                (getAllocation CWire 3 allocMixed))
-    where expt = Just (QReg "input_cwires" (DecInt "0")) :: Maybe GateOperand
+    where expt = Just (Cell "input_cwires" 0) :: Maybe Operand
 
 test13 = TestCase (assertEqual "WireLookup retrieval from empty wire map (6/7)."
                                expt
                                (getAllocation CWire 9 allocMixed))
-    where expt = Just (QReg "input_cwires" (DecInt "1")) :: Maybe GateOperand
+    where expt = Just (Cell "input_cwires" 1) :: Maybe Operand
 
 test14 = TestCase (assertEqual "WireLookup retrieval from empty wire map (7/7)."
                                expt
                                (getAllocation CWire 44 allocMixed))
-    where expt = Just (QReg "input_cwires" (DecInt "2")) :: Maybe GateOperand
+    where expt = Just (Cell "input_cwires" 2) :: Maybe Operand
 
 test15 = TestCase (assertEqual "WireLookup retrieval fails with invalid type."
-                               (Nothing :: Maybe GateOperand)
+                               (Nothing :: Maybe Operand)
                                (getAllocation CWire 1 allocMixed))
 
 test16 = TestCase (assertEqual "WireLookup retrieval fails with invalid identifier."
-                               (Nothing :: Maybe GateOperand)
+                               (Nothing :: Maybe Operand)
                                (getAllocation QWire 256 allocMixed))
 
 -----------------------------------------------------------------------------------------

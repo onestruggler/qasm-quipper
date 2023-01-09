@@ -9,16 +9,16 @@ import LinguaQuanta.Qasm.AST (AstStmt(..))
 import LinguaQuanta.Qasm.Gate
   ( Gate(..)
   , GateMod
+  , Operand
   , addCtrlsToMod
   , addNegCtrlsToMod
   , negateMod
   , nullGateMod
   )
 import qualified LinguaQuanta.Qasm.GateName as Qasm
-import LinguaQuanta.Qasm.Language (GateOperand(..))
 import LinguaQuanta.Quip.Gate
-  ( Wire
-  , Control(..)
+  ( Control(..)
+  , Wire
   , toWires
   )
 import qualified LinguaQuanta.Quip.GateName as Quip
@@ -46,7 +46,7 @@ toGateMod inv   ((Neg _):ctrls) = addNegCtrlsToMod 1 $ toGateMod inv ctrls
 -- maps to the corresponding declaration in wmap.
 --
 -- Note: If a wire is not found is wmap, then an error is raised.
-mergeCtrlsAndIns :: WireLookup -> [Control] -> [Wire] -> [GateOperand]
+mergeCtrlsAndIns :: WireLookup -> [Control] -> [Wire] -> [Operand]
 mergeCtrlsAndIns wmap ctrls ins = map f $ toWires ctrls ++ ins
     where f w = case getState w wmap of
                     Nothing    -> error "Undefined control wire."
@@ -154,4 +154,4 @@ namedGateTransl wmap Quip.GateQMultiNot _ ins ctrls = transl
     where transl = unfoldQMultiNot wmap ins ctrls
 -- Special case: User-defined gate.
 namedGateTransl _ (Quip.UserDefinedGate _) _ _ _ = error msg
-    where msg = "User-defined gate translation implemented."
+    where msg = "User-defined gate translations not implemented."

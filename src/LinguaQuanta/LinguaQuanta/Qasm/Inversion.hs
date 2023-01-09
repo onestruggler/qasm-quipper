@@ -22,6 +22,7 @@ import LinguaQuanta.Qasm.Expression
 import LinguaQuanta.Qasm.Gate
   ( Gate(..)
   , GateMod
+  , Operand
   , invert
   , isInverted
   )
@@ -31,10 +32,7 @@ import LinguaQuanta.Qasm.GateName
   , isSelfInverse
   , toOperandCount
   )
-import LinguaQuanta.Qasm.Language
-  ( Expr(..)
-  , GateOperand
-  )
+import LinguaQuanta.Qasm.Language (Expr(..))
 
 -------------------------------------------------------------------------------
 -- * Useful Constants.
@@ -105,7 +103,7 @@ gateIsParamInverse (GPhaseGate _ _ _)     = True
 -- and its modifiers (mod). If the u3 gate is valid, then returns the inverse
 -- of u3(a, b, c) with the modifiers mod (i.e., a phase gate of angle (b+c)/2,
 -- followed by the inverse of U(a,b,c)). Otherwise, nothing is returned.
-invertU3 :: Expr -> Expr -> Expr -> [GateOperand] -> GateMod -> Maybe [Gate]
+invertU3 :: Expr -> Expr -> Expr -> [Operand] -> GateMod -> Maybe [Gate]
 invertU3 a b c operands mod = maybeAppend phase mcirc
     where phase = GPhaseGate (avgExpr b c) operands mod
           ucomp = NamedGate GateU [a, b, c] operands mod
