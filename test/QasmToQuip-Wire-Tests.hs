@@ -646,6 +646,41 @@ test128 = TestCase (assertEqual "WireAllocMap: toSize on a trace of updates (8/8
                                 (toSize trace8))
 
 -----------------------------------------------------------------------------------------
+-- Tests basic wire index queries
+
+test129 = TestCase (assertEqual "getScalarIndex: allocated wire (1/2)."
+                                (Just 0 :: Maybe Int)
+                                (getScalarIndex "decl1" alloc4))
+
+test130 = TestCase (assertEqual "getScalarIndex: allocated wire (2/2)."
+                                (Just 10 :: Maybe Int)
+                                (getScalarIndex "decl4" alloc4))
+
+test131 = TestCase (assertEqual "getScalarIndex: fails for undeclared declarations."
+                                (Nothing :: Maybe Int)
+                                (getScalarIndex "decl6" alloc4))
+
+test132 = TestCase (assertEqual "getScalarIndex: fails for array declarations."
+                                (Nothing :: Maybe Int)
+                                (getScalarIndex "decl2" alloc4))
+
+test133 = TestCase (assertEqual "getCellIndex: allocated wire (1/2)."
+                                (Just 3 :: Maybe Int)
+                                (getCellIndex "decl2" 2 alloc4))
+
+test134 = TestCase (assertEqual "getCellIndex: allocated wire (2/2)."
+                                (Just 7 :: Maybe Int)
+                                (getCellIndex "decl3" 1 alloc4))
+
+test135 = TestCase (assertEqual "getCellIndex: fails for undeclared declarations."
+                                (Nothing :: Maybe Int)
+                                (getCellIndex "decl6" 0 alloc4))
+
+test136 = TestCase (assertEqual "getCellIndex: fails for scalar declarations."
+                                (Nothing :: Maybe Int)
+                                (getCellIndex "decl1" 0 alloc4))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "WireAPI_UniqueStates_1" test1,
@@ -775,6 +810,14 @@ tests = hUnitTestToTests $ TestList [TestLabel "WireAPI_UniqueStates_1" test1,
                                      TestLabel "WireAllocMap_toSize_Trace_5" test125,
                                      TestLabel "WireAllocMap_toSize_Trace_6" test126,
                                      TestLabel "WireAllocMap_toSize_Trace_7" test127,
-                                     TestLabel "WireAllocMap_toSize_Trace_8" test128]
+                                     TestLabel "WireAllocMap_toSize_Trace_8" test128,
+                                     TestLabel "getScalarIndex_Valid_1" test129,
+                                     TestLabel "getScalarIndex_Valid_2" test130,
+                                     TestLabel "getScalarIndex_UndeclaredErr" test131,
+                                     TestLabel "getScalarIndex_ArrayErr" test132,
+                                     TestLabel "getCellIndex_Valid_1" test133,
+                                     TestLabel "getCellIndex_Valid_2" test134,
+                                     TestLabel "getCellIndex_UndeclaredErr" test135,
+                                     TestLabel "getCellIndex_ScalarErr" test136]
 
 main = defaultMain tests

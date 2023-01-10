@@ -10,7 +10,9 @@ module LinguaQuanta.QasmToQuip.Wire
   , Eq(..)
   , allocate
   , allocateWire
+  , getCellIndex
   , getDeclType
+  , getScalarIndex
   , isInput
   , initialAllocations
   , initCell
@@ -194,6 +196,29 @@ getDeclType name (WireAllocMap _ _ map) =
         Nothing                -> Undeclared
         Just (ty, Left _)      -> Scalar ty
         Just (ty, Right cells) -> Array ty (IntMap.size cells)
+
+-- | Takes as input a declaration name and a wire allocation map. If there is a
+-- scalar declaration of the same name, then returns the corresponding wire
+-- index. Otherwise, returns nothing.
+getScalarIndex :: String -> WireAllocMap -> Maybe Int
+getScalarIndex name (WireAllocMap _ _ map) =
+    case Map.lookup name map of
+        Nothing           -> Nothing
+        Just (_, Left st) -> Just $ wireIndex st
+        Just (_, Right _) -> Nothing
+
+-- | Takes as input a declaration identifier (name), an array index (idx), and
+-- a wire allocation map. If there is an array declaration identified by name,
+-- with a cell at index idx, then returns the corresponding wire index.
+-- Oterwise, returns nothing.
+getCellIndex :: String -> Int -> WireAllocMap -> Maybe Int
+getCellIndex name idx (WireAllocMap _ _ map) =
+    case Map.lookup name map of
+        Nothing               -> Nothing
+        Just (_, Left _)      -> Nothing
+        Just (_, Right cells) -> case IntMap.lookup idx cells of
+            Nothing -> Nothing
+            Just st -> Just $ wireIndex st
 
 -------------------------------------------------------------------------------
 -- * Update Declarations in WireAllocMaps.
