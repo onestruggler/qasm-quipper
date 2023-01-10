@@ -209,7 +209,7 @@ test-suite qasmtoquip-control-tests
 
 test-suite qasmtoquip-gate-tests
   import:              basic-unit-test-props
-  main-is:             QasmToQuip-Wire-Tests.hs
+  main-is:             QasmToQuip-Gate-Tests.hs
   build-depends:       containers
   type:                exitcode-stdio-1.0
 

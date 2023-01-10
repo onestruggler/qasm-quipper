@@ -19,7 +19,7 @@ import LinguaQuanta.QasmToQuip.Wire
   , getScalarIndex
   )
 import LinguaQuanta.Quip.Gate
-  ( Control
+  ( Control(..)
   , Gate(..)
   , Wire
   )
@@ -57,6 +57,21 @@ opsToWires wmap = map (opToWire wmap)
 -------------------------------------------------------------------------------
 -- * (Zero-Parameter) Named Gate Translation.
 
+-- | Translates a gate of the form C(name) from OpenQASM to Quipper, with the
+-- given input wires and additional controls.
+expandSingleCtrl :: Quip.GateName -> [Wire] -> [Control] -> [Gate]
+expandSingleCtrl name (w:ins) ctrls = [gate]
+    where gate = NamedGate name False ins (Pos w:ctrls)
+expandSingleCtrl name _ _ = error msg
+    where msg = show name ++ " requires an additional control operand."
+
+-- | Translates a CCX gate from OpenQASM to Quipper, with the given input wires
+-- and additional controls.
+expandToffoli :: [Wire] -> [Control] -> [Gate]
+expandToffoli (w1:w2:ins) ctrls = gates
+    where gates = expandSingleCtrl Quip.GateX (w1:ins) (Pos w2:ctrls)
+expandDoubleCtrl name _ _ = error "Toffoli requires two control operands."
+
 -- | Implementation details for namedGateTransl. The Boolaen flag indicates if
 -- the gate modifier was inverted. The wires and controls are obtained by first
 -- mapping the operands to wires, and then partitioning the wires as either
@@ -92,6 +107,19 @@ toNamedGate Qasm.GateSdg inv ins ctrls = gates
     where gates = toNamedGate Qasm.GateS (not inv) ins ctrls
 toNamedGate Qasm.GateTdg inv ins ctrls = gates
     where gates = toNamedGate Qasm.GateT (not inv) ins ctrls
+-- Translations for gates that are singly controlled instances.
+toNamedGate Qasm.GateCX _ ins ctrls = gates
+    where gates = expandSingleCtrl Quip.GateX ins ctrls
+toNamedGate Qasm.GateCY _ ins ctrls = gates
+    where gates = expandSingleCtrl Quip.GateY ins ctrls
+toNamedGate Qasm.GateCZ _ ins ctrls = gates
+    where gates = expandSingleCtrl Quip.GateZ ins ctrls
+toNamedGate Qasm.GateCH _ ins ctrls = gates
+    where gates = expandSingleCtrl Quip.GateH ins ctrls
+toNamedGate Qasm.GateCSwap _ ins ctrls = gates
+    where gates = expandSingleCtrl Quip.GateSwap ins ctrls
+-- Special case: Toffoli gate.
+toNamedGate Qasm.GateCCX _ ins ctrls = expandToffoli ins ctrls
 -- Special case: User-defined gate.
 toNamedGate (Qasm.UserDefined _) _ _ _ = error msg
     where msg = "User-defined gate translations not implemented."
