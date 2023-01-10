@@ -28,6 +28,7 @@ library
                        LinguaQuanta.Qasm.Passes
                        LinguaQuanta.Qasm.Parser
                        LinguaQuanta.Qasm.Printer
+                       LinguaQuanta.QasmToQuip.Control
                        LinguaQuanta.QasmToQuip.Translator
                        LinguaQuanta.QasmToQuip.Wire
                        LinguaQuanta.Quip.Gate
@@ -197,6 +198,12 @@ test-suite qasm-parser-tests
 test-suite qasm-passes-tests
   import:              basic-unit-test-props
   main-is:             Qasm-Passes-Tests.hs
+  type:                exitcode-stdio-1.0
+
+test-suite qasmtoquip-control-tests
+  import:              basic-unit-test-props
+  main-is:             QasmToQuip-Control-Tests.hs
+  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-translator-tests
