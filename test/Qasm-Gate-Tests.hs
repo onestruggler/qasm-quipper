@@ -47,7 +47,7 @@ test6 = TestCase (assertEqual "Building gate modifiers (6/6)."
 
 pidiv2    = Div Pi (DecInt "2")
 params    = [Pi, pidiv2]
-inputs    = [Scalar "q"]
+inputs    = [QRef "q"]
 inputsRaw = [QVar "q"]
 
 gate0A = NamedGate GateX params inputs nullGateMod
@@ -115,7 +115,7 @@ test18 = TestCase (assertEqual "Building phase gates (6/6)."
 -----------------------------------------------------------------------------------------
 -- Gate Evaluation
 
-targetAndCtrl    = [Scalar "v", Cell "reg" 2]
+targetAndCtrl    = [QRef "v", Cell "reg" 2]
 targetAndCtrlRaw = [QVar "v", QReg "reg" (DecInt "2")]
 
 cexprVal3 = Plus (DecInt "4") (DecInt "-1")
@@ -187,7 +187,7 @@ test28 = TestCase (assertEqual "Catching exceptions in gate evaluations (3/3)."
 -----------------------------------------------------------------------------------------
 -- Gate Validation
 
-doubleControl = (Scalar "w") : targetAndCtrl
+doubleControl = (QRef "w") : targetAndCtrl
 
 validGate1 = NamedGate GateCRX [pidiv2] targetAndCtrl nullGateMod
 validGate2 = NamedGate GateCRX [pidiv2] doubleControl (addNegCtrlsToMod 1 nullGateMod)

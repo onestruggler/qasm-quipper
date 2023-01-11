@@ -36,7 +36,7 @@ type GateGenerator = [Operand] -> GateMod -> [Gate]
 -- declaration for op is recorded in wmap, then the corresponding wire index is
 -- returned. Otherwise, and error is raised.
 opToWire :: WireAllocMap -> Operand -> Wire
-opToWire wmap (Scalar id) =
+opToWire wmap (QRef id) =
     case getScalarIndex id wmap of
         Nothing -> error $ "Unknown qvar used as operand: " ++ id
         Just w  -> w
@@ -70,7 +70,7 @@ expandSingleCtrl name _ _ = error msg
 expandToffoli :: [Wire] -> [Control] -> [Gate]
 expandToffoli (w1:w2:ins) ctrls = gates
     where gates = expandSingleCtrl Quip.GateX (w1:ins) (Pos w2:ctrls)
-expandDoubleCtrl name _ _ = error "Toffoli requires two control operands."
+expandToffoli name _ = error "Toffoli requires two control operands."
 
 -- | Implementation details for namedGateTransl. The Boolaen flag indicates if
 -- the gate modifier was inverted. The wires and controls are obtained by first

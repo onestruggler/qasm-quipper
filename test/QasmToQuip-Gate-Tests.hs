@@ -33,10 +33,10 @@ alloc3 = fromJust $ allocate QWire "decl3" (Just 4) alloc2
 alloc4 = fromJust $ allocate CWire "decl4" Nothing  alloc3
 
 -- Operands:
-decl1       = Scalar "decl1"
+decl1       = QRef "decl1"
 decl2at idx = Cell "decl2" idx
 decl3at idx = Cell "decl3" idx
-decl4       = Scalar "decl4"
+decl4       = QRef "decl4"
 
 -- Modifiers:
 mod0 = nullGateMod

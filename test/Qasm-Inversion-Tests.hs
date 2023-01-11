@@ -36,10 +36,10 @@ params_len2 = [angle1, angle2]
 params_len3 = [angle1, angle2, angle3]
 params_len4 = [angle1, angle2, angle3, angle4]
 
-ops_len1 = [Scalar "x0"]
-ops_len2 = [Scalar "x0", Scalar "x1"]
-ops_len3 = [Scalar "x0", Scalar "x1", Cell "reg" 7]
-ops_len4 = [Scalar "x0", Scalar "x1", Cell "reg" 7, Scalar "x2"]
+ops_len1 = [QRef "x0"]
+ops_len2 = [QRef "x0", QRef "x1"]
+ops_len3 = [QRef "x0", QRef "x1", Cell "reg" 7]
+ops_len4 = [QRef "x0", QRef "x1", Cell "reg" 7, QRef "x2"]
 
 build_g1 :: [Expr] -> Gate
 build_g1 params = NamedGate name1 params [] mod1
@@ -178,7 +178,7 @@ set4_mk_operands :: [Sign] -> GateName -> [Operand]
 set4_mk_operands ctrl name = impl (ctrlCt + argsCt)
     where ctrlCt = length ctrl
           argsCt = fromJust $ toOperandCount name
-          impl n = if n == 0 then [] else Scalar ("var" ++ show n) : impl (n - 1)
+          impl n = if n == 0 then [] else QRef ("var" ++ show n) : impl (n - 1)
 
 set4_mktest_selfinv :: GateName -> Test.HUnit.Test
 set4_mktest_selfinv name = TestCase (assertEqual msg (Just [invert gate]) res)

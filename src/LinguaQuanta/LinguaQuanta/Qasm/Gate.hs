@@ -88,7 +88,7 @@ getCtrlList (GateMod _ ctrls) = ctrls
 
 -- | Abstract representation of a gate operand. In particular, all array cells
 -- must be compile-time constants.
-data Operand = Scalar String
+data Operand = QRef String
              | Cell String Int
              deriving (Show, Eq)
 
@@ -153,12 +153,12 @@ tryParseParam expr =
         Left n    -> if n > 0 then Left n else Right (NonPosParam n expr)
         Right err -> Right (NonConstParam err expr)
 
--- | Takes as input a gate operand (op). If op is a QVar, then a Scalar operand
+-- | Takes as input a gate operand (op). If op is a QVar, then a QRef operand
 -- is returned. If op is a QReg with constant index, then a Cell operand is
 -- returned. Otherwise, a gate summarization is returned to explain why the
 -- array cell index is non-constant.
 tryParseOperand :: GateOperand -> Either Operand GateSummaryErr
-tryParseOperand (QVar id) = Left $ Scalar id
+tryParseOperand (QVar id) = Left $ QRef id
 tryParseOperand (QReg id idx) =
     case toConstInt idx of
         Left n -> if n >= 0

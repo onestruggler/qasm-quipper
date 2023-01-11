@@ -41,7 +41,7 @@ printParams params = "(" ++ list ++ ")"
 
 -- | Converts a gate operand to its syntactic representation.
 printOperand :: Operand -> String
-printOperand (Scalar str)     = str
+printOperand (QRef str)       = str
 printOperand (Cell str index) = str ++ "[" ++ show index ++ "]"
 
 -- | Converts a list of operands to its syntactic representation.
