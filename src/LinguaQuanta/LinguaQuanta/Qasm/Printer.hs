@@ -28,6 +28,7 @@ printExpr (Div lhs rhs)   = printExpr lhs ++ " / " ++ printExpr rhs
 printExpr (Brack expr)    = "(" ++ printExpr expr ++ ")"
 printExpr (Negate expr)   = "-" ++ printExpr expr
 printExpr Pi              = "\x3C0"
+printExpr (DecFloat str)  = str
 printExpr (DecInt str)    = str
 printExpr (QasmId id)     = id
 

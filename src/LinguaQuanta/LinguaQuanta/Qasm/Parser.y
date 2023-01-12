@@ -20,6 +20,7 @@ import LinguaQuanta.Qasm.Language
     gphase          { Token _ TokenGPhase }
     qreg            { Token _ TokenQReg }
     qubit           { Token _ TokenQubit }
+    float           { Token _ (TokenFloat $$) }
     decint          { Token _ (TokenDecInt $$) }
     pi              { Token _ (TokenPi $$) }
     id              { Token _ (TokenID $$) }
@@ -76,6 +77,7 @@ Expr : Expr '+' Expr                        { Plus $1 $3 }
      | '(' Expr ')'                         { Brack $2 }
      | '-' Expr %prec NEG                   { Negate $2 }
      | pi                                   { Pi }
+     | float                                { DecFloat $1 }
      | decint                               { DecInt $1 }
      | id                                   { QasmId $1 }
 

@@ -73,6 +73,7 @@ toConstInt (Div lhs rhs)   = applyBinaryOp toConstInt div lhs rhs
 toConstInt (Brack expr)    = toConstInt expr
 toConstInt (Negate expr)   = applyUnaryOp toConstInt (\x -> -x) expr
 toConstInt Pi              = Right (BadType "angle")
+toConstInt (DecFloat _)    = Right (BadType "float")
 toConstInt (DecInt str)    = Left (readDecInt str)
 toConstInt (QasmId str)    = Right (NonConstId str)
 

@@ -132,6 +132,17 @@ test23 = TestCase (assertEqual "avgExpr is a semantically correct average (2/2).
                                (toConstInt $ avgExpr expr1 expr2))
 
 -----------------------------------------------------------------------------------------
+-- Floats are not integers.
+
+--- | Contains a float.
+expr5 = Plus (Times (DecInt "5") (DecInt "2"))
+             (Times (Brack (Minus (DecInt "5") (DecFloat "43e-2"))) (DecInt "2"))
+
+test24 = TestCase (assertEqual "toConstInt rejects float expressions."
+                               (Right (BadType "float") :: Either Int ExprErr)
+                               (toConstInt expr5))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores" test1,
@@ -156,6 +167,7 @@ tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores
                                      TestLabel "avgExpr_Syntactic_Test3" test20,
                                      TestLabel "avgExpr_Syntactic_Test4" test21,
                                      TestLabel "avgExpr_Semantic_Test1" test22,
-                                     TestLabel "avgExpr_Semantic_Test2" test23]
+                                     TestLabel "avgExpr_Semantic_Test2" test23,
+                                     TestLabel "toConstInt_Test7" test24]
 
 main = defaultMain tests

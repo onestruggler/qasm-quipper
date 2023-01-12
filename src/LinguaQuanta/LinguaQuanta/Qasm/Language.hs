@@ -12,6 +12,7 @@ data Expr = Plus Expr Expr
           | Brack Expr
           | Negate Expr
           | Pi
+          | DecFloat String
           | DecInt String
           | QasmId String
           deriving (Show, Eq)

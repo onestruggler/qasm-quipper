@@ -21,6 +21,9 @@ $alpha      = [A-Za-z]
 $greek      = [\x370-\x3FF]
 $idchars    = ['_' $alpha $greek]
 
+@decint     = ($decimal _?)* $decimal
+@floatexp   = [e E] [\+ \-]? @decint
+
 tokens :-
     <0>             $white+                           ;
     -- Comment Parsing.
@@ -40,7 +43,10 @@ tokens :-
     <0>             qreg                              { constLex TokenQReg }
     <0>             qubit                             { constLex TokenQubit }
     -- Literals and Identifiers.
-    <0>             ($decimal '_'?)* $decimal         { charLex TokenDecInt }
+    <0>             \. @decint @floatexp?             { charLex TokenFloat }
+    <0>             @decint \. @decint? @floatexp?    { charLex TokenFloat }
+    <0>             @decint @floatexp                 { charLex TokenFloat }
+    <0>             @decint                           { charLex TokenDecInt }
     <0>             \x3C0 | pi                        { charLex TokenPi }
     <0>             $idchars [$idchars $decimal]*     { charLex TokenID }
     -- Operators.
@@ -78,6 +84,7 @@ data TokenClass = TokenCtrl
                 | TokenGPhase
                 | TokenQReg
                 | TokenQubit
+                | TokenFloat String
                 | TokenDecInt String
                 | TokenPi String
                 | TokenID String
@@ -106,6 +113,7 @@ unlex TokenPow        = "pow"
 unlex TokenGPhase     = "gphase"
 unlex TokenQReg       = "qreg"
 unlex TokenQubit      = "qubit"
+unlex (TokenFloat x)  = (show x)
 unlex (TokenDecInt x) = (show x)
 unlex (TokenPi tok)   = (show tok)
 unlex (TokenID str)   = (show str)
