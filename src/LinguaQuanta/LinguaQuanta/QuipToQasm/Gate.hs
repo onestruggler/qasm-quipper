@@ -1,6 +1,9 @@
 -- | Functions to translate Quipper gates to OpenQASM gates.
 
-module LinguaQuanta.QuipToQasm.Gate (namedGateTransl) where
+module LinguaQuanta.QuipToQasm.Gate
+  ( namedGateTransl
+  , translGPhase
+  ) where
 
 -------------------------------------------------------------------------------
 -- * Import Section.
@@ -16,6 +19,7 @@ import LinguaQuanta.Qasm.Gate
   , nullGateMod
   )
 import qualified LinguaQuanta.Qasm.GateName as Qasm
+import LinguaQuanta.Qasm.Language (Expr(DecFloat, Pi, Times))
 import LinguaQuanta.Quip.Gate
   ( Control(..)
   , Wire
@@ -31,6 +35,10 @@ import LinguaQuanta.QuipToQasm.Wire
 
 -------------------------------------------------------------------------------
 -- * Gate Translation Utilities.
+
+-- | Function to a generate a sequence of OpenQASM gates, using the given wires
+-- and controls. This is a utility to improve function type readability.
+type GateGenerator = [Wire] -> [Control] -> [AstStmt]
 
 -- | Takes as input a flag indicating if a gate is inverted, together with a
 -- list of Quipper controls. Returns an equivalent OpenQASM 3 gate modifier.
@@ -63,14 +71,23 @@ conjugateByNots wmap w stmts = notStmts ++ stmts ++ notStmts
     where notStmts = namedGateTransl wmap Quip.GateX False [w] []
 
 -------------------------------------------------------------------------------
--- * Named Gate Translation.
-
--- | Function to a generate a sequence of OpenQASM gates, using the given wires
--- and controls. This is a utility to improve function type readability.
-type GateGenerator = [Wire] -> [Control] -> [AstStmt]
+-- * Phase Gate Translation.
 
 -- | Takes as input a map from Quipper wires to OpenQASM declarations (wmap),
--- an OpenQASM gate name, and the description of a Quipper NAmedGate (excluding
+-- a duration (t), and the description of a Quipper gate. Returns an OpenQASM
+-- GPhase gate at an angle of (pi*t) with an equivalent list of controls.
+translGPhase :: WireLookup -> Double -> [Control] -> [AstStmt]
+translGPhase wmap t ctrls = [AstGateStmt 1 gate]
+    where param = Times Pi $ DecFloat $ show t
+          ops   = mergeCtrlsAndIns wmap ctrls []
+          mods  = toGateMod False ctrls
+          gate  = GPhaseGate param ops mods
+
+-------------------------------------------------------------------------------
+-- * Named Gate Translation.
+
+-- | Takes as input a map from Quipper wires to OpenQASM declarations (wmap),
+-- an OpenQASM gate name, and the description of a Quipper NamedGate (excluding
 -- the name). Returns an equivalent OpenQASM gate with the provided name.
 toNamedGateStmt :: WireLookup -> Qasm.GateName -> Bool -> GateGenerator
 toNamedGateStmt wmap name inv ins ctrls = [AstGateStmt 1 gate]

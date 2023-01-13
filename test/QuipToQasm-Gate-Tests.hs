@@ -8,6 +8,7 @@ import Test.HUnit
 import LinguaQuanta.Qasm.AST (AstStmt(..))
 import LinguaQuanta.Qasm.Gate as Qasm
 import qualified LinguaQuanta.Qasm.GateName as Qasm
+import LinguaQuanta.Qasm.Language
 import LinguaQuanta.Quip.Gate as Quip
 import qualified LinguaQuanta.Quip.GateName as Quip
 import LinguaQuanta.Quip.Wire
@@ -406,6 +407,46 @@ test42 = TestCase (assertEqual "namedGateTransl: QMultiNot (4/4)."
           gate3 = Qasm.NamedGate Qasm.GateCX [] [decl4, decl3] nullGateMod
 
 -----------------------------------------------------------------------------------------
+-- Translating GPhase gates.
+
+test43 = TestCase (assertEqual "Translating global phase gates without controls (1/3)."
+                               [AstGateStmt 1 gate]
+                               (translGPhase qalloc 1 []))
+    where param = Times Pi $ DecFloat "1.0"
+          gate  = GPhaseGate param [] nullGateMod
+
+test44 = TestCase (assertEqual "Translating global phase gates without controls (2/3)."
+                               [AstGateStmt 1 gate]
+                               (translGPhase qalloc 0 []))
+    where param = Times Pi $ DecFloat "0.0"
+          gate  = GPhaseGate param [] nullGateMod
+
+test45 = TestCase (assertEqual "Translating global phase gates without controls (3/3)."
+                               [AstGateStmt 1 gate]
+                               (translGPhase qalloc 2.3e-15 []))
+    where param = Times Pi $ DecFloat "2.3e-15"
+          gate  = GPhaseGate param [] nullGateMod
+
+test46 = TestCase (assertEqual "Translating global phase gates with controls (1/2)."
+                               [AstGateStmt 1 gate]
+                               (translGPhase qalloc 1 ctrls))
+    where param = Times Pi $ DecFloat "1.0"
+          ctrls = [Quip.Pos 2]
+          decl  = Cell "input_qwires" 1
+          mod   = addCtrlsToMod 1 $ nullGateMod
+          gate  = GPhaseGate param [decl] mod
+
+test47 = TestCase (assertEqual "Translating global phase gates with controls (2/2)."
+                               [AstGateStmt 1 gate]
+                               (translGPhase qalloc 1 ctrls))
+    where param = Times Pi $ DecFloat "1.0"
+          ctrls = [Quip.Neg 3, Quip.Pos 2]
+          decl1 = Cell "input_qwires" 2
+          decl2 = Cell "input_qwires" 1
+          mod   = addNegCtrlsToMod 1 $ addCtrlsToMod 1 $ nullGateMod
+          gate  = GPhaseGate param [decl1, decl2] mod
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "GateX_NoCtrl_NoInv_Q1" test1,
@@ -449,6 +490,11 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateX_NoCtrl_NoInv_Q1" test1,
                                      TestLabel "QMultiNot_NoCtrls_NoInv_Q1" test39,
                                      TestLabel "QMultiNot_Pos2_Inv_Q2" test40,
                                      TestLabel "QMultiNot_NoCtrls_NoInv_Q1Q2Q3" test41,
-                                     TestLabel "QMultiNot_Pos4_Inv_Q1Q2Q3" test42]
+                                     TestLabel "QMultiNot_Pos4_Inv_Q1Q2Q3" test42,
+                                     TestLabel "GPhase_NoCtrl_1" test43,
+                                     TestLabel "GPhase_NoCtrl_2" test44,
+                                     TestLabel "GPhase_NoCtrl_3" test45,
+                                     TestLabel "GPhase_Ctrl_1" test46,
+                                     TestLabel "GPhase_Ctrl_2" test47]
 
 main = defaultMain tests
