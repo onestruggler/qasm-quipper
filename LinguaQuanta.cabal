@@ -19,6 +19,7 @@ extra-source-files:  CHANGELOG.md, README.md
 library
   exposed-modules:     LinguaQuanta.MaxTracker
                        LinguaQuanta.Maybe
+                       LinguaQuanta.List
                        LinguaQuanta.Qasm.AST
                        LinguaQuanta.Qasm.Expression
                        LinguaQuanta.Qasm.Gate
@@ -174,6 +175,11 @@ test-suite maxtracker-tests
 test-suite maybe-tests
   import:              basic-unit-test-props
   main-is:             Maybe-Tests.hs
+  type:                exitcode-stdio-1.0
+
+test-suite list-tests
+  import:              basic-unit-test-props
+  main-is:             List-Tests.hs
   type:                exitcode-stdio-1.0
 
 test-suite qasm-expression-tests
