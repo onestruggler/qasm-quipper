@@ -143,6 +143,37 @@ test24 = TestCase (assertEqual "toConstInt rejects float expressions."
                                (toConstInt expr5))
 
 -----------------------------------------------------------------------------------------
+-- readFloat
+
+test25 = TestCase (assertEqual "readFloat supports the INT EXP format."
+                               13e15
+                               (readFloat "1__3e1_5"))
+
+test26 = TestCase (assertEqual "readFloat supports the .INT format."
+                               0.435
+                               (readFloat ".4__3_5"))
+
+test27 = TestCase (assertEqual "readFloat supports the .INT EXP format."
+                               0.43e-2
+                               (readFloat ".4__3e-2"))
+
+test28 = TestCase (assertEqual "readFloat supports the INT. format."
+                               545.0
+                               (readFloat "5_4__5."))
+
+test29 = TestCase (assertEqual "readFloat supports the INT. EXP format."
+                               512.0e-3
+                               (readFloat "5__1_2.e-3"))
+
+test30 = TestCase (assertEqual "readFloat supports the INT.INT format."
+                               435.23
+                               (readFloat "4__3___5.2_3"))
+
+test31 = TestCase (assertEqual "readFloat supports the INT.INT EXP format."
+                               435.23e14
+                               (readFloat "4_3_5.2_3e1_4"))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores" test1,
@@ -155,6 +186,7 @@ tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores
                                      TestLabel "toConstInt_Test4" test8,
                                      TestLabel "toConstInt_Test5" test9,
                                      TestLabel "toConstInt_Test6" test10,
+                                     TestLabel "toConstInt_Test7" test24,
                                      TestLabel "negateExpr_Syntactic_Test1" test11,
                                      TestLabel "negateExpr_Syntactic_Test2" test12,
                                      TestLabel "negateExpr_Syntactic_Test3" test13,
@@ -168,6 +200,12 @@ tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores
                                      TestLabel "avgExpr_Syntactic_Test4" test21,
                                      TestLabel "avgExpr_Semantic_Test1" test22,
                                      TestLabel "avgExpr_Semantic_Test2" test23,
-                                     TestLabel "toConstInt_Test7" test24]
+                                     TestLabel "readFloat_Test1" test25,
+                                     TestLabel "readFloat_Test2" test26,
+                                     TestLabel "readFloat_Test3" test27,
+                                     TestLabel "readFloat_Test4" test28,
+                                     TestLabel "readFloat_Test5" test29,
+                                     TestLabel "readFloat_Test6" test30,
+                                     TestLabel "readFloat_Test7" test31]
 
 main = defaultMain tests

@@ -5,6 +5,7 @@ module LinguaQuanta.Qasm.Expression
   , avgExpr
   , negateExpr
   , readDecInt
+  , readFloat
   , toConstInt
   , zero
   ) where
@@ -12,7 +13,9 @@ module LinguaQuanta.Qasm.Expression
 -------------------------------------------------------------------------------
 -- * Import Section.
 
-import LinguaQuanta.Qasm.Language (Expr(..))
+import LinguaQuanta.List (splitAtFirst)
+import LinguaQuanta.Qasm.Language (Expr)
+import LinguaQuanta.Qasm.Language as Qasm
 
 -------------------------------------------------------------------------------
 -- * Evaluation and Error Handling Types.
@@ -28,7 +31,7 @@ type ExprEvalFn a = Expr -> ExprEval a
 -- * Useful Expressions.
 
 zero :: Expr
-zero = DecInt "0"
+zero = Qasm.DecInt "0"
 
 -------------------------------------------------------------------------------
 -- * Evaluation Helper Methods.
@@ -37,6 +40,26 @@ zero = DecInt "0"
 -- that underscores may appear in decimal integer literals as padding.
 readDecInt :: String -> Int
 readDecInt = read . (filter (/= '_'))
+
+-- | Takes as input an OpenQASM 3 float string. Returns an equivalent OpenQASM
+-- float string of either the form `INT EXP`, or `INT.INT`, or `INT.INT EXP`.
+-- Note that such strings are also valid Haskell doubles.
+padFloat :: String -> String
+padFloat str =
+    case splitAtFirst (== '.') str of
+        (istr, "")    -> istr
+        (qpart, rest) -> case splitAtFirst isExp rest of
+            (rpart, "")  -> mergeParts qpart rpart ""
+            (rpart, exp) -> mergeParts qpart rpart $ "e" ++ exp
+    where isExp c          = c == 'e' || c == 'E'
+          handleNull str   = if null str then "0" else str
+          mergeParts q r e = (handleNull q) ++ "." ++ (handleNull r) ++ e
+
+-- | Converts an OpenQASM 3 float string to a double value. Recall that
+-- underscores may appear in the whole, decimal, or expoential component of a
+-- float literal as padding.
+readFloat :: String -> Double
+readFloat = read . padFloat . (filter (/= '_'))
 
 -- | Consumes an evaluation function (f), a binary operation on the evaluation
 -- type (op), and two expressions (lhs and rhs). If (f lhs) evaluates to v1 and
@@ -62,28 +85,28 @@ applyUnaryOp f op expr =
 -------------------------------------------------------------------------------
 -- * Evaluation Methods.
 
--- Evaluates an expression as a constant integer literal. If the evaluation is
--- possible, then the corresponding integer is returned. Otherwise, returns an
--- error describing the first failure.
+-- | Evaluates an expression as a constant integer literal. If the evaluation
+-- is possible, then the corresponding integer is returned. Otherwise, returns
+-- an error describing the first failure.
 toConstInt :: Expr -> ExprEval Int
-toConstInt (Plus lhs rhs)  = applyBinaryOp toConstInt (+) lhs rhs 
-toConstInt (Minus lhs rhs) = applyBinaryOp toConstInt (-) lhs rhs
-toConstInt (Times lhs rhs) = applyBinaryOp toConstInt (*) lhs rhs
-toConstInt (Div lhs rhs)   = applyBinaryOp toConstInt div lhs rhs
-toConstInt (Brack expr)    = toConstInt expr
-toConstInt (Negate expr)   = applyUnaryOp toConstInt (\x -> -x) expr
-toConstInt Pi              = Right (BadType "angle")
-toConstInt (DecFloat _)    = Right (BadType "float")
-toConstInt (DecInt str)    = Left (readDecInt str)
-toConstInt (QasmId str)    = Right (NonConstId str)
+toConstInt (Qasm.Plus lhs rhs)  = applyBinaryOp toConstInt (+) lhs rhs 
+toConstInt (Qasm.Minus lhs rhs) = applyBinaryOp toConstInt (-) lhs rhs
+toConstInt (Qasm.Times lhs rhs) = applyBinaryOp toConstInt (*) lhs rhs
+toConstInt (Qasm.Div lhs rhs)   = applyBinaryOp toConstInt div lhs rhs
+toConstInt (Qasm.Brack expr)    = toConstInt expr
+toConstInt (Qasm.Negate expr)   = applyUnaryOp toConstInt (\x -> -x) expr
+toConstInt Qasm.Pi              = Right (BadType "angle")
+toConstInt (Qasm.DecFloat _)    = Right (BadType "float")
+toConstInt (Qasm.DecInt str)    = Left (readDecInt str)
+toConstInt (Qasm.QasmId str)    = Right (NonConstId str)
 
 -------------------------------------------------------------------------------
 -- * Manipulation Methods.
 
 -- Returns the symbolic negation of a numeric expression.
 negateExpr :: Expr -> Expr
-negateExpr expr = Negate (Brack expr)
+negateExpr expr = Qasm.Negate (Qasm.Brack expr)
 
 -- | Returns the symbolic average of two numeric expressions.
 avgExpr :: Expr -> Expr -> Expr
-avgExpr lhs rhs = Div (Brack (Plus lhs rhs)) (DecInt "2")
+avgExpr lhs rhs = Qasm.Div (Qasm.Brack (Qasm.Plus lhs rhs)) (Qasm.DecInt "2")
