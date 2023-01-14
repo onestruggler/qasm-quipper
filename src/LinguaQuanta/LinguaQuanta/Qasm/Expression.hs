@@ -6,6 +6,7 @@ module LinguaQuanta.Qasm.Expression
   , negateExpr
   , readDecInt
   , readFloat
+  , toConstFloat
   , toConstInt
   , zero
   ) where
@@ -16,6 +17,11 @@ module LinguaQuanta.Qasm.Expression
 import LinguaQuanta.List (splitAtFirst)
 import LinguaQuanta.Qasm.Language (Expr)
 import LinguaQuanta.Qasm.Language as Qasm
+import Quantum.Synthesis.SymReal
+  ( SymReal
+  , to_real
+  )
+import Quantum.Synthesis.SymReal as SR
 
 -------------------------------------------------------------------------------
 -- * Evaluation and Error Handling Types.
@@ -95,10 +101,37 @@ toConstInt (Qasm.Times lhs rhs) = applyBinaryOp toConstInt (*) lhs rhs
 toConstInt (Qasm.Div lhs rhs)   = applyBinaryOp toConstInt div lhs rhs
 toConstInt (Qasm.Brack expr)    = toConstInt expr
 toConstInt (Qasm.Negate expr)   = applyUnaryOp toConstInt (\x -> -x) expr
-toConstInt Qasm.Pi              = Right (BadType "angle")
-toConstInt (Qasm.DecFloat _)    = Right (BadType "float")
-toConstInt (Qasm.DecInt str)    = Left (readDecInt str)
-toConstInt (Qasm.QasmId str)    = Right (NonConstId str)
+toConstInt Qasm.Pi              = Right $ BadType "angle"
+toConstInt (Qasm.DecFloat _)    = Right $ BadType "float"
+toConstInt (Qasm.DecInt str)    = Left $ readDecInt str
+toConstInt (Qasm.QasmId str)    = Right $ NonConstId str
+
+-- | Converts an OpenQASM expression to a SymReal expression. If the conversion
+-- is possible, then the corresponding symbolic real is returned. Otherwise,
+-- returns an error describing the first failure.
+--
+-- Note: Conversion to symbolic reals requries compile-time integers or floats.
+toSymReal :: Expr -> ExprEval SymReal
+toSymReal (Qasm.Plus lhs rhs)  = applyBinaryOp toSymReal SR.Plus lhs rhs
+toSymReal (Qasm.Minus lhs rhs) = applyBinaryOp toSymReal SR.Minus lhs rhs
+toSymReal (Qasm.Times lhs rhs) = applyBinaryOp toSymReal SR.Times lhs rhs
+toSymReal (Qasm.Div lhs rhs)   = applyBinaryOp toSymReal SR.Div lhs rhs
+toSymReal (Qasm.Brack expr)    = toSymReal expr
+toSymReal (Qasm.Negate expr)   = applyUnaryOp toSymReal SR.Negate expr
+toSymReal Qasm.Pi              = Left $ SR.Pi
+toSymReal (Qasm.DecInt str)    = Left $ SR.Const $ toInteger $ readDecInt str
+toSymReal (Qasm.QasmId str)    = Right $ NonConstId str
+toSymReal (Qasm.DecFloat str)  = Left $ SR.Decimal val str
+    where val = toRational $ readFloat str
+
+-- | Evaluates an expression as a constant double literal. If the evaluation
+-- is possible, then the corresponding double is returned. Otherwise, returns
+-- an error describing the first failure.
+toConstFloat :: Expr -> ExprEval Double
+toConstFloat expr =
+    case toSymReal expr of
+        Left val  -> Left $ to_real val
+        Right err -> Right err
 
 -------------------------------------------------------------------------------
 -- * Manipulation Methods.

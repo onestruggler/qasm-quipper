@@ -174,6 +174,61 @@ test31 = TestCase (assertEqual "readFloat supports the INT.INT EXP format."
                                (readFloat "4_3_5.2_3e1_4"))
 
 -----------------------------------------------------------------------------------------
+-- toConstFloat
+
+float1 = DecFloat ".5"
+float2 = DecInt "5"
+float3 = Pi
+float4 = Plus float1 float3
+float5 = Negate float2
+float6 = Brack float5
+float7 = Minus float4 float6
+float8 = Times float7 $ DecInt "2"
+float9 = Div (Plus Pi (Times float2 Pi)) Pi
+
+test32 = TestCase (assertEqual "toConstFloat: floating point literal."
+                               (Left 0.5 :: Either Double ExprErr)
+                               (toConstFloat float1))
+
+test33 = TestCase (assertEqual "toConstFloat: decimal integer literals."
+                               (Left 5.0 :: Either Double ExprErr)
+                               (toConstFloat float2))
+
+test34 = TestCase (assertBool "toConstFloat: handling pi."
+                              ((abs (3.14 - v)) < 0.01))
+    where Left v = toConstFloat float3
+
+test35 = TestCase (assertBool "toConstFloat: handling addition."
+                              ((abs (3.64 - v)) < 0.01))
+    where Left v = toConstFloat float4
+
+test36 = TestCase (assertEqual "toConstFloat: negation."
+                               (Left (-5.0) :: Either Double ExprErr)
+                               (toConstFloat float5))
+
+test37 = TestCase (assertEqual "toConstFloat: brackets."
+                               (Left (-5.0) :: Either Double ExprErr)
+                               (toConstFloat float6))
+
+test38 = TestCase (assertBool "toConstFloat: handling subtraction."
+                              ((abs (8.64 - v)) < 0.01))
+    where Left v = toConstFloat float7
+
+test39 = TestCase (assertBool "toConstFloat: handling multiplication."
+                              ((abs (17.28 - v)) < 0.01))
+    where Left v = toConstFloat float8
+
+test40 = TestCase (assertEqual "toConstFloat: handling division."
+                               (Left 6.0 :: Either Double ExprErr)
+                               (toConstFloat float9))
+
+floaterr = Plus (Times float9 (QasmId "var")) float8
+
+test41 = TestCase (assertEqual "toConstFloat: error detection."
+                               (Right (NonConstId "var") :: Either Double ExprErr)
+                               (toConstFloat floaterr))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores" test1,
@@ -206,6 +261,16 @@ tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores
                                      TestLabel "readFloat_Test4" test28,
                                      TestLabel "readFloat_Test5" test29,
                                      TestLabel "readFloat_Test6" test30,
-                                     TestLabel "readFloat_Test7" test31]
+                                     TestLabel "readFloat_Test7" test31,
+                                     TestLabel "toConstFloat_Test1" test32,
+                                     TestLabel "toConstFloat_Test2" test33,
+                                     TestLabel "toConstFloat_Test3" test34,
+                                     TestLabel "toConstFloat_Test4" test35,
+                                     TestLabel "toConstFloat_Test5" test36,
+                                     TestLabel "toConstFloat_Test6" test37,
+                                     TestLabel "toConstFloat_Test7" test38,
+                                     TestLabel "toConstFloat_Test8" test39,
+                                     TestLabel "toConstFloat_Test9" test40,
+                                     TestLabel "toConstFloat_Test10" test41]
 
 main = defaultMain tests
