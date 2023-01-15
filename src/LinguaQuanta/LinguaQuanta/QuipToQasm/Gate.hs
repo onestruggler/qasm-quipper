@@ -74,14 +74,46 @@ conjugateByNots wmap w stmts = notStmts ++ stmts ++ notStmts
 -- * Phase Gate Translation.
 
 -- | Takes as input a map from Quipper wires to OpenQASM declarations (wmap),
+-- an OpenQASM gate name, a rotation expression (param), a designate control,
+-- a list of input wires, and a list of controls. Returns the specified named
+-- gate with the provided parameter, and the desigated control promoted to an
+-- input wire. If the polarity of the control is negative, then the negations
+-- are inlined.
+toGPhaseCtrl :: WireLookup -> Qasm.GateName -> Expr -> Control -> GateGenerator
+toGPhaseCtrl wmap name param (Pos w) ins ctrls = [AstGateStmt 1 gate]
+    where ops  = mergeCtrlsAndIns wmap ctrls (w:ins)
+          mods = toGateMod False ctrls
+          gate = NamedGate name [param] ops mods
+toGPhaseCtrl wmap name param (Neg w) ins ctrls = conjugateByNots wmap w stmts
+    where stmts = toGPhaseCtrl wmap name param (Pos w) ins ctrls
+
+-- | Like toGPhaseCtrl, but consumes the first two controls and is specialized
+-- to the CP gate. Each control is promoted as described by toGPhaseCtrl.
+translCP :: WireLookup -> Expr -> Control -> Control -> [Control] -> [AstStmt]
+translCP wmap param c (Pos w) ctrls = stmts
+    where stmts = toGPhaseCtrl wmap Qasm.GateCP param c [w] ctrls
+translCP wmap param c (Neg w) ctrls = conjugateByNots wmap w stmts
+    where stmts = translCP wmap param c (Pos w) ctrls
+
+-- | Implementation details for translGPhase. Takes as input a map from Quipper
+-- wires to OpenQASM declarations (wmap), a rotation expression (param), and
+-- the description of a Quipper gate. Determines whether the global phase gate
+-- has zero controls (and returns a gphase gate), one control (and returns a P
+-- gate), or multiple controls (and returns a CP gate).
+translGPhaseImpl :: WireLookup -> Expr -> [Control] -> [AstStmt]
+translGPhaseImpl wmap param [] = [AstGateStmt 1 gate]
+    where gate = GPhaseGate param [] nullGateMod
+translGPhaseImpl wmap param [c] = stmts
+    where stmts = toGPhaseCtrl wmap Qasm.GateP param c [] []
+translGPhaseImpl wmap param (c1:c2:ctrls) = stmts
+    where stmts = translCP wmap param c1 c2 ctrls
+
+-- | Takes as input a map from Quipper wires to OpenQASM declarations (wmap),
 -- a duration (t), and the description of a Quipper gate. Returns an OpenQASM
 -- GPhase gate at an angle of (pi*t) with an equivalent list of controls.
 translGPhase :: WireLookup -> Double -> [Control] -> [AstStmt]
-translGPhase wmap t ctrls = [AstGateStmt 1 gate]
+translGPhase wmap t ctrls = translGPhaseImpl wmap param ctrls
     where param = Times Pi $ DecFloat $ show t
-          ops   = mergeCtrlsAndIns wmap ctrls []
-          mods  = toGateMod False ctrls
-          gate  = GPhaseGate param ops mods
 
 -------------------------------------------------------------------------------
 -- * Named Gate Translation.

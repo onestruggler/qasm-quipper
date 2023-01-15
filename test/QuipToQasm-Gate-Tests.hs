@@ -427,24 +427,94 @@ test45 = TestCase (assertEqual "Translating global phase gates without controls 
     where param = Times Pi $ DecFloat "2.3e-15"
           gate  = GPhaseGate param [] nullGateMod
 
-test46 = TestCase (assertEqual "Translating global phase gates with controls (1/2)."
+test46 = TestCase (assertEqual "Translating global phase gates with 1 control (1/2)."
                                [AstGateStmt 1 gate]
                                (translGPhase qalloc 1 ctrls))
     where param = Times Pi $ DecFloat "1.0"
           ctrls = [Quip.Pos 2]
           decl  = Cell "input_qwires" 1
-          mod   = addCtrlsToMod 1 $ nullGateMod
-          gate  = GPhaseGate param [decl] mod
+          gate  = Qasm.NamedGate Qasm.GateP [param] [decl] nullGateMod
 
-test47 = TestCase (assertEqual "Translating global phase gates with controls (2/2)."
+test47 = TestCase (assertEqual "Translating global phase gates with 1 control (2/2)."
+                               [AstGateStmt 1 neg,
+                                AstGateStmt 1 gate,
+                                AstGateStmt 1 neg]
+                               (translGPhase qalloc 2.3e-15 ctrls))
+    where param = Times Pi $ DecFloat "2.3e-15"
+          ctrls = [Quip.Neg 3]
+          decl  = Cell "input_qwires" 2
+          neg   = Qasm.NamedGate Qasm.GateX [] [decl] nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateP [param] [decl] nullGateMod
+
+test48 = TestCase (assertEqual "Translating global phase gates with 2 controls (1/4)."
                                [AstGateStmt 1 gate]
                                (translGPhase qalloc 1 ctrls))
     where param = Times Pi $ DecFloat "1.0"
-          ctrls = [Quip.Neg 3, Quip.Pos 2]
-          decl1 = Cell "input_qwires" 2
-          decl2 = Cell "input_qwires" 1
-          mod   = addNegCtrlsToMod 1 $ addCtrlsToMod 1 $ nullGateMod
-          gate  = GPhaseGate param [decl1, decl2] mod
+          ctrls = [Quip.Pos 2, Quip.Pos 3]
+          decl1 = Cell "input_qwires" 1
+          decl2 = Cell "input_qwires" 2
+          gate  = Qasm.NamedGate Qasm.GateCP [param] [decl1, decl2] nullGateMod
+
+test49 = TestCase (assertEqual "Translating global phase gates with 2 controls (2/4)."
+                               [AstGateStmt 1 neg,
+                                AstGateStmt 1 gate,
+                                AstGateStmt 1 neg]
+                               (translGPhase qalloc 2.3e-15 ctrls))
+    where param = Times Pi $ DecFloat "2.3e-15"
+          ctrls = [Quip.Neg 4, Quip.Pos 3]
+          decl1 = Cell "input_qwires" 3
+          decl2 = Cell "input_qwires" 2
+          neg   = Qasm.NamedGate Qasm.GateX [] [decl1] nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateCP [param] [decl1, decl2] nullGateMod
+
+test50 = TestCase (assertEqual "Translating global phase gates with 2 controls (3/4)."
+                               [AstGateStmt 1 neg,
+                                AstGateStmt 1 gate,
+                                AstGateStmt 1 neg]
+                               (translGPhase qalloc 0 ctrls))
+    where param = Times Pi $ DecFloat "0.0"
+          ctrls = [Quip.Pos 2, Quip.Neg 1]
+          decl1 = Cell "input_qwires" 1
+          decl2 = Cell "input_qwires" 0
+          neg   = Qasm.NamedGate Qasm.GateX [] [decl2] nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateCP [param] [decl1, decl2] nullGateMod
+
+test51 = TestCase (assertEqual "Translating global phase gates with 2 controls (4/4)."
+                               [AstGateStmt 1 neg1,
+                                AstGateStmt 1 neg2,
+                                AstGateStmt 1 gate,
+                                AstGateStmt 1 neg2,
+                                AstGateStmt 1 neg1]
+                               (translGPhase qalloc 0 ctrls))
+    where param = Times Pi $ DecFloat "0.0"
+          ctrls = [Quip.Neg 2, Quip.Neg 1]
+          decl1 = Cell "input_qwires" 1
+          decl2 = Cell "input_qwires" 0
+          neg1  = Qasm.NamedGate Qasm.GateX [] [decl2] nullGateMod
+          neg2  = Qasm.NamedGate Qasm.GateX [] [decl1] nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateCP [param] [decl1, decl2] nullGateMod
+
+test52 = TestCase (assertEqual "Translating global phase gates with 3 controls (1/2)."
+                               [AstGateStmt 1 gate]
+                               (translGPhase qalloc 1 ctrls))
+    where param = Times Pi $ DecFloat "1.0"
+          ctrls = [Quip.Pos 3, Quip.Pos 2, Quip.Pos 1]
+          decl1 = Cell "input_qwires" 0
+          decl2 = Cell "input_qwires" 2
+          decl3 = Cell "input_qwires" 1
+          mod   = addCtrlsToMod 1 $ nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateCP [param] [decl1, decl2, decl3] mod
+
+test53 = TestCase (assertEqual "Translating global phase gates with 3 controls (2/2)."
+                               [AstGateStmt 1 gate]
+                               (translGPhase qalloc 1 ctrls))
+    where param = Times Pi $ DecFloat "1.0"
+          ctrls = [Quip.Pos 3, Quip.Pos 2, Quip.Neg 5]
+          decl1 = Cell "input_qwires" 4
+          decl2 = Cell "input_qwires" 2
+          decl3 = Cell "input_qwires" 1
+          mod   = addNegCtrlsToMod 1 $ nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateCP [param] [decl1, decl2, decl3] mod
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
@@ -491,10 +561,16 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateX_NoCtrl_NoInv_Q1" test1,
                                      TestLabel "QMultiNot_Pos2_Inv_Q2" test40,
                                      TestLabel "QMultiNot_NoCtrls_NoInv_Q1Q2Q3" test41,
                                      TestLabel "QMultiNot_Pos4_Inv_Q1Q2Q3" test42,
-                                     TestLabel "GPhase_NoCtrl_1" test43,
-                                     TestLabel "GPhase_NoCtrl_2" test44,
-                                     TestLabel "GPhase_NoCtrl_3" test45,
-                                     TestLabel "GPhase_Ctrl_1" test46,
-                                     TestLabel "GPhase_Ctrl_2" test47]
+                                     TestLabel "GPhase_0Ctrl_1" test43,
+                                     TestLabel "GPhase_0Ctrl_2" test44,
+                                     TestLabel "GPhase_0Ctrl_3" test45,
+                                     TestLabel "GPhase_1Ctrl_1" test46,
+                                     TestLabel "GPhase_1Ctrl_2" test47,
+                                     TestLabel "GPhase_2Ctrl_1" test48,
+                                     TestLabel "GPhase_2Ctrl_2" test49,
+                                     TestLabel "GPhase_2Ctrl_3" test50,
+                                     TestLabel "GPhase_2Ctrl_3" test51,
+                                     TestLabel "GPhase_3Ctrl_1" test52,
+                                     TestLabel "GPhase_3Ctrl_1" test53]
 
 main = defaultMain tests
