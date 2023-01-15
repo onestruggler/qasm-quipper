@@ -1,17 +1,21 @@
 -- | Functions to translate OpenQASM gates to Quipper gates.
 
-module LinguaQuanta.QasmToQuip.Gate (namedGateTransl) where
+module LinguaQuanta.QasmToQuip.Gate
+  ( namedGateTransl
+  , translGPhase
+  ) where
 
 -------------------------------------------------------------------------------
 -- * Import Section.
 
-import LinguaQuanta.Qasm.Expression (toConstInt)
+import LinguaQuanta.Qasm.Expression (toConstFloat)
 import LinguaQuanta.Qasm.Gate
   ( GateMod
   , Operand(..)
   , hasInversionMod
   )
 import qualified LinguaQuanta.Qasm.GateName as Qasm
+import LinguaQuanta.Qasm.Language (Expr(..))
 import LinguaQuanta.QasmToQuip.Control (extractCtrls)
 import LinguaQuanta.QasmToQuip.Wire
   ( WireAllocMap
@@ -53,6 +57,23 @@ opToWire wmap (Cell id idx) =
 -- Note: If a declaration does not appear in wmap, then an error is raised.
 opsToWires :: WireAllocMap -> [Operand] -> [Wire]
 opsToWires wmap = map (opToWire wmap)
+
+-------------------------------------------------------------------------------
+-- * GPhase Gate Translation.
+
+-- | Takes as input a wire allocation map (wmap), an OpenQASM expression for a
+-- compile-time angle (param), a list of operands (ops), and a modifier (mod).
+-- Returns a list of Quipper gates quivalent to `mod @ gphase(param) ops` where
+-- each operand is mapped to a wire according to wmap. The Quipper gate will
+-- have a timestep of `param / PI` to account for the difference in units.
+translGPhase :: WireAllocMap -> Expr -> GateGenerator
+translGPhase wmap param ops mod =
+    case toConstFloat (Div param Pi) of
+        Right err -> error "Non-contant float expression as global phase."
+        Left pval -> let angle = if hasInversionMod mod then -pval else pval
+                     in [PhaseGate angle ctrls] 
+    where wires = opsToWires wmap ops
+          ctrls = snd $ extractCtrls wires mod
 
 -------------------------------------------------------------------------------
 -- * (Zero-Parameter) Named Gate Translation.

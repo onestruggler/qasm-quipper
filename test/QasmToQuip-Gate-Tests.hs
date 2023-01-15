@@ -13,6 +13,7 @@ import LinguaQuanta.Qasm.Gate
   , nullGateMod
   )
 import qualified LinguaQuanta.Qasm.GateName as Qasm
+import LinguaQuanta.Qasm.Language
 import LinguaQuanta.QasmToQuip.Gate
 import LinguaQuanta.QasmToQuip.Wire
   ( initialAllocations
@@ -263,6 +264,26 @@ test35 = TestCase (assertEqual "Translation of a CCX gate with 2 ctrls and inver
           ctrls = [Pos 2, Pos 3, Pos 0, Neg 1]
 
 -----------------------------------------------------------------------------------------
+-- Translating global phase gates
+
+test36 = TestCase (assertEqual "Translation of global phase gates without controls."
+                               [PhaseGate 5.0 []]
+                               (translGPhase alloc4 param [] mod0))
+    where param = Times Pi $ DecFloat "5.0"
+
+test37 = TestCase (assertEqual "Translation of global phase gates with inversion."
+                               [PhaseGate (-7.1) []]
+                               (translGPhase alloc4 param [] mod1))
+    where param = Times Pi $ DecFloat "7.1"
+
+test38 = TestCase (assertEqual "Translation of global phase gates with controls."
+                               [PhaseGate 0 ctrls]
+                               (translGPhase alloc4 param ops mod2))
+    where ops   = [decl1, decl2at 2]
+          ctrls = [Pos 0, Pos 3]
+          param = Times Pi $ DecFloat "0"
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "GateS_1" test1,
@@ -299,6 +320,9 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateS_1" test1,
                                      TestLabel "GateCZ" test32,
                                      TestLabel "GateCH" test33,
                                      TestLabel "GateCSwap" test34,
-                                     TestLabel "GateToffoli" test35]
+                                     TestLabel "GateToffoli" test35,
+                                     TestLabel "GPhase_1" test36,
+                                     TestLabel "GPhase_2" test37,
+                                     TestLabel "GPhase_3" test38]
 
 main = defaultMain tests
