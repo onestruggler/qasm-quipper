@@ -2,12 +2,14 @@
 -- registers, and to map said registers to Quipper wires.
 
 module LinguaQuanta.QasmToQuip.Wire
-  ( WireState
+  ( CellUpdate
+  , DeclType(..)
+  , Eq(..)
+  , ScalarUpdate
+  , Show(..)
+  , WireState
   , WireError(..)
   , WireAllocMap
-  , DeclType(..)
-  , Show(..)
-  , Eq(..)
   , allocate
   , allocateWire
   , getCellIndex
@@ -226,7 +228,13 @@ getCellIndex name idx (WireAllocMap _ _ map) =
 -- | A function that updates a single cell in a DeclWireStateMap. If the update
 -- fails, then nothing is returned. Otherwise, returns the new map, and a flag
 -- indicating whether the update changes the current circuit size.
-type ScalarUpdate = DeclWireStateMap -> Maybe (Bool, DeclWireStateMap)
+type StatefulUpdate = DeclWireStateMap -> Maybe (Bool, DeclWireStateMap)
+
+-- | Extends TryMaybeUpdate to scalars.
+type ScalarUpdate = String -> TryMapUpdate
+
+-- | Extends TryMaybeUpdate to cells.
+type CellUpdate = String -> Int -> TryMapUpdate
 
 -- | Helper predicate for init updates.
 initPred = not. isOutput
@@ -251,7 +259,7 @@ applyUpdate name maybeIdx update wire =
 --
 -- Note: This method assumes that update is applicable to w. If the declaration
 -- exists and the update is not applicable, then an error is reported.
-applyToScalar :: WirePred -> WireUpdate -> String -> ScalarUpdate
+applyToScalar :: WirePred -> WireUpdate -> String -> StatefulUpdate
 applyToScalar pred update name map =
     branchJust (Map.lookup name map) $ \(ty, st) -> case st of
         Right _   -> Nothing
@@ -266,7 +274,7 @@ applyToScalar pred update name map =
 --
 -- Note: This method assumes that update is applicable to w. If the declaration
 -- exists and the update is not applicable, then an error is reported.
-initScalar :: String -> TryMapUpdate
+initScalar :: ScalarUpdate
 initScalar name (WireAllocMap tot cur map) =
     branchJust (applyToScalar initPred initWire name map) $ \(b, map') ->
         let cur' = updateTracker cur $ \x -> x + fromEnum b
@@ -279,7 +287,7 @@ initScalar name (WireAllocMap tot cur map) =
 --
 -- Note: This method assumes that update is applicable to w. If the declaration
 -- exists and the update is not applicable, then an error is reported.
-termScalar :: String -> TryMapUpdate
+termScalar :: ScalarUpdate
 termScalar name (WireAllocMap tot cur map) =
     branchJust (applyToScalar isOutput termWire name map) $ \(b, map') ->
         let cur' = updateTracker cur $ \x -> x - fromEnum b
@@ -291,7 +299,7 @@ termScalar name (WireAllocMap tot cur map) =
 --
 -- Note: This method assumes that update is applicable to w. If the declaration
 -- exists and the update is not applicable, then an error is reported.
-useScalar :: String -> TryMapUpdate
+useScalar :: ScalarUpdate
 useScalar name (WireAllocMap tot cur map) =
     branchJust (applyToScalar isWire useWire name map) $ \(_, map') ->
         Just $ WireAllocMap tot cur map'
@@ -305,7 +313,7 @@ useScalar name (WireAllocMap tot cur map) =
 --
 -- Note: This method assumes that update is applicable to w. If the declaration
 -- exists and the update is not applicable, then an error is reported.
-applyToCell :: WirePred -> WireUpdate -> String -> Int -> ScalarUpdate 
+applyToCell :: WirePred -> WireUpdate -> String -> Int -> StatefulUpdate 
 applyToCell pred update name idx map =
     branchJust (Map.lookup name map) $ \(ty, st) -> case st of
         Left _     -> Nothing
@@ -323,7 +331,7 @@ applyToCell pred update name idx map =
 --
 -- Note: This method assumes that update is applicable to w. If the declaration
 -- exists and the update is not applicable, then an error is reported.
-initCell :: String -> Int -> TryMapUpdate
+initCell :: CellUpdate
 initCell name idx (WireAllocMap tot cur map) =
     branchJust (applyToCell initPred initWire name idx map) $ \(b, map') ->
         let cur' = updateTracker cur $ \x -> x + fromEnum b
@@ -337,7 +345,7 @@ initCell name idx (WireAllocMap tot cur map) =
 --
 -- Note: This method assumes that update is applicable to w. If the declaration
 -- exists and the update is not applicable, then an error is reported.
-termCell :: String -> Int -> TryMapUpdate
+termCell :: CellUpdate
 termCell name idx (WireAllocMap tot cur map) =
     branchJust (applyToCell isOutput termWire name idx map) $ \(b, map') ->
         let cur' = updateTracker cur $ \x -> x - fromEnum b
@@ -350,7 +358,7 @@ termCell name idx (WireAllocMap tot cur map) =
 --
 -- Note: This method assumes that update is applicable to w. If the declaration
 -- exists and the update is not applicable, then an error is reported.
-useCell :: String -> Int -> TryMapUpdate
+useCell :: CellUpdate
 useCell name idx (WireAllocMap tot cur map) =
     branchJust (applyToCell isWire useWire name idx map) $ \(_, map') ->
         Just $ WireAllocMap tot cur map'

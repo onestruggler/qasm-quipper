@@ -150,7 +150,7 @@ elimInv = applyPerLinePass elimInvImpl 1
 -- | Inlines the power modifers of a single AST statements.
 elimPowImpl :: AstStmt -> [AstStmt]
 elimPowImpl (AstGateStmt 0 gate) = [AstGateStmt 0 gate]
-elimPowImpl (AstGateStmt n gate) = (replicate n $ AstGateStmt 0 gate)
+elimPowImpl (AstGateStmt n gate) = replicate n $ AstGateStmt 0 gate
 elimPowImpl stmt                 = [stmt]
 
 -- | Inlines all power modifers in a list of AST statements.
