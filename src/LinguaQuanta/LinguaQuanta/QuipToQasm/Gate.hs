@@ -80,7 +80,7 @@ conjugateByNots wmap w stmts = notStmts ++ stmts ++ notStmts
 -- input wire. If the polarity of the control is negative, then the negations
 -- are inlined.
 toGPhaseCtrl :: WireLookup -> Qasm.GateName -> Expr -> Control -> GateGenerator
-toGPhaseCtrl wmap name param (Pos w) ins ctrls = [AstGateStmt 1 gate]
+toGPhaseCtrl wmap name param (Pos w) ins ctrls = [AstGateStmt 0 gate]
     where ops  = mergeCtrlsAndIns wmap ctrls (w:ins)
           mods = toGateMod False ctrls
           gate = NamedGate name [param] ops mods
@@ -101,7 +101,7 @@ translCP wmap param c (Neg w) ctrls = conjugateByNots wmap w stmts
 -- has zero controls (and returns a gphase gate), one control (and returns a P
 -- gate), or multiple controls (and returns a CP gate).
 translGPhaseImpl :: WireLookup -> Expr -> [Control] -> [AstStmt]
-translGPhaseImpl wmap param [] = [AstGateStmt 1 gate]
+translGPhaseImpl wmap param [] = [AstGateStmt 0 gate]
     where gate = GPhaseGate param [] nullGateMod
 translGPhaseImpl wmap param [c] = stmts
     where stmts = toGPhaseCtrl wmap Qasm.GateP param c [] []
@@ -122,7 +122,7 @@ translGPhase wmap t ctrls = translGPhaseImpl wmap param ctrls
 -- an OpenQASM gate name, and the description of a Quipper NamedGate (excluding
 -- the name). Returns an equivalent OpenQASM gate with the provided name.
 toNamedGateStmt :: WireLookup -> Qasm.GateName -> Bool -> GateGenerator
-toNamedGateStmt wmap name inv ins ctrls = [AstGateStmt 1 gate]
+toNamedGateStmt wmap name inv ins ctrls = [AstGateStmt 0 gate]
     where ops  = mergeCtrlsAndIns wmap ctrls ins
           mods = toGateMod inv ctrls
           gate = NamedGate name [] ops mods

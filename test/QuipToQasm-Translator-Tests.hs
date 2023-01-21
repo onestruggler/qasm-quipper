@@ -83,9 +83,9 @@ qgate3 = Qasm.NamedGate Qasm.GateS [] [getOp 2] mod0
 
 dstmt1 = AstQubitDecl (Just 5) "input_qwires"
 
-gstmt1 = AstGateStmt 1 qgate1
-gstmt2 = AstGateStmt 1 qgate2
-gstmt3 = AstGateStmt 1 qgate3
+gstmt1 = AstGateStmt 0 qgate1
+gstmt2 = AstGateStmt 0 qgate2
+gstmt3 = AstGateStmt 0 qgate3
 
 test7 = TestCase (assertEqual "Can convert CCX."
                               [dstmt1, gstmt1]
