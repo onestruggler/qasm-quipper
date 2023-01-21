@@ -160,6 +160,8 @@ concretizeGate (RotGate name inv angle ins ctrls) = gate
 concretizeGate (PhaseGate angle ctrls) = gate
     where qctrls = exposeCtrls ctrls
           gate   = GPhase angle [] qctrls False
+concretizeGate (QInitGate on wire) = QInit on wire False
+concretizeGate (QTermGate on wire) = QTerm on wire False
 
 -- | Consumes a gate-based representation of a Quipper circuit. Returns the
 -- ASCII representation of the circuit. If the conversion fails, then an error
