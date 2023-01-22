@@ -517,6 +517,158 @@ test53 = TestCase (assertEqual "Translating global phase gates with 3 controls (
           gate  = Qasm.NamedGate Qasm.GateCP [param] [decl1, decl2, decl3] mod
 
 -----------------------------------------------------------------------------------------
+-- Translating rotation gates without controls (many configurations).
+
+test54 = TestCase (assertEqual "rotGateTransl: support for the RotExpZ gate (1/4)."
+                               [AstGateStmt 0 gate]
+                               (rotGateTransl qalloc Quip.RotExpZ False 1.0 [3] []))
+    where param = Times (DecFloat "1.0") (DecInt "2")
+          decl1 = Cell "input_qwires" 2
+          gate  = Qasm.NamedGate Qasm.GateRZ [param] [decl1] nullGateMod
+
+test55 = TestCase (assertEqual "rotGateTransl: support for the RotExpZ gate (2/4)."
+                               [AstGateStmt 0 gate]
+                               (rotGateTransl qalloc Quip.RotExpZ True 2.1 [3] []))
+    where param = Times (DecFloat "2.1") (DecInt "2")
+          decl1 = Cell "input_qwires" 2
+          mod   = negateMod $ nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateRZ [param] [decl1] mod
+
+test56 = TestCase (assertEqual "rotGateTransl: support for the RotExpZ gate (3/4)."
+                               [AstGateStmt 0 gate]
+                               (rotGateTransl qalloc Quip.RotExpZ False 1.0 [4] []))
+    where param = Times (DecFloat "1.0") (DecInt "2")
+          decl1 = Cell "input_qwires" 3
+          gate  = Qasm.NamedGate Qasm.GateRZ [param] [decl1] nullGateMod
+
+test57 = TestCase (assertEqual "rotGateTransl: support for the RotExpZ gate (4/4)."
+                               [AstGateStmt 0 gate]
+                               (rotGateTransl qalloc Quip.RotExpZ True 2.1 [4] []))
+    where param = Times (DecFloat "2.1") (DecInt "2")
+          decl1 = Cell "input_qwires" 3
+          mod   = negateMod $ nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateRZ [param] [decl1] mod
+
+test58 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (1/2)."
+                               [AstGateStmt 0 gate]
+                               (rotGateTransl qalloc Quip.RotZ False 2.0 [3] []))
+    where expzt = Div (Times Pi $ DecInt "2") (DecFloat "2.0")
+          param = Times expzt (DecInt "2")
+          decl1 = Cell "input_qwires" 2
+          gate  = Qasm.NamedGate Qasm.GateRZ [param] [decl1] nullGateMod
+
+test59 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (2/2)."
+                               [AstGateStmt 0 gate]
+                               (rotGateTransl qalloc Quip.RotZ True 2.0 [4] []))
+    where expzt = Div (Times Pi $ DecInt "2") (DecFloat "2.0")
+          param = Times expzt (DecInt "2")
+          decl1 = Cell "input_qwires" 3
+          mod   = negateMod $ nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateRZ [param] [decl1] mod
+
+-----------------------------------------------------------------------------------------
+-- Translating rotation gates with a single control (many configurations).
+
+test60 = TestCase (assertEqual "rotGateTransl: support for the RotExpZ gate (1/2)."
+                               [AstGateStmt 0 gate]
+                               (rotGateTransl qalloc Quip.RotExpZ False 1.0 [3] ctrls))
+    where ctrls = [Quip.Pos 1]
+          param = Times (DecFloat "1.0") (DecInt "2")
+          decl1 = Cell "input_qwires" 2
+          decl2 = Cell "input_qwires" 0
+          gate  = Qasm.NamedGate Qasm.GateCRZ [param] [decl2, decl1] nullGateMod
+
+test61 = TestCase (assertEqual "rotGateTransl: support for the RotExpZ gate (2/2)."
+                               [AstGateStmt 0 neg,
+                                AstGateStmt 0 gate,
+                                AstGateStmt 0 neg]
+                               (rotGateTransl qalloc Quip.RotExpZ False 2.0 [3] ctrls))
+    where ctrls = [Quip.Neg 1]
+          param = Times (DecFloat "2.0") (DecInt "2")
+          decl1 = Cell "input_qwires" 2
+          decl2 = Cell "input_qwires" 0
+          neg   = Qasm.NamedGate Qasm.GateX [] [decl2] nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateCRZ [param] [decl2, decl1] nullGateMod
+
+test62 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (1/2)."
+                               [AstGateStmt 0 gate]
+                               (rotGateTransl qalloc Quip.RotZ False 2.0 [3] ctrls))
+    where ctrls = [Quip.Pos 1]
+          expzt = Div (Times Pi $ DecInt "2") (DecFloat "2.0")
+          param = Times expzt (DecInt "2")
+          decl1 = Cell "input_qwires" 2
+          decl2 = Cell "input_qwires" 0
+          gate  = Qasm.NamedGate Qasm.GateCRZ [param] [decl2, decl1] nullGateMod
+
+test63 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (2/2)."
+                               [AstGateStmt 0 neg,
+                                AstGateStmt 0 gate,
+                                AstGateStmt 0 neg]
+                               (rotGateTransl qalloc Quip.RotZ False 3.0 [3] ctrls))
+    where ctrls = [Quip.Neg 1]
+          expzt = Div (Times Pi $ DecInt "2") (DecFloat "3.0")
+          param = Times expzt (DecInt "2")
+          decl1 = Cell "input_qwires" 2
+          decl2 = Cell "input_qwires" 0
+          neg   = Qasm.NamedGate Qasm.GateX [] [decl2] nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateCRZ [param] [decl2, decl1] nullGateMod
+
+-----------------------------------------------------------------------------------------
+-- Translating rotation gates with two controls (many configurations).
+
+test64 = TestCase (assertEqual "rotGateTransl: support for the RotExpZ gate (1/2)."
+                               [AstGateStmt 0 gate]
+                               (rotGateTransl qalloc Quip.RotExpZ False 1.0 [3] ctrls))
+    where ctrls = [Quip.Pos 1, Quip.Pos 2]
+          param = Times (DecFloat "1.0") (DecInt "2")
+          decl1 = Cell "input_qwires" 1
+          decl2 = Cell "input_qwires" 0
+          decl3 = Cell "input_qwires" 2
+          mod   = addCtrlsToMod 1 $ nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateCRZ [param] [decl1, decl2, decl3] mod
+
+test65 = TestCase (assertEqual "rotGateTransl: support for the RotExpZ gate (2/2)."
+                               [AstGateStmt 0 neg,
+                                AstGateStmt 0 gate,
+                                AstGateStmt 0 neg]
+                               (rotGateTransl qalloc Quip.RotExpZ False 2.0 [3] ctrls))
+    where ctrls = [Quip.Neg 1, Quip.Neg 2]
+          param = Times (DecFloat "2.0") (DecInt "2")
+          decl1 = Cell "input_qwires" 1
+          decl2 = Cell "input_qwires" 0
+          decl3 = Cell "input_qwires" 2
+          neg   = Qasm.NamedGate Qasm.GateX [] [decl2] nullGateMod
+          mod   = addNegCtrlsToMod 1 $ nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateCRZ [param] [decl1, decl2, decl3] mod
+
+test66 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (1/2)."
+                               [AstGateStmt 0 gate]
+                               (rotGateTransl qalloc Quip.RotZ False 2.0 [3] ctrls))
+    where ctrls = [Quip.Pos 1, Quip.Pos 2]
+          expzt = Div (Times Pi $ DecInt "2") (DecFloat "2.0")
+          param = Times expzt (DecInt "2")
+          decl1 = Cell "input_qwires" 1
+          decl2 = Cell "input_qwires" 0
+          decl3 = Cell "input_qwires" 2
+          mod   = addCtrlsToMod 1 $ nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateCRZ [param] [decl1, decl2, decl3] mod
+
+test67 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (2/2)."
+                               [AstGateStmt 0 neg,
+                                AstGateStmt 0 gate,
+                                AstGateStmt 0 neg]
+                               (rotGateTransl qalloc Quip.RotZ False 3.0 [3] ctrls))
+    where ctrls = [Quip.Neg 1, Quip.Neg 2]
+          expzt = Div (Times Pi $ DecInt "2") (DecFloat "3.0")
+          param = Times expzt (DecInt "2")
+          decl1 = Cell "input_qwires" 1
+          decl2 = Cell "input_qwires" 0
+          decl3 = Cell "input_qwires" 2
+          neg   = Qasm.NamedGate Qasm.GateX [] [decl2] nullGateMod
+          mod   = addNegCtrlsToMod 1 $ nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateCRZ [param] [decl1, decl2, decl3] mod
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "GateX_NoCtrl_NoInv_Q1" test1,
@@ -571,6 +723,20 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateX_NoCtrl_NoInv_Q1" test1,
                                      TestLabel "GPhase_2Ctrl_3" test50,
                                      TestLabel "GPhase_2Ctrl_3" test51,
                                      TestLabel "GPhase_3Ctrl_1" test52,
-                                     TestLabel "GPhase_3Ctrl_1" test53]
+                                     TestLabel "GPhase_3Ctrl_2" test53,
+                                     TestLabel "RotExpZ_0Ctrl_1" test54,
+                                     TestLabel "RotExpZ_0Ctrl_2" test55,
+                                     TestLabel "RotExpZ_0Ctrl_3" test56,
+                                     TestLabel "RotExpZ_0Ctrl_4" test57,
+                                     TestLabel "RotZ_0Ctrl_1" test58,
+                                     TestLabel "RotZ_0Ctrl_2" test59,
+                                     TestLabel "RotExpZ_1Ctrl_1" test60,
+                                     TestLabel "RotExpZ_1Ctrl_2" test61,
+                                     TestLabel "RotZ_1Ctrl_1" test62,
+                                     TestLabel "RotZ_1Ctrl_2" test63,
+                                     TestLabel "RotExpZ_2Ctrl_1" test64,
+                                     TestLabel "RotExpZ_2Ctrl_2" test65,
+                                     TestLabel "RotZ_2Ctrl_1" test66,
+                                     TestLabel "RotZ_2Ctrl_2" test67]
 
 main = defaultMain tests

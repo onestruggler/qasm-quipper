@@ -2,6 +2,7 @@
 
 module LinguaQuanta.QuipToQasm.Gate
   ( namedGateTransl
+  , rotGateTransl
   , translGPhase
   ) where
 
@@ -19,7 +20,13 @@ import LinguaQuanta.Qasm.Gate
   , nullGateMod
   )
 import qualified LinguaQuanta.Qasm.GateName as Qasm
-import LinguaQuanta.Qasm.Language (Expr(DecFloat, Pi, Times))
+import LinguaQuanta.Qasm.Language
+  ( Expr(DecInt)
+  , Expr(Div)
+  , Expr(DecFloat)
+  , Expr(Pi)
+  , Expr(Times)
+  )
 import LinguaQuanta.Quip.Gate
   ( Control(..)
   , Wire
@@ -114,6 +121,55 @@ translGPhaseImpl wmap param (c1:c2:ctrls) = stmts
 translGPhase :: WireLookup -> Double -> [Control] -> [AstStmt]
 translGPhase wmap t ctrls = translGPhaseImpl wmap param ctrls
     where param = Times Pi $ DecFloat $ show t
+
+-------------------------------------------------------------------------------
+-- * Rotation Translation.
+
+-- | Takes as input a map from Quipper wires to OpenQASM declarations (wmap),
+-- the name of an OpenQASM gate (name) a symbolic duration value (texpr), and
+-- the description of a Quipper gate. Returns an equivalent OpenQASM rotation
+-- with the provided name and angle.
+toRotGate :: WireLookup -> Qasm.GateName -> Bool -> Expr -> GateGenerator
+toRotGate wmap name inv texpr ins ctrls = [AstGateStmt 0 gate]
+    where ops   = mergeCtrlsAndIns wmap ctrls ins
+          mods  = toGateMod inv ctrls
+          param = Times texpr $ DecInt "2"
+          gate  = NamedGate name [param] ops mods
+
+-- | Takes as input a map from Quipper wires to OpenQASM declarations (wmap),
+-- a symbolic duration value (texpr), and the description of a Quipper gate.
+-- Returns a cr(texpr) gate with an equivalent list of controls. The first
+-- control is promoted to an input wire.
+toCrzGate :: WireLookup -> Bool -> Expr -> Control -> GateGenerator
+toCrzGate wmap inv texpr (Pos w) ins ctrls = stmts
+    where stmts = toRotGate wmap Qasm.GateCRZ inv texpr (w:ins) ctrls
+toCrzGate wmap inv texpr (Neg w) ins ctrls = conjugateByNots wmap w stmts
+    where stmts = toCrzGate wmap inv texpr (Pos w) ins ctrls
+
+-- | Takes as input a map from Quipper wires to OpenQASM declarations (wmap),
+-- a symbolic duration value (texpr), and the description of a Quipper gate.
+-- Returns a OpenQASM Z-rotation parameterized by texpr with an equivalent
+-- list of controls.
+translRotExpZ :: WireLookup -> Bool -> Expr -> GateGenerator
+translRotExpZ wmap inv texpr ins [] = stmts
+    where stmts = toRotGate wmap Qasm.GateRZ inv texpr ins []
+translRotExpZ wmap inv texpr ins (c:ctrls) = stmts
+    where stmts = toCrzGate wmap inv texpr c ins ctrls
+
+-- | Takes as input a map from Quipper wires to OpenQASM declarations (wmap),
+-- the name of a rotation, a duration (t), and the description of a Quipper
+-- gate. Returns an OpenQASM rotation gate equivalent to name(t) with an
+-- equivalent list of controls.
+rotGateTransl :: WireLookup -> Quip.RotName -> Bool -> Double -> GateGenerator
+rotGateTransl wmap Quip.RotExpZ inv t ins ctrls = stmts
+    where texpr = DecFloat $ show t
+          stmts = translRotExpZ wmap inv texpr ins ctrls
+rotGateTransl wmap Quip.RotZ inv t ins ctrls = stmts
+    where twopi = Times Pi $ DecInt "2"
+          texpr = Div twopi $ DecFloat $ show t
+          stmts = translRotExpZ wmap inv texpr ins ctrls
+rotGateTransl _ (Quip.UserDefinedRot _) _ _ _ _ = error msg
+    where msg = "User-defined gate translations not implemented."
 
 -------------------------------------------------------------------------------
 -- * Named Gate Translation.
