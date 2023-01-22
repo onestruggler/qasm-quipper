@@ -73,19 +73,23 @@ mod3 = Qasm.addCtrlsToMod 1 $ mod0
 
 gate1 = Quip.NamedGate Quip.GateX False [4] $ map Quip.Pos [2, 3, 0, 1]
 gate2 = Quip.PhaseGate 1.0 [Quip.Pos 0, Quip.Pos 1, Quip.Pos 2]
-gate3 = Quip.NamedGate Quip.GateS False [2] []
+gate3 = Quip.RotGate Quip.RotExpZ False 2.0 [0] []
+gate4 = Quip.NamedGate Quip.GateS False [2] []
 
-pi1 = Times Pi (DecFloat "1.0")
+pi1  = Times Pi (DecFloat "1.0")
+four = Times (DecFloat "2.0") (DecInt "2")
 
 qgate1 = Qasm.NamedGate Qasm.GateCCX [] [getOp 0, getOp 1, getOp 2, getOp 3, getOp 4] mod2
 qgate2 = Qasm.NamedGate Qasm.GateCP [pi1] [getOp 2, getOp 0, getOp 1] mod3
-qgate3 = Qasm.NamedGate Qasm.GateS [] [getOp 2] mod0
+qgate3 = Qasm.NamedGate Qasm.GateRZ [four] [getOp 0] mod0
+qgate4 = Qasm.NamedGate Qasm.GateS [] [getOp 2] mod0
 
 dstmt1 = AstQubitDecl (Just 5) "input_qwires"
 
 gstmt1 = AstGateStmt 0 qgate1
 gstmt2 = AstGateStmt 0 qgate2
 gstmt3 = AstGateStmt 0 qgate3
+gstmt4 = AstGateStmt 0 qgate4
 
 test7 = TestCase (assertEqual "Can convert CCX."
                               [dstmt1, gstmt1]
@@ -95,9 +99,13 @@ test8 = TestCase (assertEqual "Can convert GPhase gates."
                               [dstmt1, gstmt2]
                               (translate $ make_gate_circ [gate2]))
 
-test9 = TestCase (assertEqual "Can convert mixed unitary gates."
-                              [dstmt1, gstmt1, gstmt2, gstmt3]
-                              (translate $ make_gate_circ [gate1, gate2, gate3]))
+test9 = TestCase (assertEqual "Can convert CZ."
+                              [dstmt1, gstmt3]
+                              (translate $ make_gate_circ [gate3]))
+
+test10 = TestCase (assertEqual "Can convert mixed unitary gates."
+                              [dstmt1, gstmt1, gstmt2, gstmt3, gstmt4]
+                              (translate $ make_gate_circ [gate1, gate2, gate3, gate4]))
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
@@ -110,6 +118,7 @@ tests = hUnitTestToTests $ TestList [TestLabel "Empty_Circ_0_to_0" test1,
                                      TestLabel "Empty_Circ_3_to_3" test6,
                                      TestLabel "CCX" test7,
                                      TestLabel "GPhase" test8,
-                                     TestLabel "MixedUnitary" test9]
+                                     TestLabel "CZ" test9,
+                                     TestLabel "MixedUnitary" test10]
 
 main = defaultMain tests
