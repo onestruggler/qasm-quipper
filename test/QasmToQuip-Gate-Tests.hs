@@ -5,6 +5,7 @@ import Data.Maybe
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit
+import LinguaQuanta.Qasm.Expression
 import LinguaQuanta.Qasm.Gate
   ( Operand(..)
   , addCtrlsToMod
@@ -284,7 +285,7 @@ test38 = TestCase (assertEqual "Translation of global phase gates with controls.
           param = Times Pi $ DecFloat "0"
 
 -----------------------------------------------------------------------------------------
--- Translating RZ gates (many configuration)
+-- Translating RZ gates (many configuration).
 
 test39 = TestCase (assertEqual "Translation of an RZ gate (1/2)."
                                [RotGate Quip.RotExpZ False 0.5 [0] []]
@@ -314,7 +315,7 @@ test42 = TestCase (assertEqual "Translation of a controlled RZ gate (2/2)."
           param = DecFloat "2.0"
 
 -----------------------------------------------------------------------------------------
--- Translating CRZ gates (many configuration)
+-- Translating CRZ gates (many configuration).
 
 test43 = TestCase (assertEqual "Translation of a CRZ gate (1/2)."
                                [RotGate Quip.RotExpZ False 0.5 [0] [Pos 2]]
@@ -329,7 +330,7 @@ test44 = TestCase (assertEqual "Translation of a CRZ gate (2/2)."
           param = DecFloat "2.0"
 
 -----------------------------------------------------------------------------------------
--- Translating controlled CRZ gates (many configuration)
+-- Translating controlled CRZ gates (many configuration).
 
 test45 = TestCase (assertEqual "Translation of a controlled CRZ gate (1/2)."
                                [RotGate Quip.RotExpZ False 0.5 [0] ctrls]
@@ -344,6 +345,118 @@ test46 = TestCase (assertEqual "Translation of a CRZ gate (2/2)."
     where ops   = [decl2at 3, decl2at 4, decl2at 2, decl2at 1]
           ctrls = [Pos 3, Pos 4, Neg 5]
           param = DecFloat "2.0"
+
+-----------------------------------------------------------------------------------------
+-- Translating U1 and Phase gates (many configuration)
+
+toPhaseTest1 :: String -> Qasm.GateName -> Test.HUnit.Test
+toPhaseTest1 msg gate =
+    case toConstFloat $ Div (DecFloat "1.0") Pi of
+        Right err  -> TestCase (assertFailure "Unable to parse phase.")
+        Left phase -> let pgate = PhaseGate phase [] 
+                      in TestCase (assertEqual msg [pgate, rgate] act)
+    where param = DecInt "2"
+          rgate = RotGate Quip.RotExpZ False 1.0 [0] []
+          act   = d1RotTransl alloc4 gate param [decl1] mod0
+
+toPhaseTest2 :: String -> Qasm.GateName -> Test.HUnit.Test
+toPhaseTest2 msg gate =
+    case toConstFloat $ Div (DecFloat "2.0") Pi of
+        Right err  -> TestCase (assertFailure "Unable to parse phase.")
+        Left phase -> let pgate = PhaseGate (-phase) [] 
+                      in TestCase (assertEqual msg [pgate, rgate] act)
+    where param = DecFloat "4.0"
+          rgate = RotGate Quip.RotExpZ True 2.0 [2] []
+          act   = d1RotTransl alloc4 gate param [decl2at 1] mod1
+
+test47 = toPhaseTest1 "Translation of an U1 gate (1/2)." Qasm.GateU1
+test48 = toPhaseTest2 "Translation of an U1 gate (2/2)." Qasm.GateU1
+
+test49 = toPhaseTest1 "Translation of an Phase gate (1/2)." Qasm.GatePhase
+test50 = toPhaseTest2 "Translation of an Phase gate (2/2)." Qasm.GatePhase
+
+-----------------------------------------------------------------------------------------
+-- Translating GPhase gates (many configuration)
+
+test51 = case toConstFloat $ Div (DecFloat "1.0") Pi of
+    Right err  -> TestCase (assertFailure "Unable to parse phase.")
+    Left phase -> let pgate = PhaseGate phase ctrls
+                  in TestCase (assertEqual msg [pgate, rgate] act)
+    where msg   = "Translation of a CPhase gate (1/2)."
+          param = DecInt "2"
+          decls = [decl2at 0, decl1]
+          ctrls = [Pos 1]
+          rgate = RotGate Quip.RotExpZ False 1.0 [0] ctrls
+          act   = d1RotTransl alloc4 Qasm.GateCPhase param decls mod0
+
+test52 = case toConstFloat $ Div (DecFloat "2.0") Pi of
+    Right err  -> TestCase (assertFailure "Unable to parse phase.")
+    Left phase -> let pgate = PhaseGate (-phase) ctrls
+                  in TestCase (assertEqual msg [pgate, rgate] act)
+    where msg   = "Translation of a CPhase gate (2/2)."
+          param = DecFloat "4.0"
+          decls = [decl2at 2, decl2at 1]
+          ctrls = [Pos 3]
+          rgate = RotGate Quip.RotExpZ True 2.0 [2] ctrls
+          act   = d1RotTransl alloc4 Qasm.GateCPhase param decls mod1
+
+-----------------------------------------------------------------------------------------
+-- Translating U1 and Phase gates with controls (many configuration)
+
+toPhaseTest3 :: String -> Qasm.GateName -> Test.HUnit.Test
+toPhaseTest3 msg gate =
+    case toConstFloat $ Div (DecFloat "1.0") Pi of
+        Right err  -> TestCase (assertFailure "Unable to parse phase.")
+        Left phase -> let pgate = PhaseGate phase ctrls
+                      in TestCase (assertEqual msg [pgate, rgate] act)
+    where param = DecInt "2"
+          decls = [decl2at 1, decl2at 0, decl1]
+          ctrls = [Pos 2, Pos 1]
+          rgate = RotGate Quip.RotExpZ False 1.0 [0] ctrls
+          act   = d1RotTransl alloc4 gate param decls mod2
+
+toPhaseTest4 :: String -> Qasm.GateName -> Test.HUnit.Test
+toPhaseTest4 msg gate =
+    case toConstFloat $ Div (DecFloat "2.0") Pi of
+        Right err  -> TestCase (assertFailure "Unable to parse phase.")
+        Left phase -> let pgate = PhaseGate (-phase) ctrls
+                      in TestCase (assertEqual msg [pgate, rgate] act)
+    where param = DecFloat "4.0"
+          decls = [decl2at 3, decl2at 4, decl2at 2]
+          ctrls = [Pos 4, Neg 5]
+          rgate = RotGate Quip.RotExpZ True 2.0 [3] ctrls
+          act   = d1RotTransl alloc4 gate param decls mod5
+
+test53 = toPhaseTest3 "Translation of a controlled U1 gate (1/2)." Qasm.GateU1
+test54 = toPhaseTest4 "Translation of a controlled U1 gate (2/2)." Qasm.GateU1
+
+test55 = toPhaseTest3 "Translation of a controlled Phase gate (1/2)." Qasm.GatePhase
+test56 = toPhaseTest4 "Translation of a controlled Phase gate (2/2)." Qasm.GatePhase
+
+-----------------------------------------------------------------------------------------
+-- Translating controlled GPhase gates (many configuration)
+
+test57 = case toConstFloat $ Div (DecFloat "1.0") Pi of
+    Right err  -> TestCase (assertFailure "Unable to parse phase.")
+    Left phase -> let pgate = PhaseGate phase ctrls
+                  in TestCase (assertEqual msg [pgate, rgate] act)
+    where msg   = "Translation of a controlled CPhase gate (2/2)."
+          param = DecInt "2"
+          decls = [decl2at 1, decl2at 2, decl2at 0, decl1]
+          ctrls = [Pos 1, Pos 2, Pos 3]
+          rgate = RotGate Quip.RotExpZ False 1.0 [0] ctrls
+          act   = d1RotTransl alloc4 Qasm.GateCPhase param decls mod2
+
+test58 = case toConstFloat $ Div (DecFloat "2.0") Pi of
+    Right err  -> TestCase (assertFailure "Unable to parse phase.")
+    Left phase -> let pgate = PhaseGate (-phase) ctrls
+                  in TestCase (assertEqual msg [pgate, rgate] act)
+    where msg   = "Translation of a controlled CPhase gate (2/2)."
+          param = DecFloat "4.0"
+          decls = [decl2at 3, decl2at 4, decl2at 2, decl2at 1]
+          ctrls = [Pos 3, Pos 4, Neg 5]
+          rgate = RotGate Quip.RotExpZ True 2.0 [2] ctrls
+          act   = d1RotTransl alloc4 Qasm.GateCPhase param decls mod5
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
@@ -393,6 +506,18 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateS_1" test1,
                                      TestLabel "CRZ_0Ctrl_1" test43,
                                      TestLabel "CRZ_0Ctrl_2" test44,
                                      TestLabel "CRZ_2Ctrl_1" test45,
-                                     TestLabel "CRZ_2Ctrl_2" test46]
+                                     TestLabel "CRZ_2Ctrl_2" test46,
+                                     TestLabel "U1_0Ctrl_1" test47,
+                                     TestLabel "U1_0Ctrl_2" test48,
+                                     TestLabel "Phase_0Ctrl_1" test49,
+                                     TestLabel "Phase_0Ctrl_2" test50,
+                                     TestLabel "CPhase_0Ctrl_1" test51,
+                                     TestLabel "CPhase_0Ctrl_2" test52,
+                                     TestLabel "U1_2Ctrl_1" test53,
+                                     TestLabel "U1_2Ctrl_2" test54,
+                                     TestLabel "Phase_2Ctrl_1" test55,
+                                     TestLabel "Phase_2Ctrl_2" test56,
+                                     TestLabel "CPhase_2Ctrl_1" test57,
+                                     TestLabel "CPhase_2Ctrl_2" test58]
 
 main = defaultMain tests

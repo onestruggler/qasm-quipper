@@ -83,18 +83,23 @@ expandCtrl name _ _ _ = error msg
 -------------------------------------------------------------------------------
 -- * GPhase Gate Translation.
 
+-- | Implementation details for translGPhase.
+toGPhase :: Bool -> Expr -> [Control] -> Gate
+toGPhase inv param ctrls =
+    case toConstFloat $ Div param Pi of
+        Right err -> error "Non-contant float expression as global phase."
+        Left pval -> let angle = if inv then -pval else pval
+                     in PhaseGate angle ctrls
+
 -- | Takes as input a wire allocation map (wmap), an OpenQASM expression for a
 -- compile-time angle (param), a list of operands (ops), and a modifier (mod).
 -- Returns a list of Quipper gates quivalent to `mod @ gphase(param) ops` where
 -- each operand is mapped to a wire according to wmap. The Quipper gate will
 -- have a timestep of `param / PI` to account for the difference in units.
 translGPhase :: WireAllocMap -> Expr -> GateGenerator
-translGPhase wmap param ops mod =
-    case toConstFloat $ Div param Pi of
-        Right err -> error "Non-contant float expression as global phase."
-        Left pval -> let angle = if hasInversionMod mod then -pval else pval
-                     in [PhaseGate angle ctrls] 
+translGPhase wmap param ops mod = [toGPhase inv param ctrls]
     where wires = opsToWires wmap ops
+          inv   = hasInversionMod mod
           ctrls = snd $ extractCtrls wires mod
 
 -------------------------------------------------------------------------------
@@ -173,8 +178,9 @@ toRotGate Qasm.GateRY param inv ins ctrls = error msg
 toRotGate Qasm.GateP param inv ins ctrls = error msg
     where msg = "Translation not implemented for: P."
 -- The U1 and Phase are equivalent.
-toRotGate Qasm.GateU1 param inv ins ctrls = error msg
-    where msg = "Translation not implemented for: U1."
+toRotGate Qasm.GateU1 param inv ins ctrls = phase:gates
+    where phase = toGPhase inv (Div param $ DecInt "2") ctrls
+          gates = toRotGate Qasm.GateRZ param inv ins ctrls
 toRotGate Qasm.GatePhase param inv ins ctrls = gates
     where gates = toRotGate Qasm.GateU1 param inv ins ctrls
 -- Expands controlled instances.
