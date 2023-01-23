@@ -284,6 +284,68 @@ test38 = TestCase (assertEqual "Translation of global phase gates with controls.
           param = Times Pi $ DecFloat "0"
 
 -----------------------------------------------------------------------------------------
+-- Translating RZ gates (many configuration)
+
+test39 = TestCase (assertEqual "Translation of an RZ gate (1/2)."
+                               [RotGate Quip.RotExpZ False 0.5 [0] []]
+                               (d1RotTransl alloc4 Qasm.GateRZ param [decl1] mod0))
+    where param = DecInt "1"
+
+test40 = TestCase (assertEqual "Translation of an RZ gate (2/2)."
+                               [RotGate Quip.RotExpZ True 1.0 [2] []]
+                               (d1RotTransl alloc4 Qasm.GateRZ param [decl2at 1] mod1))
+    where param = DecFloat "2.0"
+
+-----------------------------------------------------------------------------------------
+-- Translating controlled RZ gates (many configurations).
+
+test41 = TestCase (assertEqual "Translation of a controlled RZ gate (1/2)."
+                               [RotGate Quip.RotExpZ False 0.5 [0] ctrls]
+                               (d1RotTransl alloc4 Qasm.GateRZ param ops mod2))
+    where ops   = [decl2at 1, decl2at 2, decl1]
+          ctrls = [Pos 2, Pos 3]
+          param = DecInt "1"
+
+test42 = TestCase (assertEqual "Translation of a controlled RZ gate (2/2)."
+                               [RotGate Quip.RotExpZ True 1.0 [0] ctrls]
+                               (d1RotTransl alloc4 Qasm.GateRZ param ops mod5))
+    where ops   = [decl2at 1, decl2at 2, decl1]
+          ctrls = [Pos 2, Neg 3]
+          param = DecFloat "2.0"
+
+-----------------------------------------------------------------------------------------
+-- Translating CRZ gates (many configuration)
+
+test43 = TestCase (assertEqual "Translation of a CRZ gate (1/2)."
+                               [RotGate Quip.RotExpZ False 0.5 [0] [Pos 2]]
+                               (d1RotTransl alloc4 Qasm.GateCRZ param ops mod0))
+    where ops   = [decl2at 1, decl1]
+          param = DecInt "1"
+
+test44 = TestCase (assertEqual "Translation of a CRZ gate (2/2)."
+                               [RotGate Quip.RotExpZ True 1.0 [3] [Pos 4]]
+                               (d1RotTransl alloc4 Qasm.GateCRZ param ops mod1))
+    where ops   = [decl2at 3, decl2at 2]
+          param = DecFloat "2.0"
+
+-----------------------------------------------------------------------------------------
+-- Translating controlled CRZ gates (many configuration)
+
+test45 = TestCase (assertEqual "Translation of a controlled CRZ gate (1/2)."
+                               [RotGate Quip.RotExpZ False 0.5 [0] ctrls]
+                               (d1RotTransl alloc4 Qasm.GateCRZ param ops mod2))
+    where ops   = [decl2at 1, decl2at 2, decl2at 0, decl1]
+          ctrls = [Pos 1, Pos 2, Pos 3]
+          param = DecInt "1"
+
+test46 = TestCase (assertEqual "Translation of a CRZ gate (2/2)."
+                               [RotGate Quip.RotExpZ True 1.0 [2] ctrls]
+                               (d1RotTransl alloc4 Qasm.GateCRZ param ops mod5))
+    where ops   = [decl2at 3, decl2at 4, decl2at 2, decl2at 1]
+          ctrls = [Pos 3, Pos 4, Neg 5]
+          param = DecFloat "2.0"
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "GateS_1" test1,
@@ -323,6 +385,14 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateS_1" test1,
                                      TestLabel "GateToffoli" test35,
                                      TestLabel "GPhase_1" test36,
                                      TestLabel "GPhase_2" test37,
-                                     TestLabel "GPhase_3" test38]
+                                     TestLabel "GPhase_3" test38,
+                                     TestLabel "RZ_0Ctrl_1" test39,
+                                     TestLabel "RZ_0Ctrl_2" test40,
+                                     TestLabel "RZ_2Ctrl_2" test41,
+                                     TestLabel "RZ_2Ctrl_2" test42,
+                                     TestLabel "CRZ_0Ctrl_1" test43,
+                                     TestLabel "CRZ_0Ctrl_2" test44,
+                                     TestLabel "CRZ_2Ctrl_1" test45,
+                                     TestLabel "CRZ_2Ctrl_2" test46]
 
 main = defaultMain tests
