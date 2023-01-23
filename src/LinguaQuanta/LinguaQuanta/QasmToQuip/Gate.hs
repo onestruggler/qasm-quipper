@@ -71,7 +71,12 @@ opToWire wmap (Cell id idx) =
 opsToWires :: WireAllocMap -> [Operand] -> [Wire]
 opsToWires wmap = map (opToWire wmap)
 
--- |
+-- | Takes as input the textual name of a gate (for error reporting), a list of
+-- input wires (w:ins), a list of controls (ctrls), a Quipper circuit that is
+-- parameterized by inputs and controls (f). Generates f with the first input
+-- wire promoted to a positive control. Formally, this is: f ins (Pos w:ctrls).
+--
+-- Note: Requires at least two input wires. Otherwise, an error is raised.
 expandCtrl :: String -> [Wire] -> [Control] -> QuipCircFn -> [Gate]
 expandCtrl name (w:ins) ctrls f
     | null ins  = error msg
@@ -79,6 +84,20 @@ expandCtrl name (w:ins) ctrls f
     where msg = name ++ " requires an additional control operand."
 expandCtrl name _ _ _ = error msg
     where msg = name ++ " requires at least two operands."
+
+-- | Takes as input the textual name of a gate (for error reporting), a list of
+-- input wires (w1:w2:ins), a list of controls (ctrls), a Quipper circuit that
+-- is parameterized by inputs and controls (f). Generates f with the second
+-- input wire promoted to a positive controls, i.e.: f (w1:ins) (Pos w2:ctrls).
+-- This function is intended for use with expandCtrl, to promote a pair of
+-- control wires to controls (e.g., CCX to X with two controls).
+--
+-- Note: Requires at least two input wires. Otherwise, an error is raised.
+expandDblCtrl :: String -> [Wire] -> [Control] -> QuipCircFn -> [Gate]
+expandDblCtrl _ (w1:w2:ins) ctrls f = gates
+    where gates = f (w1:ins) (Pos w2:ctrls)
+expandDblCtrl name _ _ _ = error msg
+    where msg = name ++ " requires two control operands."
 
 -------------------------------------------------------------------------------
 -- * GPhase Gate Translation.
@@ -113,7 +132,7 @@ from3DRot Qasm.GateU param inv ins ctrls = error msg
 from3DRot Qasm.GateU3 param inv ins ctrls = error msg
     where msg = "Translation not implemented for: U3."
 from3DRot Qasm.GateCU param inv ins ctrls = expandCtrl "U3" ins ctrls f
-    where f x y = from3DRot Qasm.GateU param inv x y
+    where f = from3DRot Qasm.GateU param inv
 -- Named 3D-rotations are not supported.
 from3DRot (Qasm.UserDefined _) _ _ _ _ = error msg
     where msg = "User-defined rotations must be one-dimensional (not 3D)."
@@ -157,7 +176,28 @@ d2RotTransl _ name _ _ _ = error msg
 -- the given input wires and additional controls.
 expandCRot :: Qasm.GateName -> Dim1Rot -> Bool -> QuipCircFn
 expandCRot name param inv ins ctrls = expandCtrl (show name) ins ctrls f
-    where f x y = toRotGate name param inv x y
+    where f = toRotGate name param inv
+
+-- | Translation details for the U1 gate.
+toU1Gate :: Dim1Rot -> Bool -> QuipCircFn
+toU1Gate param inv ins ctrls = gphase : rzgate
+    where phase  = Div param $ DecInt "2"
+          gphase = toGPhase inv phase ctrls
+          rzgate = toRotGate Qasm.GateRZ param inv ins ctrls
+
+-- | Translation details for the P gate.
+toPGate :: Dim1Rot -> Bool -> QuipCircFn
+toPGate param inv [w] ctrls = [gates]
+    where gates = toGPhase inv param $ Pos w:ctrls
+toPGate _ _ ins _ = error msg
+    where num = show $ length ins
+          msg = "P gate requires one non-control input, found: " ++ num
+
+-- | Translates a CP gate from OpenQASM to Quipper, with the given input wires
+-- and additional controls.
+expandCP :: Dim1Rot -> Bool -> QuipCircFn
+expandCP param inv ins ctrls = expandDblCtrl "CP" ins ctrls f
+    where f = toRotGate Qasm.GateP param inv
 
 -- | Implementation details for d1RotTransl. The Boolaen flag indicates if the
 -- gate modifier was inverted. The wires and controls are obtained by first
@@ -175,12 +215,11 @@ toRotGate Qasm.GateRX param inv ins ctrls = error msg
 toRotGate Qasm.GateRY param inv ins ctrls = error msg
     where msg = "Translation not implemented for: RY."
 -- The P gate is in fact a controlled global phase.
-toRotGate Qasm.GateP param inv ins ctrls = error msg
-    where msg = "Translation not implemented for: P."
+toRotGate Qasm.GateP param inv ins ctrls = gates
+    where gates = toPGate param inv ins ctrls
 -- The U1 and Phase are equivalent.
-toRotGate Qasm.GateU1 param inv ins ctrls = phase:gates
-    where phase = toGPhase inv (Div param $ DecInt "2") ctrls
-          gates = toRotGate Qasm.GateRZ param inv ins ctrls
+toRotGate Qasm.GateU1 param inv ins ctrls = gates
+    where gates = toU1Gate param inv ins ctrls
 toRotGate Qasm.GatePhase param inv ins ctrls = gates
     where gates = toRotGate Qasm.GateU1 param inv ins ctrls
 -- Expands controlled instances.
@@ -190,10 +229,11 @@ toRotGate Qasm.GateCRX param inv ins ctrls = gates
     where gates = expandCRot Qasm.GateRX param inv ins ctrls
 toRotGate Qasm.GateCRY param inv ins ctrls = gates
     where gates = expandCRot Qasm.GateRY param inv ins ctrls
-toRotGate Qasm.GateCP param inv ins ctrls = gates
-    where gates = expandCRot Qasm.GateP param inv ins ctrls
 toRotGate Qasm.GateCPhase param inv ins ctrls = gates
     where gates = expandCRot Qasm.GatePhase param inv ins ctrls
+-- Expands doubly controlled instances.
+toRotGate Qasm.GateCP param inv ins ctrls = gates
+    where gates = expandCP param inv ins ctrls
 -- Special case: User-defined rotations.
 toRotGate (Qasm.UserDefined _) _ _ _ _ = error msg
     where msg = "User-defined gate translations not implemented."
@@ -224,9 +264,8 @@ expandSingleCtrl name ins ctrls = expandCtrl (show name) ins ctrls f
 -- | Translates a CCX gate from OpenQASM to Quipper, with the given input wires
 -- and additional controls.
 expandToffoli :: QuipCircFn
-expandToffoli (w1:w2:ins) ctrls = gates
-    where gates = expandSingleCtrl Quip.GateX (w1:ins) (Pos w2:ctrls)
-expandToffoli name _ = error "Toffoli requires two control operands."
+expandToffoli ins ctrls = expandDblCtrl "Toffoli" ins ctrls f
+    where f = expandSingleCtrl Quip.GateX
 
 -- | Implementation details for namedGateTransl. The Boolaen flag indicates if
 -- the gate modifier was inverted. The wires and controls are obtained by first

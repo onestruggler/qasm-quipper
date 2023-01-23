@@ -347,7 +347,7 @@ test46 = TestCase (assertEqual "Translation of a CRZ gate (2/2)."
           param = DecFloat "2.0"
 
 -----------------------------------------------------------------------------------------
--- Translating U1 and Phase gates (many configuration)
+-- Translating U1 and Phase gates (many configuration).
 
 toPhaseTest1 :: String -> Qasm.GateName -> Test.HUnit.Test
 toPhaseTest1 msg gate =
@@ -376,7 +376,7 @@ test49 = toPhaseTest1 "Translation of an Phase gate (1/2)." Qasm.GatePhase
 test50 = toPhaseTest2 "Translation of an Phase gate (2/2)." Qasm.GatePhase
 
 -----------------------------------------------------------------------------------------
--- Translating GPhase gates (many configuration)
+-- Translating GPhase gates (many configuration).
 
 test51 = case toConstFloat $ Div (DecFloat "1.0") Pi of
     Right err  -> TestCase (assertFailure "Unable to parse phase.")
@@ -401,7 +401,7 @@ test52 = case toConstFloat $ Div (DecFloat "2.0") Pi of
           act   = d1RotTransl alloc4 Qasm.GateCPhase param decls mod1
 
 -----------------------------------------------------------------------------------------
--- Translating U1 and Phase gates with controls (many configuration)
+-- Translating U1 and Phase gates with controls (many configuration).
 
 toPhaseTest3 :: String -> Qasm.GateName -> Test.HUnit.Test
 toPhaseTest3 msg gate =
@@ -434,7 +434,7 @@ test55 = toPhaseTest3 "Translation of a controlled Phase gate (1/2)." Qasm.GateP
 test56 = toPhaseTest4 "Translation of a controlled Phase gate (2/2)." Qasm.GatePhase
 
 -----------------------------------------------------------------------------------------
--- Translating controlled GPhase gates (many configuration)
+-- Translating controlled GPhase gates (many configuration).
 
 test57 = case toConstFloat $ Div (DecFloat "1.0") Pi of
     Right err  -> TestCase (assertFailure "Unable to parse phase.")
@@ -457,6 +457,52 @@ test58 = case toConstFloat $ Div (DecFloat "2.0") Pi of
           ctrls = [Pos 3, Pos 4, Neg 5]
           rgate = RotGate Quip.RotExpZ True 2.0 [2] ctrls
           act   = d1RotTransl alloc4 Qasm.GateCPhase param decls mod5
+
+-----------------------------------------------------------------------------------------
+-- Translating P gates (many configuration).
+
+-- Remark: GateP should route to GPhase translation, so the same test cases are used.
+
+test59 = TestCase (assertEqual "Translation of P gates without controls."
+                               [PhaseGate 5.0 [Pos 0]]
+                               (d1RotTransl alloc4 Qasm.GateP param [decl1] mod0))
+    where param = Times Pi $ DecFloat "5.0"
+
+test60 = TestCase (assertEqual "Translation of P gates with inversion."
+                               [PhaseGate (-7.1) [Pos 1]]
+                               (d1RotTransl alloc4 Qasm.GateP param [decl2at 0] mod1))
+    where param = Times Pi $ DecFloat "7.1"
+
+test61 = TestCase (assertEqual "Translation of P gates with controls."
+                               [PhaseGate 0 ctrls]
+                               (d1RotTransl alloc4 Qasm.GateP param ops mod2))
+    where ops   = [decl1, decl2at 2, decl2at 1]
+          ctrls = [Pos 2, Pos 0, Pos 3]
+          param = Times Pi $ DecFloat "0"
+
+-----------------------------------------------------------------------------------------
+-- Translating CP gates (many configuration).
+
+test62 = TestCase (assertEqual "Translation of CP gates without controls."
+                               [PhaseGate 5.0 ctrls]
+                               (d1RotTransl alloc4 Qasm.GateCP param ops mod0))
+    where ops   = [decl2at 0, decl1]
+          ctrls = [Pos 1, Pos 0]
+          param = Times Pi $ DecFloat "5.0"
+
+test63 = TestCase (assertEqual "Translation of CP gates with inversion."
+                               [PhaseGate (-7.1) ctrls]
+                               (d1RotTransl alloc4 Qasm.GateCP param ops mod1))
+    where ops   = [decl2at 2, decl2at 1]
+          ctrls = [Pos 3, Pos 2]
+          param = Times Pi $ DecFloat "7.1"
+
+test64 = TestCase (assertEqual "Translation of CP gates with controls."
+                               [PhaseGate 0 ctrls]
+                               (d1RotTransl alloc4 Qasm.GateCP param ops mod2))
+    where ops   = [decl1, decl2at 2, decl2at 1, decl2at 3]
+          ctrls = [Pos 2, Pos 4, Pos 0, Pos 3]
+          param = Times Pi $ DecFloat "0"
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
@@ -518,6 +564,12 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateS_1" test1,
                                      TestLabel "Phase_2Ctrl_1" test55,
                                      TestLabel "Phase_2Ctrl_2" test56,
                                      TestLabel "CPhase_2Ctrl_1" test57,
-                                     TestLabel "CPhase_2Ctrl_2" test58]
+                                     TestLabel "CPhase_2Ctrl_2" test58,
+                                     TestLabel "GateP_1" test59,
+                                     TestLabel "GateP_2" test60,
+                                     TestLabel "GateP_3" test61,
+                                     TestLabel "GateCP_1" test62,
+                                     TestLabel "GateCP_2" test63,
+                                     TestLabel "GateCP_3" test64]
 
 main = defaultMain tests
