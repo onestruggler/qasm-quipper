@@ -46,8 +46,6 @@ data GateName = UserDefined String
               | GateU1
               | GateU2
               | GateU3
-              -- Rotational Quipper Integration Gates:
-              | GateQuipRZ
               deriving (Show, Eq)
 
 -------------------------------------------------------------------------------
@@ -92,7 +90,6 @@ toGateName "cu"         = GateCU
 toGateName "u1"         = GateU1
 toGateName "u2"         = GateU2
 toGateName "u3"         = GateU3
-toGateName "quip_rz"    = GateQuipRZ
 toGateName str          = UserDefined str
 
 -- | Returns the number of parameters expected by a named gate. If nothing is
@@ -114,7 +111,6 @@ toParamCount GateCU          = Just 4
 toParamCount GateU1          = Just 1
 toParamCount GateU2          = Just 2
 toParamCount GateU3          = Just 3
-toParamCount GateQuipRZ      = Just 1
 toParamCount _               = Just 0
 
 -- | Returns the number of operands consumed by a name gate (without controls).
@@ -163,5 +159,4 @@ isParamInverse GateRZ     = True
 isParamInverse GateCRZ    = True
 isParamInverse GateP      = True
 isParamInverse GateCP     = True
-isParamInverse GateQuipRZ = True
 isParamInverse _          = False

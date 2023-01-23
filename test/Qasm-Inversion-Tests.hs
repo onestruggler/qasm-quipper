@@ -223,7 +223,6 @@ test40 = set4_mktest_paraminv GateRZ
 test41 = set4_mktest_paraminv GateCRZ
 test42 = set4_mktest_paraminv GateP
 test43 = set4_mktest_paraminv GateCP
-test44 = set4_mktest_paraminv GateQuipRZ
 
 set4_mktest_invpair :: GateName -> GateName -> Test.HUnit.Test
 set4_mktest_invpair name iname = TestCase (assertEqual msg (Just [inv]) res)
@@ -400,7 +399,6 @@ tests = hUnitTestToTests $ TestList [TestLabel "negateParams_Named_0Param" test1
                                      TestLabel "invertGate_ParamInverse_Test6" test41,
                                      TestLabel "invertGate_ParamInverse_Test7" test42,
                                      TestLabel "invertGate_ParamInverse_Test8" test43,
-                                     TestLabel "invertGate_ParamInverse_Test9" test44,
                                      TestLabel "invertGate_InversePairs_Test1" test45,
                                      TestLabel "invertGate_InversePairs_Test2" test46,
                                      TestLabel "invertGate_InversePairs_Test3" test47,

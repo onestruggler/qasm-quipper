@@ -102,7 +102,6 @@ printName _     GateCU            = "cu"
 printName _     GateU1            = "u1"
 printName _     GateU2            = "u2"
 printName _     GateU3            = "u3"
-printName _     GateQuipRZ        = "quip_rz"
 
 -- | Converts a gate to its syntactic representation. Modifiers are expanded.
 printGate :: Bool -> Gate -> String
