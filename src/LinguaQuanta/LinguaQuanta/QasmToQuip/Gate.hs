@@ -2,6 +2,7 @@
 
 module LinguaQuanta.QasmToQuip.Gate
   ( d1RotTransl
+  , d2RotTransl
   , namedGateTransl
   , translGPhase
   ) where
@@ -152,8 +153,21 @@ d3RotTransl wmap name param ops mod = from3DRot name param inv ins ctrls
 
 -- | Same as toRotGate, but for d2RotTransl.
 toU2Gate :: Dim2Rot -> Bool -> QuipCircFn
-toU2Gate (p1, p2) inv ins ctrls = error msg
-    where msg = "Translation not implemented for: U2."
+toU2Gate (p1, p2) inv ins ctrls = circ
+    where -- Angles
+          phi    = if inv then Negate p2 else p1
+          lambda = if inv then Negate p1 else p2
+          param1 = Plus phi $ Div Pi $ DecInt "2"
+          param2 = Minus lambda $ Div Pi $ DecInt "2"
+          -- Rotations
+          rot1 = toRotGate Qasm.GateRZ param1 False ins ctrls
+          rot2 = toRotGate Qasm.GateRZ param2 False ins ctrls
+          -- Unitary Gates
+          phase = toNamedGate Qasm.GateQuipOmega inv   ins ctrls
+          gateh = toNamedGate Qasm.GateH         False ins []
+          gates = toNamedGate Qasm.GateS         inv   ins ctrls
+          -- Result
+          circ = phase ++ rot1 ++ gateh ++ gates ++ gateh ++ rot2
 
 -- | Same as d2RotTransl, but for Dim2Rot parameters.
 d2RotTransl :: WireAllocMap -> Qasm.GateName -> Dim2Rot -> GateGenerator

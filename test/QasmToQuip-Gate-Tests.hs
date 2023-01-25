@@ -505,6 +505,47 @@ test64 = TestCase (assertEqual "Translation of CP gates with controls."
           param = Times Pi $ DecFloat "0"
 
 -----------------------------------------------------------------------------------------
+-- Translating U2 gates (single controlled, single uncontrolled, as tedious to test).
+
+test65 = case toConstFloat $ Div a1 $ DecInt "2" of
+    Right err  -> TestCase (assertFailure "Unable to parse p1.")
+    Left t1    -> case toConstFloat $ Div a2 $ DecInt "2" of
+        Right err  -> TestCase (assertFailure "Unable to parse p1.")
+        Left t2    -> let circ = [NamedGate Quip.GateOmega False    [0] [],
+                                  RotGate   Quip.RotExpZ   False t1 [0] [],
+                                  NamedGate Quip.GateH     False    [0] [],
+                                  NamedGate Quip.GateS     False    [0] [],
+                                  NamedGate Quip.GateH     False    [0] [],
+                                  RotGate   Quip.RotExpZ   False t2 [0] []]
+                          expt = d2RotTransl alloc4 Qasm.GateU2 (p1, p2) [decl1] mod0
+                      in TestCase (assertEqual msg circ expt)
+    where msg = "Translation of U2 gates without controls."
+          p1  = Times Pi $ DecFloat "0.25"
+          p2  = Times Pi $ DecFloat "0.33"
+          a1  = Plus p1 $ Div Pi $ DecInt "2"
+          a2  = Minus p2 $ Div Pi $ DecInt "2"
+
+test66 = case toConstFloat $ Div a1 $ DecInt "2" of
+    Right err  -> TestCase (assertFailure "Unable to parse p1.")
+    Left t1    -> case toConstFloat $ Div a2 $ DecInt "2" of
+        Right err  -> TestCase (assertFailure "Unable to parse p1.")
+        Left t2    -> let circ = [NamedGate Quip.GateOmega True     [2] ctrls,
+                                  RotGate   Quip.RotExpZ   False t1 [2] ctrls,
+                                  NamedGate Quip.GateH     False    [2] [],
+                                  NamedGate Quip.GateS     True     [2] ctrls,
+                                  NamedGate Quip.GateH     False    [2] [],
+                                  RotGate   Quip.RotExpZ   False t2 [2] ctrls]
+                          expt = d2RotTransl alloc4 Qasm.GateU2 (p1, p2) ops mod4
+                      in TestCase (assertEqual msg circ expt)
+    where msg   = "Translation of U2 gates with controls."
+          p1    = Times Pi $ DecFloat "0.25"
+          p2    = Times Pi $ DecFloat "0.33"
+          a1    = Plus  (Negate p2) $ Div Pi $ DecInt "2"
+          a2    = Minus (Negate p1) $ Div Pi $ DecInt "2"
+          ops   = [decl2at 3, decl2at 2, decl2at 1]
+          ctrls = [Pos 4, Pos 3]
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "GateS_1" test1,
@@ -570,6 +611,8 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateS_1" test1,
                                      TestLabel "GateP_3" test61,
                                      TestLabel "GateCP_1" test62,
                                      TestLabel "GateCP_2" test63,
-                                     TestLabel "GateCP_3" test64]
+                                     TestLabel "GateCP_3" test64,
+                                     TestLabel "GateU2_1" test65,
+                                     TestLabel "GateU2_2" test66]
 
 main = defaultMain tests
