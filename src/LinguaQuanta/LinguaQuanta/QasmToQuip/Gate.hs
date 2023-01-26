@@ -3,6 +3,7 @@
 module LinguaQuanta.QasmToQuip.Gate
   ( d1RotTransl
   , d2RotTransl
+  , d3RotTransl
   , namedGateTransl
   , translGPhase
   ) where
@@ -125,13 +126,47 @@ translGPhase wmap param ops mod = [toGPhase inv param ctrls]
 -------------------------------------------------------------------------------
 -- * 3D-Rotation Translation.
 
+-- | Translation details for the U3 gate.
+toU3Gate :: Dim3Rot -> Bool -> QuipCircFn
+toU3Gate (p1, p2, p3) inv ins ctrls = circ
+    where -- Angles
+          theta  = if inv then Negate p1 else p1
+          phi    = if inv then Negate p3 else p2
+          lambda = if inv then Negate p2 else p3
+          param2 = Plus phi $ Div Pi $ DecInt "2"
+          param3 = Minus lambda $ Div Pi $ DecInt "2"
+          -- Global Phase
+          phase = toGPhase False theta ctrls
+          -- Rotations
+          rot1 = toRotGate Qasm.GateRZ theta  False ins ctrls
+          rot2 = toRotGate Qasm.GateRZ param2 False ins ctrls
+          rot3 = toRotGate Qasm.GateRZ param3 False ins ctrls
+          -- Unitary Gates
+          omega = toNamedGate Qasm.GateQuipOmega inv   ins ctrls
+          gateh = toNamedGate Qasm.GateH         False ins []
+          -- Result
+          pref = omega ++ omega ++ [phase]
+          circ = pref ++ rot1 ++ gateh ++ rot2 ++ gateh ++ rot3
+
+-- | Translation details for the U gate.
+toUGate :: Dim3Rot -> Bool -> QuipCircFn
+toUGate params@(_, p2, p3) inv ins ctrls = phase : gates
+    where -- Angles
+          phi    = if inv then Negate p3 else p2
+          lambda = if inv then Negate p2 else p3
+          -- Global PHase
+          angle = Div (Plus phi lambda) $ DecInt "2"
+          phase = toGPhase False angle ctrls
+          -- Result
+          gates = from3DRot Qasm.GateU3 params inv ins ctrls
+
 -- | Same as toRotGate, but for d2RotTransl.
 from3DRot :: Qasm.GateName -> Dim3Rot -> Bool -> QuipCircFn
 -- Supported 3D-rotations.
-from3DRot Qasm.GateU param inv ins ctrls = error msg
-    where msg = "Translation not implemented for: U."
-from3DRot Qasm.GateU3 param inv ins ctrls = error msg
-    where msg = "Translation not implemented for: U3."
+from3DRot Qasm.GateU params inv ins ctrls = gates
+    where gates = toUGate params inv ins ctrls
+from3DRot Qasm.GateU3 params inv ins ctrls = gates
+    where gates = toU3Gate params inv ins ctrls
 from3DRot Qasm.GateCU param inv ins ctrls = expandCtrl "U3" ins ctrls f
     where f = from3DRot Qasm.GateU param inv
 -- Named 3D-rotations are not supported.
