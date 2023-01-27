@@ -4,6 +4,7 @@ import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit
 import LinguaQuanta.Qasm.AST
+import LinguaQuanta.Qasm.Expression
 import LinguaQuanta.Qasm.Gate as Qasm
 import LinguaQuanta.Qasm.GateName as Qasm
 import LinguaQuanta.Qasm.GateName
@@ -176,6 +177,64 @@ test28 = TestCase (assertEqual "translate (size): mixed unitary gates."
                                (size circ7))
 
 -----------------------------------------------------------------------------------------
+-- Rotational Tests
+
+p1 = DecFloat "1.0"
+p2 = DecFloat "2.0"
+p3 = DecFloat "3.0"
+
+gate4 = Qasm.NamedGate Qasm.GateRZ [p1] [getOp 0, getOp 1, getOp 3] mod2
+gate5 = Qasm.NamedGate Qasm.GateU2 [p2, p3] [getOp 0] mod0
+gate6 = Qasm.NamedGate Qasm.GateU3 [p1, p2, p3] [getOp 0] mod0
+
+gstmt5 = AstGateStmt 1 gate4
+gstmt6 = AstGateStmt 1 gate5
+gstmt7 = AstGateStmt 1 gate6
+
+circ8 = translate [dstmt2, dstmt3, gstmt5, gstmt6, gstmt7]
+
+test29 = TestCase (assertEqual "translate (inputs): miscellaneous rotations."
+                               circ4_io
+                               (outputs circ8))
+
+test30 = case toConstFloat $ Div p1 Pi of
+    Right err -> TestCase (assertFailure "Unable to parse p1.")
+    Left ph   -> case toConstFloat $ Div p1 $ DecInt "2" of
+        Right err  -> TestCase (assertFailure "Unable to parse p1.")
+        Left t1    -> case toConstFloat $ Div a1 $ DecInt "2" of
+            Right err -> TestCase (assertFailure "Unable to parse p1.")
+            Left t2   -> case toConstFloat $ Div a2 $ DecInt "2" of
+                Right err -> TestCase (assertFailure "Unable to parse p3.")
+                Left t3   -> let circ = [Quip.RotGate   Quip.RotExpZ   True  0.5 [3] ctrls,
+                                         Quip.NamedGate Quip.GateOmega False     [0] [],
+                                         Quip.RotGate   Quip.RotExpZ   False t2  [0] [],
+                                         Quip.NamedGate Quip.GateH     False     [0] [],
+                                         Quip.NamedGate Quip.GateS     False     [0] [],
+                                         Quip.NamedGate Quip.GateH     False     [0] [],
+                                         Quip.RotGate   Quip.RotExpZ   False t3  [0] [],
+                                         Quip.NamedGate Quip.GateOmega False     [0] [],
+                                         Quip.NamedGate Quip.GateOmega False     [0] [],
+                                         Quip.PhaseGate                      ph      [],
+                                         Quip.RotGate   Quip.RotExpZ   False t1  [0] [],
+                                         Quip.NamedGate Quip.GateH     False     [0] [],
+                                         Quip.RotGate   Quip.RotExpZ   False t2  [0] [],
+                                         Quip.NamedGate Quip.GateH     False     [0] [],
+                                         Quip.RotGate   Quip.RotExpZ   False t3  [0] []]
+                      in TestCase (assertEqual msg circ $ gates circ8)
+    where msg   = "translate (gates): miscellaneous rotations."
+          a1    = Plus p2 $ Div Pi $ DecInt "2"
+          a2    = Minus p3 $ Div Pi $ DecInt "2"
+          ctrls = [Quip.Pos 0, Quip.Pos 1]
+
+test31 = TestCase (assertEqual "translate (outputs): miscellaneous rotations."
+                               circ4_io
+                               (outputs circ8))
+
+test32 = TestCase (assertEqual "translate (size): miscellaneous rotations."
+                               5
+                               (size circ8))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "Empty_Inputs" test1,
@@ -205,6 +264,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "Empty_Inputs" test1,
                                      TestLabel "MixedUnitary_Inputs" test25,
                                      TestLabel "MixedUnitary_Gates" test26,
                                      TestLabel "MixedUnitary_Outputs" test27,
-                                     TestLabel "MixedUnitary_Size" test28]
+                                     TestLabel "MixedUnitary_Size" test28,
+                                     TestLabel "MixedRot_Inputs" test29,
+                                     TestLabel "MixedRot_Gates" test30,
+                                     TestLabel "MixedRot_Outputs" test31,
+                                     TestLabel "MixedRot_Size" test32]
 
 main = defaultMain tests

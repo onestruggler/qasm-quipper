@@ -8,7 +8,10 @@ module LinguaQuanta.QasmToQuip.Translator (translate) where
 import LinguaQuanta.Qasm.AST (AstStmt(..))
 import LinguaQuanta.Qasm.Gate as Qasm
 import LinguaQuanta.QasmToQuip.Gate
-  ( namedGateTransl
+  ( d1RotTransl
+  , d2RotTransl
+  , d3RotTransl
+  , namedGateTransl
   , translGPhase
   )
 import LinguaQuanta.QasmToQuip.Wire
@@ -40,8 +43,14 @@ type UpdatePair = (ScalarUpdate, CellUpdate)
 translateGate :: WireAllocMap -> Int -> Qasm.Gate -> ([Operand], [Quip.Gate])
 translateGate wmap 0 (Qasm.NamedGate name [] ops mod) = (ops, stmts)
     where stmts = namedGateTransl wmap name ops mod
+translateGate wmap 0 (Qasm.NamedGate name [p] ops mod) = (ops, stmts)
+    where stmts = d1RotTransl wmap name p ops mod
+translateGate wmap 0 (Qasm.NamedGate name [p1, p2] ops mod) = (ops, stmts)
+    where stmts = d2RotTransl wmap name (p1, p2) ops mod
+translateGate wmap 0 (Qasm.NamedGate name [p1, p2, p3] ops mod) = (ops, stmts)
+    where stmts = d3RotTransl wmap name (p1, p2, p3) ops mod
 translateGate wmap 0 (Qasm.NamedGate name params ops mod) = error msg
-    where msg = "Rotation gate translations not implemented."
+    where msg = "Rotations must not exceed three dimensions."
 translateGate wmap 0 (Qasm.GPhaseGate param ops mod) = (ops, stmts)
     where stmts = translGPhase wmap param ops mod
 translateGate wmap n gate = (ops, concat $ replicate n $ gates)
