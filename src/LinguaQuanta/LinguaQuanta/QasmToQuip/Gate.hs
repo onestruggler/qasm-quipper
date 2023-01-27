@@ -105,8 +105,8 @@ expandDblCtrl name _ _ _ = error msg
 -- * GPhase Gate Translation.
 
 -- | Implementation details for translGPhase.
-toGPhase :: Bool -> Expr -> [Control] -> Gate
-toGPhase inv param ctrls =
+toGPhase :: Expr -> Bool -> [Control] -> Gate
+toGPhase param inv ctrls =
     case toConstFloat $ Div param Pi of
         Right err -> error "Non-contant float expression as global phase."
         Left pval -> let angle = if inv then -pval else pval
@@ -118,7 +118,7 @@ toGPhase inv param ctrls =
 -- each operand is mapped to a wire according to wmap. The Quipper gate will
 -- have a timestep of `param / PI` to account for the difference in units.
 translGPhase :: WireAllocMap -> Expr -> GateGenerator
-translGPhase wmap param ops mod = [toGPhase inv param ctrls]
+translGPhase wmap param ops mod = [toGPhase param inv ctrls]
     where wires = opsToWires wmap ops
           inv   = hasInversionMod mod
           ctrls = snd $ extractCtrls wires mod
@@ -136,11 +136,11 @@ toU3Gate (p1, p2, p3) inv ins ctrls = circ
           param2 = Plus phi $ Div Pi $ DecInt "2"
           param3 = Minus lambda $ Div Pi $ DecInt "2"
           -- Global Phase
-          phase = toGPhase False theta ctrls
+          phase = toGPhase theta False ctrls
           -- Rotations
-          rot1 = toRotGate Qasm.GateRZ theta  False ins ctrls
-          rot2 = toRotGate Qasm.GateRZ param2 False ins ctrls
-          rot3 = toRotGate Qasm.GateRZ param3 False ins ctrls
+          rot1 = toRZGate theta  False ins ctrls
+          rot2 = toRZGate param2 False ins ctrls
+          rot3 = toRZGate param3 False ins ctrls
           -- Unitary Gates
           omega = toNamedGate Qasm.GateQuipOmega inv   ins ctrls
           gateh = toNamedGate Qasm.GateH         False ins []
@@ -156,9 +156,9 @@ toUGate params@(_, p2, p3) inv ins ctrls = phase : gates
           lambda = if inv then Negate p2 else p3
           -- Global PHase
           angle = Div (Plus phi lambda) $ DecInt "2"
-          phase = toGPhase False angle ctrls
+          phase = toGPhase angle False ctrls
           -- Result
-          gates = from3DRot Qasm.GateU3 params inv ins ctrls
+          gates = toU3Gate params inv ins ctrls
 
 -- | Same as toRotGate, but for d2RotTransl.
 from3DRot :: Qasm.GateName -> Dim3Rot -> Bool -> QuipCircFn
@@ -195,8 +195,8 @@ toU2Gate (p1, p2) inv ins ctrls = circ
           param1 = Plus phi $ Div Pi $ DecInt "2"
           param2 = Minus lambda $ Div Pi $ DecInt "2"
           -- Rotations
-          rot1 = toRotGate Qasm.GateRZ param1 False ins ctrls
-          rot2 = toRotGate Qasm.GateRZ param2 False ins ctrls
+          rot1 = toRZGate param1 False ins ctrls
+          rot2 = toRZGate param2 False ins ctrls
           -- Unitary Gates
           phase = toNamedGate Qasm.GateQuipOmega inv   ins ctrls
           gateh = toNamedGate Qasm.GateH         False ins []
@@ -231,22 +231,54 @@ expandCRot name param inv ins ctrls = expandCtrl (show name) ins ctrls f
 toU1Gate :: Dim1Rot -> Bool -> QuipCircFn
 toU1Gate param inv ins ctrls = gphase : rzgate
     where phase  = Div param $ DecInt "2"
-          gphase = toGPhase inv phase ctrls
-          rzgate = toRotGate Qasm.GateRZ param inv ins ctrls
+          gphase = toGPhase phase inv ctrls
+          rzgate = toRZGate param inv ins ctrls
 
 -- | Translation details for the P gate.
 toPGate :: Dim1Rot -> Bool -> QuipCircFn
 toPGate param inv [w] ctrls = [gates]
-    where gates = toGPhase inv param $ Pos w:ctrls
+    where gates = toGPhase param inv $ Pos w:ctrls
 toPGate _ _ ins _ = error msg
     where num = show $ length ins
           msg = "P gate requires one non-control input, found: " ++ num
+
+toRZGate :: Dim1Rot -> Bool -> QuipCircFn
+toRZGate param inv ins ctrls = 
+    case toConstFloat $ Div param $ DecInt "2" of
+        Right err -> error "Non-contant float expression as global phase."
+        Left tval -> [RotGate Quip.RotExpZ inv tval ins ctrls]
+
+-- | Translation details for the RY gate.
+toRXGate :: Dim1Rot -> Bool -> QuipCircFn
+toRXGate param inv ins ctrls = circ
+    where -- Angles.
+          t = Div param $ DecInt "2"
+          -- Rotational Gates.
+          phase = toGPhase t     inv     ctrls
+          zrot  = toRZGate param inv ins ctrls
+          -- Unitary Gates
+          hgate   = toNamedGate Qasm.GateH False ins []
+          -- Result
+          circ = [phase] ++ hgate ++ zrot ++ hgate
+
+-- | Translation details for the RY gate.
+toRYGate :: Dim1Rot -> Bool -> QuipCircFn
+toRYGate param inv ins ctrls = circ
+    where -- Rotational Gates.
+          phase = toGPhase param inv     ctrls
+          zrot  = toRZGate param inv ins ctrls
+          -- Unitary Gates
+          sgate   = toNamedGate Qasm.GateS False ins []
+          hgate   = toNamedGate Qasm.GateH False ins []
+          sdggate = toNamedGate Qasm.GateS True  ins []
+          -- Result
+          circ = [phase] ++ sgate ++ hgate ++ zrot ++ hgate ++ sdggate
 
 -- | Translates a CP gate from OpenQASM to Quipper, with the given input wires
 -- and additional controls.
 expandCP :: Dim1Rot -> Bool -> QuipCircFn
 expandCP param inv ins ctrls = expandDblCtrl "CP" ins ctrls f
-    where f = toRotGate Qasm.GateP param inv
+    where f = toPGate param inv
 
 -- | Implementation details for d1RotTransl. The Boolaen flag indicates if the
 -- gate modifier was inverted. The wires and controls are obtained by first
@@ -254,15 +286,13 @@ expandCP param inv ins ctrls = expandDblCtrl "CP" ins ctrls f
 -- inputs or controls, according to the gate modifier.
 toRotGate :: Qasm.GateName -> Dim1Rot -> Bool -> QuipCircFn
 -- Translates the only rotation supported in Quipper.
-toRotGate Qasm.GateRZ param inv ins ctrls =
-    case toConstFloat $ Div param $ DecInt "2" of
-        Right err -> error "Non-contant float expression as global phase."
-        Left tval -> [RotGate Quip.RotExpZ inv tval ins ctrls]
+toRotGate Qasm.GateRZ param inv ins ctrls = gates
+    where gates = toRZGate param inv ins ctrls
 -- Translates rotations with known decompositions.
-toRotGate Qasm.GateRX param inv ins ctrls = error msg
-    where msg = "Translation not implemented for: RX."
-toRotGate Qasm.GateRY param inv ins ctrls = error msg
-    where msg = "Translation not implemented for: RY."
+toRotGate Qasm.GateRX param inv ins ctrls = gates
+    where gates = toRXGate param inv ins ctrls
+toRotGate Qasm.GateRY param inv ins ctrls = gates
+    where gates = toRYGate param inv ins ctrls
 -- The P gate is in fact a controlled global phase.
 toRotGate Qasm.GateP param inv ins ctrls = gates
     where gates = toPGate param inv ins ctrls
@@ -270,7 +300,7 @@ toRotGate Qasm.GateP param inv ins ctrls = gates
 toRotGate Qasm.GateU1 param inv ins ctrls = gates
     where gates = toU1Gate param inv ins ctrls
 toRotGate Qasm.GatePhase param inv ins ctrls = gates
-    where gates = toRotGate Qasm.GateU1 param inv ins ctrls
+    where gates = toU1Gate param inv ins ctrls
 -- Expands controlled instances.
 toRotGate Qasm.GateCRZ param inv ins ctrls = gates
     where gates = expandCRot Qasm.GateRZ param inv ins ctrls
