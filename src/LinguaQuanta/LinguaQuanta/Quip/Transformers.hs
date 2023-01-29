@@ -153,10 +153,16 @@ elimCtrlsRotGate name inv ts ncf ins gens [] =
 elimCtrlsRotGate name inv ts ncf ins gens ctrls =
     without_controls_if ncf $
         with_combined_controls_tof 1 ctrls $ \[c] -> do
-            applyRot False
-            qmultinot_at ins `controlled` c
-            applyRot True
-            qmultinot_at ins `controlled` c
+            if name == "exp(-i%Z)" || name == "R(2pi/%)"
+            then do
+                named_rotation_qulist name inv ts ins gens `controlled` c
+                return ()
+            else do
+                applyRot False
+                qmultinot_at ins `controlled` c
+                applyRot True
+                qmultinot_at ins `controlled` c
+                return ()
             return (ins, gens, ctrls)
     where halfTs = ts / 2
           applyRot i = named_rotation_qulist name (xor inv i) halfTs ins gens

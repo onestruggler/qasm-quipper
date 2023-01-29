@@ -190,7 +190,8 @@ ascii_crot   = "QRot[\"exp(-i%Z)\",1](0) with controls=[+1]"
 ascii_ccrot  = "QRot[\"exp(-i%Z)\",2](0) with controls=[+1, +2]"
 ascii_cccrot = "QRot[\"exp(-i%Z)\",3](0) with controls=[+1, +2, +3]"
 
-abs_rot = RotGate RotExpZ False 0.5 [0] []
+abs_rot  = RotGate RotExpZ False 0.5 [0] []
+abs_crot = RotGate RotExpZ False 1.0 [0] [Pos 1]
 
 test13 = TestCase (assertEqual "elimCtrlsTransformer on expZt."
                                [abs_rot]
@@ -200,21 +201,21 @@ test13 = TestCase (assertEqual "elimCtrlsTransformer on expZt."
                   "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
 
 test14 = TestCase (assertEqual "elimCtrlsTransformer on C(expZt)."
-                               4
-                               (length $ apply elimCtrlsTransformer input))
+                               [abs_crot]
+                               (apply elimCtrlsTransformer input))
     where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
                   ascii_crot ++ "\n" ++
                   "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
 
 test15 = TestCase (assertEqual "elimCtrlsTransformer on CC(expZt)."
-                               8
+                               5
                                (length $ apply elimCtrlsTransformer input))
     where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
                   ascii_ccrot ++ "\n" ++
                   "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
 
 test16 = TestCase (assertEqual "elimCtrlsTransformer on CCC(expZt)."
-                               12
+                               9
                                (length $ apply elimCtrlsTransformer input))
     where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
                   ascii_cccrot ++ "\n" ++
@@ -473,7 +474,7 @@ ascii_user_inv   = "QGate[\"MyGate\"]*(0)"
 ascii_cs_inv     = "QGate[\"S\"]*(0) with controls=[+1]"
 ascii_cw_inv     = "QGate[\"W\"]*(0,1) with controls=[+2]"
 ascii_comega_inv = "QGate[\"omega\"]*(0) with controls=[+1]"
-ascii_crot_inv   = "QRot[\"exp(-i%Z)\",1]*(0) with controls=[+1]"
+ascii_crot_inv   = "QRot[\"MyRot\",1]*(0) with controls=[+1]"
 
 abs_h_inv      = NamedGate GateH                      False         [0]    []
 abs_s_inv      = NamedGate GateS                      True          [0]    []
@@ -557,10 +558,46 @@ test39 = TestCase (assertEqual "elimCtrlsTransformer on C(expZt)*."
     where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
                    ascii_crot_inv ++ "\n" ++
                   "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
-          output = [RotGate   RotExpZ       True  0.5 [0] [],
-                    NamedGate GateQMultiNot False     [0] [Pos 1],
-                    RotGate   RotExpZ       False 0.5 [0] [],
-                    NamedGate GateQMultiNot False     [0] [Pos 1]]
+          output = [RotGate   (UserDefinedRot "MyRot") True  0.5 [0] [],
+                    NamedGate GateQMultiNot            False     [0] [Pos 1],
+                    RotGate   (UserDefinedRot "MyRot") False 0.5 [0] [],
+                    NamedGate GateQMultiNot            False     [0] [Pos 1]]
+
+-- User Defined Rotations
+ascii_user_rot    = "QRot[\"MyRot\",0.5](0)"
+ascii_user_crot   = "QRot[\"MyRot\",1](0) with controls=[+1]"
+ascii_user_ccrot  = "QRot[\"MyRot\",2](0) with controls=[+1, +2]"
+ascii_user_cccrot = "QRot[\"MyRot\",3](0) with controls=[+1, +2, +3]"
+
+abs_user_rot = RotGate (UserDefinedRot "MyRot") False 0.5 [0] []
+
+test40 = TestCase (assertEqual "elimCtrlsTransformer on MyRot."
+                               [abs_user_rot]
+                               (apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_user_rot ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+
+test41 = TestCase (assertEqual "elimCtrlsTransformer on C(MyRot)."
+                               4
+                               (length $ apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_user_crot ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+
+test42 = TestCase (assertEqual "elimCtrlsTransformer on CC(MyRot)."
+                               8
+                               (length $ apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_user_ccrot ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+
+test43 = TestCase (assertEqual "elimCtrlsTransformer on CCC(MyRot)."
+                               12
+                               (length $ apply elimCtrlsTransformer input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_user_cccrot ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
@@ -573,36 +610,40 @@ tests = hUnitTestToTests $ TestList [TestLabel "elimCtrlsTransformer_QGate_1" te
                                      TestLabel "elimCtrlsTransformer_QGate_6" test6,
                                      TestLabel "elimCtrlsTransformer_QGate_7" test7,
                                      TestLabel "elimCtrlsTransformer_QGate_8" test8,
-                                     TestLabel "elimCtrlsTransformer_QGate_9" test9,
-                                     TestLabel "elimCtrlsTransformer_QGate_10" test10,
-                                     TestLabel "elimCtrlsTransformer_QGate_38" test38,
-                                     TestLabel "elimCtrlsTransformer_QGate_11" test11,
-                                     TestLabel "elimCtrlsTransformer_QGate_12" test12,
-                                     TestLabel "elimCtrlsTransformer_QGate_13" test13,
-                                     TestLabel "elimCtrlsTransformer_QGate_14" test14,
-                                     TestLabel "elimCtrlsTransformer_QGate_15" test15,
-                                     TestLabel "elimCtrlsTransformer_QGate_16" test16,
-                                     TestLabel "elimCtrlsTransformer_QGate_17" test17,
-                                     TestLabel "elimCtrlsTransformer_QGate_18" test18,
-                                     TestLabel "elimCtrlsTransformer_QGate_19" test19,
-                                     TestLabel "elimCtrlsTransformer_QGate_20" test20,
-                                     TestLabel "elimCtrlsTransformer_QGate_21" test21,
-                                     TestLabel "elimCtrlsTransformer_QGate_22" test22,
-                                     TestLabel "elimCtrlsTransformer_QGate_23" test23,
-                                     TestLabel "elimCtrlsTransformer_QGate_24" test24,
-                                     TestLabel "elimCtrlsTransformer_QGate_25" test25,
-                                     TestLabel "elimCtrlsTransformer_QGate_26" test26,
-                                     TestLabel "elimCtrlsTransformer_QGate_27" test27,
-                                     TestLabel "elimCtrlsTransformer_QGate_28" test28,
-                                     TestLabel "elimCtrlsTransformer_QGate_29" test29,
-                                     TestLabel "elimCtrlsTransformer_QGate_30" test30,
-                                     TestLabel "elimCtrlsTransformer_QGate_31" test31,
-                                     TestLabel "elimCtrlsTransformer_QGate_32" test32,
-                                     TestLabel "elimCtrlsTransformer_QGate_33" test33,
-                                     TestLabel "elimCtrlsTransformer_QGate_34" test34,
-                                     TestLabel "elimCtrlsTransformer_QGate_35" test35,
-                                     TestLabel "elimCtrlsTransformer_QGate_36" test36,
-                                     TestLabel "elimCtrlsTransformer_QGate_37" test37,
-                                     TestLabel "elimCtrlsTransformer_QGate_39" test39]
+                                     TestLabel "elimCtrlsTransformer_GPhase_1" test9,
+                                     TestLabel "elimCtrlsTransformer_GPhase_2" test10,
+                                     TestLabel "elimCtrlsTransformer_GPhase_3" test38,
+                                     TestLabel "elimCtrlsTransformer_GPhase_4" test11,
+                                     TestLabel "elimCtrlsTransformer_GPhase_5" test12,
+                                     TestLabel "elimCtrlsTransformer_QRot_1" test13,
+                                     TestLabel "elimCtrlsTransformer_QRot_2" test14,
+                                     TestLabel "elimCtrlsTransformer_QRot_3" test15,
+                                     TestLabel "elimCtrlsTransformer_QRot_4" test16,
+                                     TestLabel "elimCtrlsTransformer_Gen" test17,
+                                     TestLabel "elimCtrlsTransformer_Omega_1" test18,
+                                     TestLabel "elimCtrlsTransformer_Omega_2" test19,
+                                     TestLabel "elimCtrlsTransformer_Omega_3" test20,
+                                     TestLabel "elimCtrlsTransformer_Omega_4" test21,
+                                     TestLabel "elimCtrlsTransformer_W_1" test22,
+                                     TestLabel "elimCtrlsTransformer_W_2" test23,
+                                     TestLabel "elimCtrlsTransformer_W_3" test24,
+                                     TestLabel "elimCtrlsTransformer_W_4" test25,
+                                     TestLabel "elimCtrlsTransformer_QGate_Ex_1" test26,
+                                     TestLabel "elimCtrlsTransformer_QGate_Ex_2" test27,
+                                     TestLabel "elimCtrlsTransformer_QGate_Ex_3" test28,
+                                     TestLabel "elimCtrlsTransformer_QGate_Ex_4" test29,
+                                     TestLabel "elimCtrlsTransformer_QGate_Ex_5" test30,
+                                     TestLabel "elimCtrlsTransformer_QGate_Ex_6" test31,
+                                     TestLabel "elimCtrlsTransformer_QGate_Ex_7" test32,
+                                     TestLabel "elimCtrlsTransformer_QGate_Ex_8" test33,
+                                     TestLabel "elimCtrlsTransformer_Inv_1" test34,
+                                     TestLabel "elimCtrlsTransformer_Inv_2" test35,
+                                     TestLabel "elimCtrlsTransformer_Inv_3" test36,
+                                     TestLabel "elimCtrlsTransformer_Inv_4" test37,
+                                     TestLabel "elimCtrlsTransformer_Inv_5" test39,
+                                     TestLabel "elimCtrlsTransformer_User_QRot_1" test40,
+                                     TestLabel "elimCtrlsTransformer_User_QRot_2" test41,
+                                     TestLabel "elimCtrlsTransformer_User_QRot_3" test42,
+                                     TestLabel "elimCtrlsTransformer_User_QRot_4" test43]
 
 main = defaultMain tests
