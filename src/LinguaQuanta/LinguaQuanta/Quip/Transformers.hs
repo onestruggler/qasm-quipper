@@ -168,7 +168,7 @@ type Anchor = B_Endpoint Qubit Bit
 elimCtrlsGPhase :: Double -> Bool -> [Anchor] -> CtrlList -> Circ CtrlList
 elimCtrlsGPhase ts ncf ins ctrls =
     without_controls_if ncf $
-        with_combined_controls_tof 1 ctrls $ \ctrls' -> do
+        with_combined_controls_tof 2 ctrls $ \ctrls' -> do
             global_phase_anchored ts ins `controlled` ctrls'
             return ctrls
 
