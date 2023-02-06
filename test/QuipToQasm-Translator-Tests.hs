@@ -107,6 +107,37 @@ test10 = TestCase (assertEqual "Can convert mixed unitary gates."
                               [dstmt1, gstmt1, gstmt2, gstmt3, gstmt4]
                               (translate $ make_gate_circ [gate1, gate2, gate3, gate4]))
 
+-------------------------------------------------------------------------------
+-- * Classical Wire Tests
+
+iomap_5 = IntMap.fromList[(1, QWire), (3, CWire)]
+iomap_6 = IntMap.fromList[(1, QWire), (3, CWire), (5, QWire), (7, CWire), (9, QWire)]
+
+test11 = TestCase (assertEqual "Can convert a 1-to-0 bit circuit (with qubits)."
+                               [AstQubitDecl (Just 1) "input_qwires",
+                                AstBitDecl (Just 1) "input_cwires"]
+                               (translate $ make_wire_circ iomap_5 iomap_1))
+
+test12 = TestCase (assertEqual "Can convert a 1-to-1 bit circuit (with qubits)."
+                               [AstQubitDecl (Just 1) "input_qwires",
+                                AstBitDecl (Just 1) "input_cwires"]
+                               (translate $ make_wire_circ iomap_5 iomap_5))
+
+test13 = TestCase (assertEqual "Can convert a 2-to-0 bit circuit (with qubits)."
+                               [AstQubitDecl (Just 3) "input_qwires",
+                                AstBitDecl (Just 2) "input_cwires"]
+                               (translate $ make_wire_circ iomap_6 iomap_1))
+
+test14 = TestCase (assertEqual "Can convert a 2-to-1 bit circuit (with qubits)."
+                               [AstQubitDecl (Just 3) "input_qwires",
+                                AstBitDecl (Just 2) "input_cwires"]
+                               (translate $ make_wire_circ iomap_6 iomap_5))
+
+test15 = TestCase (assertEqual "Can convert a 2-to-2 bit circuit (with qubits)."
+                               [AstQubitDecl (Just 3) "input_qwires",
+                                AstBitDecl (Just 2) "input_cwires"]
+                               (translate $ make_wire_circ iomap_6 iomap_6))
+
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
@@ -119,6 +150,11 @@ tests = hUnitTestToTests $ TestList [TestLabel "Empty_Circ_0_to_0" test1,
                                      TestLabel "CCX" test7,
                                      TestLabel "GPhase" test8,
                                      TestLabel "CZ" test9,
-                                     TestLabel "MixedUnitary" test10]
+                                     TestLabel "MixedUnitary" test10,
+                                     TestLabel "Empty_Bit_Circ_1_to_0" test11,
+                                     TestLabel "Empty_Bit_Circ_1_to_1" test12,
+                                     TestLabel "Empty_Bit_Circ_2_to_0" test13,
+                                     TestLabel "Empty_Bit_Circ_2_to_1" test14,
+                                     TestLabel "Empty_Bit_Circ_2_to_2" test15]
 
 main = defaultMain tests

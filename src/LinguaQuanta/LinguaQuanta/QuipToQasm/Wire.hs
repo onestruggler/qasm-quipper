@@ -40,7 +40,7 @@ translateQWireInputs n = [AstQubitDecl (Just n) _IN_QWIRE_REG]
 -- a list of AST statements to declare the corresponding register.
 translateCWireInputs :: Int -> [AstStmt]
 translateCWireInputs 0 = []
-translateCWireInputs _ = error "Classical wires not yet supported."
+translateCWireInputs n = [AstBitDecl (Just n) _IN_CWIRE_REG]
 
 -------------------------------------------------------------------------------
 -- * Functions to Translate Inputs
