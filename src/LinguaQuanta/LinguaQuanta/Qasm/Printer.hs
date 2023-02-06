@@ -120,11 +120,6 @@ printGate _ (GPhaseGate param operands mods) = mstr ++ body
 -------------------------------------------------------------------------------
 -- * Statement Printing.
 
--- | Converts a qubit array of a given length to its syntactic representation.
-printQubitType :: Maybe Int -> String
-printQubitType Nothing  = "qubit"
-printQubitType (Just n) = printQubitType Nothing ++ "[" ++ show n ++ "]"
-
 -- | Consumes the length associated with a variable declaration. If the length
 -- is just an integer, the the corresponding designator string is returned.
 -- Otherwise, nothing is returned.
@@ -140,12 +135,21 @@ printQubitDecl :: Bool -> Maybe Int -> String -> String
 printQubitDecl False len decl = "qubit" ++ printArrLen len ++ " " ++ decl
 printQubitDecl True  len decl = "qreg " ++ decl ++ printArrLen len
 
+-- | Consumes a legacy flag, array length (len), and classical bit declaration
+-- name (decl). IF the legacy flag is flase, then a classical bit declaration
+-- is returned with the designator corresponding to len. Otherwise, a creg
+-- declaration is returned using the same len and decl.
+printBitDecl :: Bool -> Maybe Int -> String -> String
+printBitDecl False len decl = "bit"  ++ printArrLen len ++ " " ++ decl
+printBitDecl True  len decl = "creg" ++ decl ++ printArrLen len
+
 -- | Concretizes a statement, and produces its syntactic representation.
 printAstStmt :: Bool -> AstStmt -> String
 printAstStmt legacy (AstGateStmt n gate) = powMod ++ gateStr ++ ";"
     where powMod = if n == 0 then "" else "pow(" ++ show n ++ ") @ "
           gateStr = printGate legacy gate
 printAstStmt legacy (AstQubitDecl len decl) = printQubitDecl legacy len decl
+printAstStmt legacy (AstBitDecl len decl)   = printBitDecl legacy len decl
 
 -- | Concretizes each statement, and produces its syntactic representation.
 printAst :: Bool -> [AstStmt] -> [String]

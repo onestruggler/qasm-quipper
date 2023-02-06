@@ -29,7 +29,9 @@ data GateExpr = NamedGateOp String [Expr] [GateOperand]
               | PowMod Expr GateExpr
               deriving (Show, Eq)
 
-data Type = QubitT
+data Type = BitT
+          | BitArrT Expr
+          | QubitT
           | QubitArrT Expr
           deriving (Show, Eq)
 

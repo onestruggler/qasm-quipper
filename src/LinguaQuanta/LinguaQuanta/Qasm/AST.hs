@@ -13,4 +13,5 @@ import LinguaQuanta.Qasm.Language (Type(..))
 
 data AstStmt = AstGateStmt Int Gate
              | AstQubitDecl (Maybe Int) String
+             | AstBitDecl (Maybe Int) String
              deriving (Show, Eq)

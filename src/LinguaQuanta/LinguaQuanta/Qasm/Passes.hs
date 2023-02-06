@@ -74,6 +74,18 @@ abstractQasmGate ln expr =
             Just err -> Right (GateAbstractionErr ln err)
         Right err -> Right (GateAbstractionErr ln err)
 
+-- | Consumes a line number (ln) and the lenght of an array given as an
+-- OpenQASM exprsesion (expr). If the array length is valid, then its integer
+-- representation is returned. If the array length is invalid, then an error is
+-- returned with line number set to ln.
+getDeclLen :: Int -> Expr -> Either Int AbstractionErr
+getDeclLen ln expr =
+    case toConstInt expr of
+        Left n -> if n > 0
+                  then Left n
+                  else Right $ NonPosArrayLen ln
+        Right err -> Right $ ArrayLenAbstractionErr ln err
+
 -- | Consumes a line number (ln), a variable type, and the name of the declared
 -- variable (decl). If the declaration if valid, then a abstract declaration
 -- for a variable with name decl is returned. The constructor of the abstract
@@ -82,11 +94,14 @@ abstractQasmGate ln expr =
 abstractQasmDecl :: Int -> Type -> String -> Either [AstStmt] AbstractionErr
 abstractQasmDecl _  QubitT           decl = Left [AstQubitDecl Nothing decl]
 abstractQasmDecl ln (QubitArrT expr) decl =
-    case toConstInt expr of
-        Left n -> if n > 0
-                  then Left [AstQubitDecl (Just n) decl]
-                  else Right (NonPosArrayLen ln)
-        Right err -> Right (ArrayLenAbstractionErr ln err)
+    case getDeclLen ln expr of
+        Left n    -> Left [AstQubitDecl (Just n) decl]
+        Right err -> Right err
+abstractQasmDecl _  BitT decl = Left [AstBitDecl Nothing decl]
+abstractQasmDecl ln (BitArrT expr) decl =
+    case getDeclLen ln expr of
+        Left n    -> Left [AstBitDecl (Just n) decl]
+        Right err -> Right err
 
 -- | Converts a single statement into a sequence of equivalent AST statements.
 -- If then conversion fails, then an appropriate abstraction error is returned.
@@ -137,7 +152,7 @@ elimInvImpl ln (AstGateStmt n gate) =
     case invertGate gate of
         Just inv -> Left (inlineInv n inv)
         Nothing  -> resolveUnknownInv ln gate
-elimInvImpl _  stmt = Left [stmt]
+elimInvImpl _ stmt = Left [stmt]
 
 -- | Inlines all inverse gates in a list of AST statements. If inlining fails,
 -- then an appropriate error is returned.

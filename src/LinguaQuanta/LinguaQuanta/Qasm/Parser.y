@@ -18,6 +18,8 @@ import LinguaQuanta.Qasm.Language
     inv             { Token _ TokenInv }
     pow             { Token _ TokenPow }
     gphase          { Token _ TokenGPhase }
+    bit             { Token _ TokenBit }
+    creg            { Token _ TokenCReg }
     qreg            { Token _ TokenQReg }
     qubit           { Token _ TokenQubit }
     float           { Token _ (TokenFloat $$) }
@@ -46,15 +48,23 @@ StmtList : Stmt                             { [$1] }
 
 Stmt : Gate ';'                             { QasmGateStmt $1 }
      | QubitDeclStmt                        { $1 }
+     | BitDeclStmt                          { $1 }
 
 Designator : '[' Expr ']'                   { $2 }
 
 QubitType : qubit                           { QubitT }
           | qubit Designator                { QubitArrT $2 }
 
+BitType : bit                               { BitT }
+        | bit Designator                    { BitArrT $2 }
+
 QubitDeclStmt : QubitType id ';'            { QasmDeclStmt $1 $2 }
               | qreg id ';'                 { QasmDeclStmt QubitT $2 }
               | qreg id Designator ';'      { QasmDeclStmt (QubitArrT $3) $2 }
+
+BitDeclStmt : BitType id ';'                { QasmDeclStmt $1 $2 }
+            | creg id ';'                   { QasmDeclStmt BitT $2 }
+            | creg id Designator ';'        { QasmDeclStmt (BitArrT $3) $2 }
 
 Gate : id GateOperands                      { NamedGateOp $1 [] $2 }
      | id '(' ExprList ')' GateOperands     { NamedGateOp $1 $3 $5 }

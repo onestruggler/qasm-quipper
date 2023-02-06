@@ -40,6 +40,8 @@ tokens :-
     <0>             pow                               { constLex TokenPow }
     <0>             gphase                            { constLex TokenGPhase }
     -- Type Keywords.
+    <0>             bit                               { constLex TokenBit }
+    <0>             creg                              { constLex TokenCReg }
     <0>             qreg                              { constLex TokenQReg }
     <0>             qubit                             { constLex TokenQubit }
     -- Literals and Identifiers.
@@ -82,6 +84,8 @@ data TokenClass = TokenCtrl
                 | TokenInv
                 | TokenPow
                 | TokenGPhase
+                | TokenBit
+                | TokenCReg
                 | TokenQReg
                 | TokenQubit
                 | TokenFloat String
