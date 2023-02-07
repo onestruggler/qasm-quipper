@@ -85,7 +85,11 @@ updateOperands wmap fns (op:ops) =
 translateStmt :: WireAllocMap -> AstStmt -> (WireAllocMap, [Quip.Gate])
 translateStmt wmap (AstQubitDecl size name) =
     case allocate QWire name size wmap of
-        Nothing   -> error $ "Duplication allocation: " ++ name
+        Nothing    -> error $ "Duplication qubit allocation: " ++ name
+        Just wmap' -> (wmap', [])
+translateStmt wmap (AstBitDecl size name) =
+    case allocate CWire name size wmap of
+        Nothing    -> error $ "Duplicate bit allocation: " ++ name
         Just wmap' -> (wmap', [])
 translateStmt wmap (AstGateStmt n gate) =  (wmap', gates)
     where (ops, gates) = translateGate wmap n gate

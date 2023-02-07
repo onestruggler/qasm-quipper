@@ -235,6 +235,99 @@ test32 = TestCase (assertEqual "translate (size): miscellaneous rotations."
                                (size circ8))
 
 -----------------------------------------------------------------------------------------
+-- Basic CWire Tests.
+
+dstmt4 = AstBitDecl Nothing  "decl3"
+dstmt5 = AstBitDecl (Just 4) "decl3"
+dstmt6 = AstBitDecl (Nothing) "decl4"
+
+circ9  = translate [dstmt4]
+circ10 = translate [dstmt5]
+circ11 = translate [dstmt5, dstmt6]
+
+circ9_io = IntMap.fromList [(0, CWire)]
+
+test33 = TestCase (assertEqual "translate (inputs): single cbit."
+                               circ9_io
+                               (outputs circ9))
+
+test34 = TestCase (assertEqual "translate (gates): single cbit."
+                               []
+                               (gates circ9))
+
+test35 = TestCase (assertEqual "translate (outputs): single cbit."
+                               circ9_io
+                               (outputs circ9))
+
+test36 = TestCase (assertEqual "translate (size): single cbit."
+                               1
+                               (size circ9))
+
+
+circ10_io = IntMap.fromList [(0, CWire), (1, CWire), (2, CWire), (3, CWire)]
+
+test37 = TestCase (assertEqual "translate (inputs): cbit array."
+                               circ10_io
+                               (outputs circ10))
+
+test38 = TestCase (assertEqual "translate (gates): cbit array."
+                               []
+                               (gates circ10))
+
+test39 = TestCase (assertEqual "translate (outputs): cbit array."
+                               circ10_io
+                               (outputs circ10))
+
+test40 = TestCase (assertEqual "translate (size): cbit array."
+                               4
+                               (size circ10))
+
+circ11_io = IntMap.fromList [(0, CWire), (1, CWire), (2, CWire), (3, CWire), (4, CWire)]
+
+test41 = TestCase (assertEqual "translate (inputs): cbit array and single cbit."
+                               circ11_io
+                               (outputs circ11))
+
+test42 = TestCase (assertEqual "translate (gates): cbit array and single cbit."
+                               []
+                               (gates circ11))
+
+test43 = TestCase (assertEqual "translate (outputs): cbit array and single cbit."
+                               circ11_io
+                               (outputs circ11))
+
+test44 = TestCase (assertEqual "translate (size): cbit array and single cbit."
+                               5
+                               (size circ11))
+
+-----------------------------------------------------------------------------------------
+-- Mixed QWire and CWire Tests.
+
+circ12 = translate [dstmt2, dstmt5, dstmt3, dstmt6]
+
+
+circ12_io = IntMap.fromList [(0, QWire), (1, QWire), (2, QWire), (3, QWire),
+                             (4, CWire), (5, CWire), (6, CWire), (7, CWire),
+                             (8, QWire),
+                             (9, CWire)]
+
+test45 = TestCase (assertEqual "translate (inputs): mixed qbit and cbit."
+                               circ12_io
+                               (outputs circ12))
+
+test46 = TestCase (assertEqual "translate (gates): mixed qbit and cbit."
+                               []
+                               (gates circ12))
+
+test47 = TestCase (assertEqual "translate (outputs): mixed qbit and cbit."
+                               circ12_io
+                               (outputs circ12))
+
+test48 = TestCase (assertEqual "translate (size): mixed qbit and cbit."
+                               10
+                               (size circ12))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "Empty_Inputs" test1,
@@ -268,6 +361,22 @@ tests = hUnitTestToTests $ TestList [TestLabel "Empty_Inputs" test1,
                                      TestLabel "MixedRot_Inputs" test29,
                                      TestLabel "MixedRot_Gates" test30,
                                      TestLabel "MixedRot_Outputs" test31,
-                                     TestLabel "MixedRot_Size" test32]
+                                     TestLabel "MixedRot_Size" test32,
+                                     TestLabel "1Cbit_Inputs" test33,
+                                     TestLabel "1Cbit_Gates" test34,
+                                     TestLabel "1Cbit_Outputs" test35,
+                                     TestLabel "1Cbit_Size" test36,
+                                     TestLabel "1Carr_Inputs" test37,
+                                     TestLabel "1Carr_Gates" test38,
+                                     TestLabel "1Carr_Outputs" test39,
+                                     TestLabel "1Carr_Size" test40,
+                                     TestLabel "1Carr1Cbit_Inputs" test41,
+                                     TestLabel "1Carr1Cbit_Gates" test42,
+                                     TestLabel "1Carr1Cbit_Outputs" test43,
+                                     TestLabel "1Carr1Cbit_Size" test44,
+                                     TestLabel "Mixed_Inputs" test45,
+                                     TestLabel "Mixed_Gates" test46,
+                                     TestLabel "Mixed_Outputs" test47,
+                                     TestLabel "Mixed_Size" test48]
 
 main = defaultMain tests
