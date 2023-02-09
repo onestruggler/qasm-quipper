@@ -463,6 +463,25 @@ test78 = TestCase (assertEqual "toConstFloat: unknown function."
     where err = UnknownCall "xyz" 1
 
 -----------------------------------------------------------------------------------------
+-- Tau and Euler
+
+test79 = TestCase (assertEqual "toConstInt: Tau."
+                               (Right (BadType "angle") :: Either Int ExprErr)
+                               (toConstInt Tau))
+
+test80 = TestCase (assertEqual "toConstInt: Euler."
+                               (Right (BadType "float") :: Either Int ExprErr)
+                               (toConstInt Euler))
+
+test81 = TestCase (assertBool "toConstFloat: Tau."
+                              ((abs (6.28 - v)) < 0.01))
+    where Left v = toConstFloat Tau
+
+test82 = TestCase (assertBool "toConstFloat: Euler."
+                              ((abs (2.71 - v)) < 0.01))
+    where Left v = toConstFloat Euler
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores" test1,
@@ -542,6 +561,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores
                                      TestLabel "toConstFloat_Call_Test26" test75,
                                      TestLabel "toConstFloat_Call_Test27" test76,
                                      TestLabel "toConstFloat_Call_Test28" test77,
-                                     TestLabel "toConstFloat_Call_Test29" test78]
+                                     TestLabel "toConstFloat_Call_Test29" test78,
+                                     TestLabel "toConstInt_Tau" test79,
+                                     TestLabel "toConstInt_Euler" test80,
+                                     TestLabel "toConstFloat_Tau" test81,
+                                     TestLabel "toConstFloat_Euler" test82]
 
 main = defaultMain tests

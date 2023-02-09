@@ -49,7 +49,9 @@ tokens :-
     <0>             @decint \. @decint? @floatexp?    { charLex TokenFloat }
     <0>             @decint @floatexp                 { charLex TokenFloat }
     <0>             @decint                           { charLex TokenDecInt }
+    <0>             \x2107 | euler                    { charLex TokenEuler }
     <0>             \x3C0 | pi                        { charLex TokenPi }
+    <0>             \x3C4 | tau                       { charLex TokenTau }
     <0>             $idchars [$idchars $decimal]*     { charLex TokenID }
     -- Operators.
     <0>             \@                                { constLex TokenAt }
@@ -90,7 +92,9 @@ data TokenClass = TokenCtrl
                 | TokenQubit
                 | TokenFloat String
                 | TokenDecInt String
+                | TokenEuler String
                 | TokenPi String
+                | TokenTau String
                 | TokenID String
                 | TokenAt
                 | TokenPlus
@@ -110,29 +114,31 @@ data Token = Token AlexPosn TokenClass deriving (Show)
 
 -- Converts tokens into strings for nicer error messages.
 unlex :: TokenClass -> String
-unlex TokenCtrl       = "ctrl"
-unlex TokenNegCtrl    = "negctrl"
-unlex TokenInv        = "inv"
-unlex TokenPow        = "pow"
-unlex TokenGPhase     = "gphase"
-unlex TokenQReg       = "qreg"
-unlex TokenQubit      = "qubit"
-unlex (TokenFloat x)  = (show x)
-unlex (TokenDecInt x) = (show x)
-unlex (TokenPi tok)   = (show tok)
-unlex (TokenID str)   = (show str)
-unlex TokenAt         = "@"
-unlex TokenPlus       = "+"
-unlex TokenMinus      = "-"
-unlex TokenStar       = "*"
-unlex TokenSlash      = "/"
-unlex TokenLParen     = "("
-unlex TokenRParen     = ")"
-unlex TokenLBrack     = "["
-unlex TokenRBrack     = "]"
-unlex TokenComma      = ","
-unlex TokenSemicolon  = ";"
-unlex TokenEOF        = "<EOF>"
+unlex TokenCtrl        = "ctrl"
+unlex TokenNegCtrl     = "negctrl"
+unlex TokenInv         = "inv"
+unlex TokenPow         = "pow"
+unlex TokenGPhase      = "gphase"
+unlex TokenQReg        = "qreg"
+unlex TokenQubit       = "qubit"
+unlex (TokenFloat x)   = show x
+unlex (TokenDecInt x)  = show x
+unlex (TokenEuler tok) = show tok
+unlex (TokenPi tok)    = show tok
+unlex (TokenTau tok)   = show tok
+unlex (TokenID str)    = show str
+unlex TokenAt          = "@"
+unlex TokenPlus        = "+"
+unlex TokenMinus       = "-"
+unlex TokenStar        = "*"
+unlex TokenSlash       = "/"
+unlex TokenLParen      = "("
+unlex TokenRParen      = ")"
+unlex TokenLBrack      = "["
+unlex TokenRBrack      = "]"
+unlex TokenComma       = ","
+unlex TokenSemicolon   = ";"
+unlex TokenEOF         = "<EOF>"
 
 alexEOF :: Alex Token
 alexEOF = do

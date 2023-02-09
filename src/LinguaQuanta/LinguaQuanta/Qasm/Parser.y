@@ -24,7 +24,9 @@ import LinguaQuanta.Qasm.Language
     qubit           { Token _ TokenQubit }
     float           { Token _ (TokenFloat $$) }
     decint          { Token _ (TokenDecInt $$) }
+    euler           { Token _ (TokenEuler $$) }
     pi              { Token _ (TokenPi $$) }
+    tau             { Token _ (TokenTau $$) }
     id              { Token _ (TokenID $$) }
     '@'             { Token _ TokenAt }
     '+'             { Token _ TokenPlus }
@@ -87,7 +89,9 @@ Expr : Expr '+' Expr                        { Plus $1 $3 }
      | '(' Expr ')'                         { Brack $2 }
      | '-' Expr %prec NEG                   { Negate $2 }
      | id '(' ExprList ')'                  { Call $1 $3 }
+     | euler                                { Euler }
      | pi                                   { Pi }
+     | tau                                  { Tau }
      | float                                { DecFloat $1 }
      | decint                               { DecInt $1 }
      | id                                   { QasmId $1 }

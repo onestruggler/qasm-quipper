@@ -11,7 +11,9 @@ data Expr = Plus Expr Expr
           | Div Expr Expr
           | Brack Expr
           | Negate Expr
+          | Euler
           | Pi
+          | Tau
           | DecFloat String
           | DecInt String
           | QasmId String
