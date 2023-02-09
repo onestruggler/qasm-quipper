@@ -86,6 +86,7 @@ Expr : Expr '+' Expr                        { Plus $1 $3 }
      | Expr '/' Expr                        { Div $1 $3 }
      | '(' Expr ')'                         { Brack $2 }
      | '-' Expr %prec NEG                   { Negate $2 }
+     | id '(' ExprList ')'                  { Call $1 $3 }
      | pi                                   { Pi }
      | float                                { DecFloat $1 }
      | decint                               { DecInt $1 }

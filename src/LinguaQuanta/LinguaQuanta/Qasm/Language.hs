@@ -15,6 +15,7 @@ data Expr = Plus Expr Expr
           | DecFloat String
           | DecInt String
           | QasmId String
+          | Call String [Expr]
           deriving (Show, Eq)
 
 data GateOperand = QVar String

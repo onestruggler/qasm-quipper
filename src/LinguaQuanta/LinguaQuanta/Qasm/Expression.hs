@@ -28,6 +28,9 @@ import Quantum.Synthesis.SymReal as SR
 
 data ExprErr = BadType String
              | NonConstId String
+             | NegIntExp Int
+             | UnknownCall String Int
+             | CallArityMismatch String Int Int
              deriving (Show, Eq)
 
 type ExprEval a = Either a ExprErr
@@ -71,25 +74,62 @@ readFloat = read . padFloat . (filter (/= '_'))
 -- type (op), and two expressions (lhs and rhs). If (f lhs) evaluates to v1 and
 -- (f rhs) evaluates to v2, then returns (op v1 v2). Otherwise, returns the
 -- first error value produced by f.
-applyBinaryOp :: ExprEvalFn a -> (a -> a -> a) -> Expr -> Expr -> ExprEval a
+applyBinaryOp :: ExprEvalFn a -> (a -> a -> b) -> Expr -> Expr -> ExprEval b
 applyBinaryOp f op lhs rhs =
     case f lhs of
         Left x -> case f rhs of
-            Left y  -> Left (op x y)
+            Left y  -> Left $ op x y
             Right e -> Right e
         Right e -> Right e
 
 -- | Consumes an evaluation function (f), a unary operation on the evaluation
 -- type (op), and an expression (expr). If (f expr) evaluates to v, then
 -- returns (op v). Otherwise, returns the first error value produced by f.
-applyUnaryOp :: ExprEvalFn a -> (a -> a) -> Expr -> ExprEval a
+applyUnaryOp :: ExprEvalFn a -> (a -> b) -> Expr -> ExprEval b
 applyUnaryOp f op expr =
     case f expr of
-        Left x  -> Left (op x)
+        Left x  -> Left $ op x
         Right e -> Right e
+
+-- | Consumes the name of a function (id), an evaluation function (f), a unary
+-- operation on the evaluation type (op), and a list of arguments (args). If
+-- args has length 1 and (f $ head args) evalues to v, then returns (op v).
+-- Otherwise, returns the first error value produced by f.
+applyUnaryFn :: String -> ExprEvalFn a -> (a -> b) -> [Expr] -> ExprEval b
+applyUnaryFn _  f call [arg] = applyUnaryOp f call arg
+applyUnaryFn id _ _    args  = Right $ CallArityMismatch id actual 1
+    where actual = length args
+
+-- | Consumes the name of a function (id), an evaluation function (f), a binary
+-- operation on the evaluation type (op), and a list of arguments (args). If
+-- args has length 2, (f $ head args) evaluates to v1 and (f $ head $ tail args)
+-- evaluates to v2, then returns (op v1 v2). Otherwise, returns the first error
+-- value produced by f.
+applyBinaryFn :: String -> ExprEvalFn a -> (a -> a -> b) -> [Expr] -> ExprEval b
+applyBinaryFn _  f call [a1, a2] = applyBinaryOp f call a1 a2
+applyBinaryFn id _ _    args     = Right $ CallArityMismatch id actual 2
+    where actual = length args
 
 -------------------------------------------------------------------------------
 -- * Evaluation Methods.
+
+-- | Evaluates a function call as a constant integer literal. If the evaluation
+-- is possible, then the corresponding integer is returned. Otherwise, returns
+-- an error describing the first failure.
+callToConstInt :: String -> [Expr] -> ExprEval Int
+callToConstInt name args
+    | name == "mod" = applyBinaryFn name toConstInt rem args
+    | name == "pow" = case args of
+        [arg1, arg2] -> case toConstInt arg1 of
+            Left a -> case toConstInt arg2 of
+                Left b -> if b < 0
+                          then Right $ NegIntExp b
+                          else Left $ a^b
+                Right e -> Right e
+            Right e -> Right e
+        _ -> Right $ CallArityMismatch name actual 2
+    | otherwise = Right $ UnknownCall name actual
+    where actual = length args
 
 -- | Evaluates an expression as a constant integer literal. If the evaluation
 -- is possible, then the corresponding integer is returned. Otherwise, returns
@@ -101,10 +141,36 @@ toConstInt (Qasm.Times lhs rhs) = applyBinaryOp toConstInt (*) lhs rhs
 toConstInt (Qasm.Div lhs rhs)   = applyBinaryOp toConstInt div lhs rhs
 toConstInt (Qasm.Brack expr)    = toConstInt expr
 toConstInt (Qasm.Negate expr)   = applyUnaryOp toConstInt (\x -> -x) expr
+toConstInt (Qasm.Call str args) = callToConstInt str args
 toConstInt Qasm.Pi              = Right $ BadType "angle"
 toConstInt (Qasm.DecFloat _)    = Right $ BadType "float"
 toConstInt (Qasm.DecInt str)    = Left $ readDecInt str
 toConstInt (Qasm.QasmId str)    = Right $ NonConstId str
+
+-- | Converts an OpenQASM function call to a SymReal expression. If the
+-- conversion is possible, then the corresponding symbolic real is returned.
+-- Otherwise, returns an error describing the first failure.
+--
+-- Note: Conversion to symbolic reals requries compile-time integers or floats.
+callToSymReal :: String -> [Expr] -> ExprEval SymReal
+callToSymReal name args
+    | name == "arccos"  = applyUnaryFn  name toSymReal    SR.ACos   args
+    | name == "arcsin"  = applyUnaryFn  name toSymReal    SR.ASin   args
+    | name == "arctan"  = applyUnaryFn  name toSymReal    SR.ATan   args
+    | name == "cos"     = applyUnaryFn  name toSymReal    SR.Cos    args
+    | name == "sin"     = applyUnaryFn  name toSymReal    SR.Sin    args
+    | name == "tan"     = applyUnaryFn  name toSymReal    SR.Tan    args
+    | name == "exp"     = applyUnaryFn  name toSymReal    SR.Exp    args
+    | name == "sqrt"    = applyUnaryFn  name toSymReal    SR.Sqrt   args
+    | name == "log"     = applyUnaryFn  name toSymReal    SR.Log    args
+    | name == "pow"     = applyBinaryFn name toSymReal    SR.Power  args
+    | name == "ceiling" = applyUnaryFn  name toConstFloat srCeiling args
+    | name == "floor"   = applyUnaryFn  name toConstFloat srFloor   args
+    | name == "mod"     = applyBinaryFn name toConstFloat srMod     args
+    | otherwise         = Right $ UnknownCall name $ length args
+    where srCeiling  = SR.Const . ceiling
+          srFloor    = SR.Const . floor
+          srMod a b  = SR.Const $ rem (floor a) (floor b)
 
 -- | Converts an OpenQASM expression to a SymReal expression. If the conversion
 -- is possible, then the corresponding symbolic real is returned. Otherwise,
@@ -118,6 +184,7 @@ toSymReal (Qasm.Times lhs rhs) = applyBinaryOp toSymReal SR.Times lhs rhs
 toSymReal (Qasm.Div lhs rhs)   = applyBinaryOp toSymReal SR.Div lhs rhs
 toSymReal (Qasm.Brack expr)    = toSymReal expr
 toSymReal (Qasm.Negate expr)   = applyUnaryOp toSymReal SR.Negate expr
+toSymReal (Qasm.Call str args) = callToSymReal str args
 toSymReal Qasm.Pi              = Left $ SR.Pi
 toSymReal (Qasm.DecInt str)    = Left $ SR.Const $ toInteger $ readDecInt str
 toSymReal (Qasm.QasmId str)    = Right $ NonConstId str

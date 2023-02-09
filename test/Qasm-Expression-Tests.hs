@@ -229,6 +229,240 @@ test41 = TestCase (assertEqual "toConstFloat: error detection."
                                (toConstFloat floaterr))
 
 -----------------------------------------------------------------------------------------
+-- Constant Integer Calls
+
+call1 = Call "mod" [DecInt "5", DecInt "3"]
+
+call2 = Call "mod" [expr2, expr2]
+
+call3 = Call "pow" [expr1, expr2]
+
+call4 = Call "pow" [expr2, expr2]
+
+call5 = Call "mod" [expr1]
+
+call6 = Call "pow" [expr1, expr1, expr1]
+
+call7 = Call "xyz" [expr1]
+
+call8 = Call "pow" [expr2, Negate expr2]
+
+test42 = TestCase (assertEqual "toConstInt: mod (1/2)."
+                              (Left 2 :: Either Int ExprErr)
+                              (toConstInt call1))
+
+test43 = TestCase (assertEqual "toConstInt: mod (2/2)."
+                              (Left 0 :: Either Int ExprErr)
+                              (toConstInt call2))
+
+test44 = TestCase (assertEqual "toConstInt: pow (1/2)."
+                              (Left 4096 :: Either Int ExprErr)
+                              (toConstInt call3))
+
+test45 = TestCase (assertEqual "toConstInt: pow (2/2)."
+                              (Left 27 :: Either Int ExprErr)
+                              (toConstInt call4))
+
+test46 = TestCase (assertEqual "toConstInt: mod arity."
+                               (Right err :: Either Int ExprErr)
+                               (toConstInt call5))
+    where err = CallArityMismatch "mod" 1 2
+
+test47 = TestCase (assertEqual "toConstInt: pow arity."
+                               (Right err :: Either Int ExprErr)
+                               (toConstInt call6))
+    where err = CallArityMismatch "pow" 3 2
+
+test48 = TestCase (assertEqual "toConstInt: unknown function."
+                               (Right err :: Either Int ExprErr)
+                               (toConstInt call7))
+    where err = UnknownCall "xyz" 1
+
+test49 = TestCase (assertEqual "toConstInt: unknown function."
+                               (Right (NegIntExp (-3)) :: Either Int ExprErr)
+                               (toConstInt call8))
+
+-----------------------------------------------------------------------------------------
+-- Symbolic Real Calls
+
+call9 = Call "arccos" [DecInt "1"]
+
+call10 = Call "arccos" [DecInt "-1"]
+
+call11 = Call "arcsin" [DecInt "1"]
+
+call12 = Call "arcsin" [DecInt "-1"]
+
+call13 = Call "arctan" [DecInt "0"]
+
+call14 = Call "arctan" [DecInt "1"]
+
+call15 = Call "cos" [Pi]
+
+call16 = Call "cos" [Div Pi $ DecInt "2"]
+
+call17 = Call "sin" [Pi]
+
+call18 = Call "sin" [Div Pi $ DecInt "2"]
+
+call19 = Call "tan" [DecInt "0"]
+
+call20 = Call "tan" [Div Pi $ DecInt "4"]
+
+call21 = Call "exp" [DecInt "0"]
+
+call22 = Call "exp" [DecInt "1"]
+
+call23 = Call "sqrt" [DecInt "4"]
+
+call24 = Call "sqrt" [DecInt "9"]
+
+call25 = Call "log" [DecInt "1"]
+
+call26 = Call "log" [DecFloat "2.71828"]
+
+call27 = Call "pow" [DecInt "4", DecFloat "0.5"]
+
+call28 = Call "pow" [DecInt "2", DecInt "-1"]
+
+call29 = Call "ceiling" [DecFloat "2.7"]
+
+call30 = Call "ceiling" [DecFloat "3.65"]
+
+call31 = Call "floor" [DecFloat "2.7"]
+
+call32 = Call "floor" [DecFloat "3.65"]
+
+call33 = Call "mod" [DecFloat "5.2", DecFloat "3.1"]
+
+call34 = Call "mod" [DecFloat "10.2", DecInt "5"]
+
+call35 = Call "arccos" [DecInt "1", DecInt "2"]
+
+call36 = Call "mod" [DecFloat "5.2"]
+
+call37 = Call "xyz" [DecFloat "5.2"]
+
+test50 = TestCase (assertEqual "toConstFloat: arccos (1/2)."
+                               (Left 0 :: Either Double ExprErr)
+                               (toConstFloat call9))
+
+test51 = TestCase (assertBool "toConstFloat: arccos (2/2)."
+                              ((abs (3.14 - v)) < 0.01))
+    where Left v = toConstFloat call10
+
+test52 = TestCase (assertBool "toConstFloat: arcsin (1/2)."
+                              ((abs (1.57 - v)) < 0.01))
+    where Left v = toConstFloat call11
+
+test53 = TestCase (assertBool "toConstFloat: arcsin (2/2)."
+                              ((abs (1.57 + v)) < 0.01))
+    where Left v = toConstFloat call12
+
+test54 = TestCase (assertEqual "toConstFloat: arctan (1/2)."
+                               (Left 0 :: Either Double ExprErr)
+                               (toConstFloat call13))
+
+test55 = TestCase (assertBool "toConstFloat: arctan (2/2)."
+                              ((abs (0.78 - v)) < 0.01))
+    where Left v = toConstFloat call14
+
+test56 = TestCase (assertEqual "toConstFloat: cos (1/2)."
+                               (Left (-1) :: Either Double ExprErr)
+                               (toConstFloat call15))
+
+test57 = TestCase (assertBool "toConstFloat: cos (2/2)."
+                              (abs v < 0.0001))
+    where Left v = toConstFloat call16
+
+test58 = TestCase (assertBool "toConstFloat: sin (1/2)."
+                              (abs v < 0.0001))
+    where Left v = toConstFloat call17
+
+test59 = TestCase (assertEqual "toConstFloat: sin (2/2)."
+                               (Left 1 :: Either Double ExprErr)
+                               (toConstFloat call18))
+
+test60 = TestCase (assertEqual "toConstFloat: tan (1/2)."
+                               (Left 0 :: Either Double ExprErr)
+                               (toConstFloat call19))
+
+test61 = TestCase (assertBool "toConstFloat: tan (2/2)."
+                              ((abs (1 - v)) < 0.0001))
+    where Left v = toConstFloat call20
+
+test62 = TestCase (assertEqual "toConstFloat: exp (1/2)."
+                               (Left 1 :: Either Double ExprErr)
+                               (toConstFloat call21))
+
+test63 = TestCase (assertBool "toConstFloat: exp (2/2)."
+                              ((abs (2.71 - v)) < 0.01))
+    where Left v = toConstFloat call22
+
+test64 = TestCase (assertEqual "toConstFloat: sqrt (1/2)."
+                               (Left 2 :: Either Double ExprErr)
+                               (toConstFloat call23))
+
+test65 = TestCase (assertEqual "toConstFloat: sqrt (2/2)."
+                               (Left 3 :: Either Double ExprErr)
+                               (toConstFloat call24))
+
+test66 = TestCase (assertEqual "toConstFloat: log (1/2)."
+                               (Left 0 :: Either Double ExprErr)
+                               (toConstFloat call25))
+
+test67 = TestCase (assertBool "toConstFloat: log (2/2)."
+                              ((abs (1 - v)) < 0.001))
+    where Left v = toConstFloat call26
+
+test68 = TestCase (assertEqual "toConstFloat: pow (1/2)."
+                               (Left 2.0 :: Either Double ExprErr)
+                               (toConstFloat call27))
+
+test69 = TestCase (assertEqual "toConstFloat: pow (2/2)."
+                               (Left 0.5 :: Either Double ExprErr)
+                               (toConstFloat call28))
+
+test70 = TestCase (assertEqual "toConstFloat: ceiling (1/2)."
+                               (Left 3 :: Either Double ExprErr)
+                               (toConstFloat call29))
+
+test71 = TestCase (assertEqual "toConstFloat: ceiling (2/2)."
+                               (Left 4 :: Either Double ExprErr)
+                               (toConstFloat call30))
+
+test72 = TestCase (assertEqual "toConstFloat: floor (1/2)."
+                               (Left 2 :: Either Double ExprErr)
+                               (toConstFloat call31))
+
+test73 = TestCase (assertEqual "toConstFloat: floor (2/2)."
+                               (Left 3 :: Either Double ExprErr)
+                               (toConstFloat call32))
+
+test74 = TestCase (assertEqual "toConstFloat: mod (1/2)."
+                               (Left 2 :: Either Double ExprErr)
+                               (toConstFloat call33))
+
+test75 = TestCase (assertEqual "toConstFloat: mod (2/2)."
+                               (Left 0 :: Either Double ExprErr)
+                               (toConstFloat call34))
+
+test76 = TestCase (assertEqual "toConstFloat: arccos arity."
+                               (Right err :: Either Double ExprErr)
+                               (toConstFloat call35))
+    where err = CallArityMismatch "arccos" 2 1
+
+test77 = TestCase (assertEqual "toConstFloat: mod arity."
+                               (Right err :: Either Double ExprErr)
+                               (toConstFloat call36))
+    where err = CallArityMismatch "mod" 1 2
+
+test78 = TestCase (assertEqual "toConstFloat: unknown function."
+                               (Right err :: Either Double ExprErr)
+                               (toConstFloat call37))
+    where err = UnknownCall "xyz" 1
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores" test1,
@@ -271,6 +505,43 @@ tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores
                                      TestLabel "toConstFloat_Test7" test38,
                                      TestLabel "toConstFloat_Test8" test39,
                                      TestLabel "toConstFloat_Test9" test40,
-                                     TestLabel "toConstFloat_Test10" test41]
+                                     TestLabel "toConstFloat_Test10" test41,
+                                     TestLabel "toConstInt_Call_Test1" test42,
+                                     TestLabel "toConstInt_Call_Test2" test43,
+                                     TestLabel "toConstInt_Call_Test3" test44,
+                                     TestLabel "toConstInt_Call_Test4" test45,
+                                     TestLabel "toConstInt_Call_Test5" test46,
+                                     TestLabel "toConstInt_Call_Test6" test47,
+                                     TestLabel "toConstInt_Call_Test7" test48,
+                                     TestLabel "toConstInt_Call_Test8" test49,
+                                     TestLabel "toConstFloat_Call_Test1" test50,
+                                     TestLabel "toConstFloat_Call_Test2" test51,
+                                     TestLabel "toConstFloat_Call_Test3" test52,
+                                     TestLabel "toConstFloat_Call_Test4" test53,
+                                     TestLabel "toConstFloat_Call_Test5" test54,
+                                     TestLabel "toConstFloat_Call_Test6" test55,
+                                     TestLabel "toConstFloat_Call_Test7" test56,
+                                     TestLabel "toConstFloat_Call_Test8" test57,
+                                     TestLabel "toConstFloat_Call_Test9" test58,
+                                     TestLabel "toConstFloat_Call_Test10" test59,
+                                     TestLabel "toConstFloat_Call_Test11" test60,
+                                     TestLabel "toConstFloat_Call_Test12" test61,
+                                     TestLabel "toConstFloat_Call_Test13" test62,
+                                     TestLabel "toConstFloat_Call_Test14" test63,
+                                     TestLabel "toConstFloat_Call_Test15" test64,
+                                     TestLabel "toConstFloat_Call_Test16" test65,
+                                     TestLabel "toConstFloat_Call_Test17" test66,
+                                     TestLabel "toConstFloat_Call_Test18" test67,
+                                     TestLabel "toConstFloat_Call_Test19" test68,
+                                     TestLabel "toConstFloat_Call_Test20" test69,
+                                     TestLabel "toConstFloat_Call_Test21" test70,
+                                     TestLabel "toConstFloat_Call_Test22" test71,
+                                     TestLabel "toConstFloat_Call_Test23" test72,
+                                     TestLabel "toConstFloat_Call_Test24" test73,
+                                     TestLabel "toConstFloat_Call_Test25" test74,
+                                     TestLabel "toConstFloat_Call_Test26" test75,
+                                     TestLabel "toConstFloat_Call_Test27" test76,
+                                     TestLabel "toConstFloat_Call_Test28" test77,
+                                     TestLabel "toConstFloat_Call_Test29" test78]
 
 main = defaultMain tests
