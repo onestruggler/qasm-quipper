@@ -37,6 +37,8 @@ translateGate wmap (QInitGate isOn id) = error msg
     where msg = "QInitGate translation not implemented."
 translateGate wmap (QTermGate isOn id) = error msg
     where msg = "QTermGate translation not implemented."
+translateGate qmap (QMeasGate w) = error msg
+    where msg = "QMeas translation not implemented."
 
 -- | Takes as input the body of a Quipper circuit or subroutine (given by a
 -- list of gates). Returns the body of an equivalent OpenQASM program (given by

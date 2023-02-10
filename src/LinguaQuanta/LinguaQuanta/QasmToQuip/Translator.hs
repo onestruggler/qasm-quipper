@@ -91,9 +91,11 @@ translateStmt wmap (AstBitDecl size name) =
     case allocate CWire name size wmap of
         Nothing    -> error $ "Duplicate bit allocation: " ++ name
         Just wmap' -> (wmap', [])
-translateStmt wmap (AstGateStmt n gate) =  (wmap', gates)
+translateStmt wmap (AstGateStmt n gate) = (wmap', gates)
     where (ops, gates) = translateGate wmap n gate
           wmap'        = updateOperands wmap (useScalar, useCell) ops
+translateStmt wmap (AstAssign decl index rval) = error msg
+    where msg = "Assignment translation not implemented."
 
 -- | Takes as input an allocation map and a list of AST statements. Returns the
 -- allocation map obtained by applying all statements in order, and a list of
