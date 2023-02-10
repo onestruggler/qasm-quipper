@@ -25,6 +25,10 @@ data GateOperand = QVar String
                  | QReg String Expr
                  deriving (Show, Eq)
 
+data LValue = CVar String
+            | CReg String Expr
+            deriving (Show, Eq)
+
 data GateExpr = NamedGateOp String [Expr] [GateOperand]
               | GPhaseOp Expr [GateOperand]
               | CtrlMod (Maybe Expr) GateExpr
@@ -44,4 +48,6 @@ data Type = BitT
 
 data Stmt = QasmGateStmt GateExpr
           | QasmDeclStmt Type String
+          | QasmAssignStmt LValue Expr
+          | QasmInitDeclStmt Type String Expr
           deriving (Show, Eq)

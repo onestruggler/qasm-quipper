@@ -12,6 +12,7 @@ import LinguaQuanta.Qasm.Expression
 import LinguaQuanta.Qasm.Gate
 import LinguaQuanta.Qasm.GateName
 import LinguaQuanta.Qasm.Language
+import LinguaQuanta.Qasm.Operand
 import LinguaQuanta.Qasm.Passes
 
 -------------------------------------------------------------------------------
@@ -120,6 +121,26 @@ test11 = TestCase (assertEqual "elimPow supports empty files."
           elim2 = AstGateStmt 0 gate2
           elim3 = AstGateStmt 0 gate3
 
+-------------------------------------------------------------------------------
+-- toAst: assignment
+
+qdecStmt = QasmDeclStmt QubitT "qvar"
+
+cdecAst = AstBitDecl Nothing "cvar"
+qdecAst = AstQubitDecl Nothing "qvar"
+asgnAst = AstAssign "cvar" Nothing $ QuipMeasure $ QRef "qvar"
+
+test12 = TestCase (assertEqual "toAst supports QasmAssignStmt."
+                               (Left [qdecAst, cdecAst, asgnAst])
+                               (toAst [qdecStmt, cdecStmt, asgnStmt]))
+    where asgnStmt = QasmAssignStmt (CVar "cvar") $ Call "QMeas" [QasmId "qvar"]
+          cdecStmt = QasmDeclStmt BitT "cvar"
+
+test13 = TestCase (assertEqual "toAst supports QasmInitDeclStmt."
+                               (Left [qdecAst, cdecAst, asgnAst])
+                               (toAst [qdecStmt, asgnStmt]))
+    where asgnStmt = QasmInitDeclStmt BitT "cvar" $  Call "QMeas" [QasmId "qvar"]
+
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
@@ -133,6 +154,8 @@ tests = hUnitTestToTests $ TestList [TestLabel "toAst_EmptyFile" test1,
                                      TestLabel "elimInv_UserDefinedErr" test8,
                                      TestLabel "elimInv_NativeErr" test9,
                                      TestLabel "elimPow_EmptyFile" test10,
-                                     TestLabel "elimPow_Basic" test11]
+                                     TestLabel "elimPow_Basic" test11,
+                                     TestLabel "toAst_Assign_Test1" test12,
+                                     TestLabel "toAst_Assign_Test2" test13]
 
 main = defaultMain tests

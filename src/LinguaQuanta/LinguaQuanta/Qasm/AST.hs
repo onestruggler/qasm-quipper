@@ -7,7 +7,7 @@ module LinguaQuanta.Qasm.AST where
 
 import LinguaQuanta.Qasm.Gate (Gate)
 import LinguaQuanta.Qasm.Language (Type)
-import LinguaQuanta.Qasm.Operand (Operand)
+import LinguaQuanta.Qasm.Operand (RValue)
 
 -------------------------------------------------------------------------------
 -- * AST Types.
@@ -15,4 +15,5 @@ import LinguaQuanta.Qasm.Operand (Operand)
 data AstStmt = AstGateStmt Int Gate
              | AstQubitDecl (Maybe Int) String
              | AstBitDecl (Maybe Int) String
+             | AstAssign String (Maybe Int) RValue
              deriving (Show, Eq)

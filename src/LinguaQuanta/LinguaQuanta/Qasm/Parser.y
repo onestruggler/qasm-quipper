@@ -28,6 +28,7 @@ import LinguaQuanta.Qasm.Language
     pi              { Token _ (TokenPi $$) }
     tau             { Token _ (TokenTau $$) }
     id              { Token _ (TokenID $$) }
+    '='             { Token _ TokenEquals }
     '@'             { Token _ TokenAt }
     '+'             { Token _ TokenPlus }
     '-'             { Token _ TokenMinus }
@@ -51,6 +52,7 @@ StmtList : Stmt                             { [$1] }
 Stmt : Gate ';'                             { QasmGateStmt $1 }
      | QubitDeclStmt                        { $1 }
      | BitDeclStmt                          { $1 }
+     | AssignStmt                           { $1 }
 
 Designator : '[' Expr ']'                   { $2 }
 
@@ -67,6 +69,12 @@ QubitDeclStmt : QubitType id ';'            { QasmDeclStmt $1 $2 }
 BitDeclStmt : BitType id ';'                { QasmDeclStmt $1 $2 }
             | creg id ';'                   { QasmDeclStmt BitT $2 }
             | creg id Designator ';'        { QasmDeclStmt (BitArrT $3) $2 }
+
+AssignStmt : BitType id '=' Expr ';'        { QasmInitDeclStmt $1 $2 $4 }
+           | LValue '=' Expr ';'            { QasmAssignStmt $1 $3 }
+
+LValue : id                                 { CVar $1 }
+       | id Designator                      { CReg $1 $2 }
 
 Gate : id GateOperands                      { NamedGateOp $1 [] $2 }
      | id '(' ExprList ')' GateOperands     { NamedGateOp $1 $3 $5 }

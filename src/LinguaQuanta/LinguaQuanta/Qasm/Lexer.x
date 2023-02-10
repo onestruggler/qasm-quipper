@@ -53,6 +53,8 @@ tokens :-
     <0>             \x3C0 | pi                        { charLex TokenPi }
     <0>             \x3C4 | tau                       { charLex TokenTau }
     <0>             $idchars [$idchars $decimal]*     { charLex TokenID }
+    -- Assignment.
+    <0>             \=                                { constLex TokenEquals }
     -- Operators.
     <0>             \@                                { constLex TokenAt }
     <0>             \+                                { constLex TokenPlus }
@@ -96,6 +98,7 @@ data TokenClass = TokenCtrl
                 | TokenPi String
                 | TokenTau String
                 | TokenID String
+                | TokenEquals
                 | TokenAt
                 | TokenPlus
                 | TokenMinus
@@ -127,6 +130,7 @@ unlex (TokenEuler tok) = show tok
 unlex (TokenPi tok)    = show tok
 unlex (TokenTau tok)   = show tok
 unlex (TokenID str)    = show str
+unlex TokenEquals      = "="
 unlex TokenAt          = "@"
 unlex TokenPlus        = "+"
 unlex TokenMinus       = "-"
