@@ -25,6 +25,7 @@ module LinguaQuanta.Qasm.Gate
 
 import LinguaQuanta.Qasm.Expression
   ( ExprErr(..)
+  , toArrayIndex
   , toConstInt
   )
 import LinguaQuanta.Qasm.GateName
@@ -38,6 +39,7 @@ import LinguaQuanta.Qasm.Language
   , GateOperand(..)
   , GateExpr(..)
   )
+import LinguaQuanta.Qasm.Operand (Operand(..))
 
 -------------------------------------------------------------------------------
 -- * Modifiers and Update Functions.
@@ -86,12 +88,6 @@ getCtrlList (GateMod _ ctrls) = ctrls
 -------------------------------------------------------------------------------
 -- * Gates and Decorator Functions.
 
--- | Abstract representation of a gate operand. In particular, all array cells
--- must be compile-time constants.
-data Operand = QRef String
-             | Cell String Int
-             deriving (Show, Eq)
-
 -- | Abstract representation of a gate: name, parameters, operands, and mods.
 data Gate = NamedGate GateName [Expr] [Operand] GateMod
           | GPhaseGate Expr [Operand] GateMod
@@ -127,8 +123,7 @@ isInverted (GPhaseGate _ _ mod)  = hasInversionMod mod
 
 data GateSummaryErr = NonConstParam ExprErr Expr
                     | NonPosParam Int Expr
-                    | NegArrIndex Int Expr
-                    | NonConstArrIndex ExprErr Expr
+                    | BadArrIndex ExprErr Expr
                     | UnexpectedParamCount Int Int
                     | UnexpectedOperandCount Int Int
                     deriving (Show, Eq)
@@ -160,11 +155,9 @@ tryParseParam expr =
 tryParseOperand :: GateOperand -> Either Operand GateSummaryErr
 tryParseOperand (QVar id) = Left $ QRef id
 tryParseOperand (QReg id idx) =
-    case toConstInt idx of
-        Left n -> if n >= 0
-                  then Left $ Cell id n
-                  else Right (NegArrIndex n idx)
-        Right err -> Right (NonConstArrIndex err idx)
+    case toArrayIndex idx of
+        Left n    -> Left $ Cell id n
+        Right err -> Right $ BadArrIndex err idx
 
 -- | Applies tryParseOperand to a list of GateOperands. The first error from
 -- left-to-right is returned.

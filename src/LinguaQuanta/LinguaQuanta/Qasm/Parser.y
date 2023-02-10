@@ -95,6 +95,7 @@ Expr : Expr '+' Expr                        { Plus $1 $3 }
      | float                                { DecFloat $1 }
      | decint                               { DecInt $1 }
      | id                                   { QasmId $1 }
+     | id Designator                        { QasmCell $1 $2 }
 
 GateOperands : GateOperand                  { [$1] }
              | GateOperand ',' GateOperands { $1 : $3 }

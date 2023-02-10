@@ -257,8 +257,8 @@ test41 = TestCase (assertBool "Inverted gate detected (2/2)."
 negOperandGate = NamedGateOp "x" [] [QReg "arr" (DecInt "-1")]
 nonConstOpGate = NamedGateOp "x" [] [QReg "arr" (QasmId "id")]
 
-negOperandErr = NegArrIndex (-1) (DecInt "-1")
-nonConstOpErr = NonConstArrIndex (NonConstId "id") (QasmId "id")
+negOperandErr = BadArrIndex (NegArrIdx (-1)) (DecInt "-1")
+nonConstOpErr = BadArrIndex (NonConstId "id") (QasmId "id")
 
 test42 = TestCase (assertEqual "Negative operand cells are rejected."
                                (Right negOperandErr :: Either (Int, Gate) GateSummaryErr)

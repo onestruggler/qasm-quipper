@@ -26,6 +26,7 @@ library
                        LinguaQuanta.Qasm.GateName
                        LinguaQuanta.Qasm.Inversion
                        LinguaQuanta.Qasm.Language
+                       LinguaQuanta.Qasm.Operand
                        LinguaQuanta.Qasm.Passes
                        LinguaQuanta.Qasm.Parser
                        LinguaQuanta.Qasm.Printer

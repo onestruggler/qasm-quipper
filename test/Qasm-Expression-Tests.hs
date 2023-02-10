@@ -5,6 +5,7 @@ import Test.Framework.Providers.HUnit
 import Test.HUnit
 import LinguaQuanta.Qasm.Expression
 import LinguaQuanta.Qasm.Language
+import LinguaQuanta.Qasm.Operand
 
 -----------------------------------------------------------------------------------------
 -- Useful Constructions
@@ -482,6 +483,51 @@ test82 = TestCase (assertBool "toConstFloat: Euler."
     where Left v = toConstFloat Euler
 
 -----------------------------------------------------------------------------------------
+-- Evaluating Non-Constant Cells.
+
+test83 = TestCase (assertEqual "toConstInt rejects QasmCell expressions."
+                               (Right (NonConstId "var") :: Either Int ExprErr)
+                               (toConstInt $ QasmCell "var" $ DecInt "1"))
+
+test84 = TestCase (assertEqual "toConstFloat rejects QasmCell expressions."
+                               (Right (NonConstId "var") :: Either Double ExprErr)
+                               (toConstFloat $ QasmCell "var" $ DecInt "1"))
+
+-----------------------------------------------------------------------------------------
+-- toRValue
+
+rval1 = Call "QMeas" [QasmId "q"]
+rval2 = Call "QMeas" [QasmCell "var" $ DecInt "5"]
+rval3 = Call "QMeas" [QasmId "q1", QasmId "Q2"]
+rval4 = Call "QMeas" [Pi]
+
+rvalerr1 = CallArityMismatch "QMeas" 2 1
+
+test85 = TestCase (assertEqual "toRValue: QMeas (1/3)."
+                               (Left (QuipMeasure $ QRef "q") :: Either RValue ExprErr)
+                               (toRValue rval1))
+
+test86 = TestCase (assertEqual "toRValue: QMeas (2/3)."
+                               (Left (QuipMeasure $ Cell "var" 5) :: Either RValue ExprErr)
+                               (toRValue rval2))
+
+test87 = TestCase (assertEqual "toRValue: QMeas (3/3)."
+                               (Left (QuipMeasure $ QRef "q") :: Either RValue ExprErr)
+                               (toRValue $ Brack $ Brack $ Brack rval1))
+
+test88 = TestCase (assertEqual "toRValue error, QMeas with too many arguments."
+                               (Right rvalerr1 :: Either RValue ExprErr)
+                               (toRValue rval3))
+
+test89 = TestCase (assertEqual "toRValue error, QMeas with non-operand expression."
+                               (Right NonOperandExpr :: Either RValue ExprErr)
+                               (toRValue rval4))
+
+test90 = TestCase (assertEqual "toRValue error, non-rvalue expression."
+                               (Right UnknownRValue :: Either RValue ExprErr)
+                               (toRValue Pi))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores" test1,
@@ -565,6 +611,14 @@ tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores
                                      TestLabel "toConstInt_Tau" test79,
                                      TestLabel "toConstInt_Euler" test80,
                                      TestLabel "toConstFloat_Tau" test81,
-                                     TestLabel "toConstFloat_Euler" test82]
+                                     TestLabel "toConstFloat_Euler" test82,
+                                     TestLabel "toConstInt_QasmCell" test83,
+                                     TestLabel "toConstFloat_QasmCell" test84,
+                                     TestLabel "toRValue_Test1" test85,
+                                     TestLabel "toRValue_Test2" test86,
+                                     TestLabel "toRValue_Test3" test87,
+                                     TestLabel "toRValue_Test4" test88,
+                                     TestLabel "toRValue_Test5" test89,
+                                     TestLabel "toRValue_Test6" test90]
 
 main = defaultMain tests

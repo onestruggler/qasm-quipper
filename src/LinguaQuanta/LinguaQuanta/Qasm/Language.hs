@@ -17,6 +17,7 @@ data Expr = Plus Expr Expr
           | DecFloat String
           | DecInt String
           | QasmId String
+          | QasmCell String Expr
           | Call String [Expr]
           deriving (Show, Eq)
 

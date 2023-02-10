@@ -5,8 +5,9 @@ module LinguaQuanta.Qasm.AST where
 -------------------------------------------------------------------------------
 -- * Import Section.
 
-import LinguaQuanta.Qasm.Gate (Gate(..))
-import LinguaQuanta.Qasm.Language (Type(..))
+import LinguaQuanta.Qasm.Gate (Gate)
+import LinguaQuanta.Qasm.Language (Type)
+import LinguaQuanta.Qasm.Operand (Operand)
 
 -------------------------------------------------------------------------------
 -- * AST Types.

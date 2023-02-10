@@ -6,6 +6,8 @@ module LinguaQuanta.Qasm.Expression
   , negateExpr
   , readDecInt
   , readFloat
+  , toArrayIndex
+  , toRValue
   , toConstFloat
   , toConstInt
   , zero
@@ -17,6 +19,10 @@ module LinguaQuanta.Qasm.Expression
 import LinguaQuanta.List (splitAtFirst)
 import LinguaQuanta.Qasm.Language (Expr)
 import LinguaQuanta.Qasm.Language as Qasm
+import LinguaQuanta.Qasm.Operand
+  ( Operand(..)
+  , RValue(..)
+  )
 import Quantum.Synthesis.SymReal
   ( SymReal
   , to_real
@@ -30,7 +36,10 @@ data ExprErr = BadType String
              | NonConstId String
              | NegIntExp Int
              | UnknownCall String Int
+             | UnknownRValue
              | CallArityMismatch String Int Int
+             | NegArrIdx Int
+             | NonOperandExpr
              deriving (Show, Eq)
 
 type ExprEval a = Either a ExprErr
@@ -111,6 +120,44 @@ applyBinaryFn id _ _    args     = Right $ CallArityMismatch id actual 2
     where actual = length args
 
 -------------------------------------------------------------------------------
+-- * Abstraction Methods.
+
+-- | Evaluates an expression as a an array index (i.e., a non-negative const
+-- integer). If the evaluation is possible, then the corresponding integer is
+-- returned. Otherwise, returns an error describing the first failure.
+toArrayIndex :: Expr -> ExprEval Int
+toArrayIndex expr =
+    case toConstInt expr of
+        Left n    -> if n >= 0 then Left n else Right $ NegArrIdx n
+        Right err -> Right err
+
+-- | Evaluates an expression as a quantum gate operand. If the evaluation is
+-- possible, then the corresponding integer is returned. Otherwise, returns an
+-- error describing the first failure.
+toOperand :: Expr -> ExprEval Operand
+toOperand (Brack expr)            = toOperand expr
+toOperand (Qasm.QasmId str)       = Left $ QRef str
+toOperand (Qasm.QasmCell str idx) =
+    case toArrayIndex idx of
+        Left n    -> Left $ Cell str n
+        Right err -> Right err
+toOperand _ = Right NonOperandExpr
+
+-- | Evaluates an expression as an r-value (i.e., a valid expression for the
+-- right-hand side of an assignment operation). If the evaluation is possible,
+-- then the corresponding integer is returned. Otherwise, returns an error
+-- describing the first failure.
+toRValue :: Expr -> ExprEval RValue
+toRValue (Brack expr)         = toRValue expr
+toRValue (Call "QMeas" [arg]) =
+    case toOperand arg of
+        Left op   -> Left $ QuipMeasure op
+        Right err -> Right err
+toRValue (Call "QMeas" args) = Right $ CallArityMismatch "QMeas" actual 1
+    where actual = length args
+toRValue _ = Right UnknownRValue
+
+-------------------------------------------------------------------------------
 -- * Evaluation Methods.
 
 -- | Evaluates a function call as a constant integer literal. If the evaluation
@@ -135,19 +182,20 @@ callToConstInt name args
 -- is possible, then the corresponding integer is returned. Otherwise, returns
 -- an error describing the first failure.
 toConstInt :: Expr -> ExprEval Int
-toConstInt (Qasm.Plus lhs rhs)  = applyBinaryOp toConstInt (+) lhs rhs 
-toConstInt (Qasm.Minus lhs rhs) = applyBinaryOp toConstInt (-) lhs rhs
-toConstInt (Qasm.Times lhs rhs) = applyBinaryOp toConstInt (*) lhs rhs
-toConstInt (Qasm.Div lhs rhs)   = applyBinaryOp toConstInt div lhs rhs
-toConstInt (Qasm.Brack expr)    = toConstInt expr
-toConstInt (Qasm.Negate expr)   = applyUnaryOp toConstInt (\x -> -x) expr
-toConstInt (Qasm.Call str args) = callToConstInt str args
-toConstInt Qasm.Euler           = Right $ BadType "float"
-toConstInt Qasm.Pi              = Right $ BadType "angle"
-toConstInt Qasm.Tau             = Right $ BadType "angle"
-toConstInt (Qasm.DecFloat _)    = Right $ BadType "float"
-toConstInt (Qasm.DecInt str)    = Left $ readDecInt str
-toConstInt (Qasm.QasmId str)    = Right $ NonConstId str
+toConstInt (Qasm.Plus lhs rhs)   = applyBinaryOp toConstInt (+) lhs rhs
+toConstInt (Qasm.Minus lhs rhs)  = applyBinaryOp toConstInt (-) lhs rhs
+toConstInt (Qasm.Times lhs rhs)  = applyBinaryOp toConstInt (*) lhs rhs
+toConstInt (Qasm.Div lhs rhs)    = applyBinaryOp toConstInt div lhs rhs
+toConstInt (Qasm.Brack expr)     = toConstInt expr
+toConstInt (Qasm.Negate expr)    = applyUnaryOp toConstInt (\x -> -x) expr
+toConstInt (Qasm.Call str args)  = callToConstInt str args
+toConstInt Qasm.Euler            = Right $ BadType "float"
+toConstInt Qasm.Pi               = Right $ BadType "angle"
+toConstInt Qasm.Tau              = Right $ BadType "angle"
+toConstInt (Qasm.DecFloat _)     = Right $ BadType "float"
+toConstInt (Qasm.DecInt str)     = Left $ readDecInt str
+toConstInt (Qasm.QasmId str)     = Right $ NonConstId str
+toConstInt (Qasm.QasmCell str _) = Right $ NonConstId str
 
 -- | Converts an OpenQASM function call to a SymReal expression. If the
 -- conversion is possible, then the corresponding symbolic real is returned.
@@ -180,19 +228,20 @@ callToSymReal name args
 --
 -- Note: Conversion to symbolic reals requries compile-time integers or floats.
 toSymReal :: Expr -> ExprEval SymReal
-toSymReal (Qasm.Plus lhs rhs)  = applyBinaryOp toSymReal SR.Plus lhs rhs
-toSymReal (Qasm.Minus lhs rhs) = applyBinaryOp toSymReal SR.Minus lhs rhs
-toSymReal (Qasm.Times lhs rhs) = applyBinaryOp toSymReal SR.Times lhs rhs
-toSymReal (Qasm.Div lhs rhs)   = applyBinaryOp toSymReal SR.Div lhs rhs
-toSymReal (Qasm.Brack expr)    = toSymReal expr
-toSymReal (Qasm.Negate expr)   = applyUnaryOp toSymReal SR.Negate expr
-toSymReal (Qasm.Call str args) = callToSymReal str args
-toSymReal Qasm.Euler           = Left $ SR.Euler
-toSymReal Qasm.Pi              = Left $ SR.Pi
-toSymReal Qasm.Tau             = Left $ SR.Times SR.Pi $ SR.Const 2
-toSymReal (Qasm.DecInt str)    = Left $ SR.Const $ toInteger $ readDecInt str
-toSymReal (Qasm.QasmId str)    = Right $ NonConstId str
-toSymReal (Qasm.DecFloat str)  = Left $ SR.Decimal val str
+toSymReal (Qasm.Plus lhs rhs)   = applyBinaryOp toSymReal SR.Plus lhs rhs
+toSymReal (Qasm.Minus lhs rhs)  = applyBinaryOp toSymReal SR.Minus lhs rhs
+toSymReal (Qasm.Times lhs rhs)  = applyBinaryOp toSymReal SR.Times lhs rhs
+toSymReal (Qasm.Div lhs rhs)    = applyBinaryOp toSymReal SR.Div lhs rhs
+toSymReal (Qasm.Brack expr)     = toSymReal expr
+toSymReal (Qasm.Negate expr)    = applyUnaryOp toSymReal SR.Negate expr
+toSymReal (Qasm.Call str args)  = callToSymReal str args
+toSymReal Qasm.Euler            = Left $ SR.Euler
+toSymReal Qasm.Pi               = Left $ SR.Pi
+toSymReal Qasm.Tau              = Left $ SR.Times SR.Pi $ SR.Const 2
+toSymReal (Qasm.DecInt str)     = Left $ SR.Const $ toInteger $ readDecInt str
+toSymReal (Qasm.QasmId str)     = Right $ NonConstId str
+toSymReal (Qasm.QasmCell str _) = Right $ NonConstId str
+toSymReal (Qasm.DecFloat str)   = Left $ SR.Decimal val str
     where val = toRational $ readFloat str
 
 -- | Evaluates an expression as a constant double literal. If the evaluation
