@@ -110,6 +110,67 @@ test19 = TestCase (assertEqual "getState handles missing allocations."
                                (getState 256 allocMixed))
 
 -----------------------------------------------------------------------------------------
+-- Tests state collapse
+
+Left (collapsedMap1, collapsedName1) = collapseState 5 allocMixed
+Left (collapsedMap2, collapsedName2) = collapseState 23 collapsedMap1
+
+test20 = TestCase (assertEqual "collapseState returns the correct names (1/2)."
+                               (Just "shadow_cwire_0" :: Maybe String)
+                               collapsedName1)
+
+test21 = TestCase (assertEqual "collapseState returns the correct names (2/2)."
+                               (Just "shadow_cwire_1" :: Maybe String)
+                               collapsedName2)
+
+test22 = TestCase (assertEqual "collapseState updates decalarations correctly (1/3)."
+                               "shadow_cwire_0"
+                               name)
+    where Just (QRef name) = getAllocation CWire 5 collapsedMap1
+
+test23 = TestCase (assertEqual "collapseState updates decalarations correctly (2/3)."
+                               "shadow_cwire_0"
+                               name)
+    where Just (QRef name) = getAllocation CWire 5 collapsedMap2
+
+test24 = TestCase (assertEqual "collapseState updates decalarations correctly (3/3)."
+                               "shadow_cwire_1"
+                               name)
+    where Just (QRef name) = getAllocation CWire 23 collapsedMap2
+
+
+test25 = TestCase (assertEqual "collapseState will not collapse classical wires."
+                               (BadWireState CWire)
+                               err)
+    where Right err = collapseState 5 collapsedMap2
+
+
+test26 = TestCase (assertEqual "collapseState will not collapse classical wires."
+                               (UnallocatedWire 100)
+                               err)
+    where Right err = collapseState 100 collapsedMap2
+
+test27 = TestCase (assertEqual "collapseState leaves other wires unchanged (1/5)."
+                               (Just QWire :: Maybe WireType)
+                               (getState 1 collapsedMap2))
+
+test28 = TestCase (assertEqual "collapseState leaves other wires unchanged (2/5)."
+                               (Just CWire :: Maybe WireType)
+                               (getState 3 collapsedMap2))
+
+test29 = TestCase (assertEqual "collapseState leaves other wires unchanged (3/5)."
+                               (Just CWire :: Maybe WireType)
+                               (getState 9 collapsedMap2))
+
+test30 = TestCase (assertEqual "collapseState leaves other wires unchanged (4/5)."
+                               (Just QWire :: Maybe WireType)
+                               (getState 50 collapsedMap2))
+
+test31 = TestCase (assertEqual "collapseState leaves other wires unchanged (5/5)."
+                               (Just CWire :: Maybe WireType)
+                               (getState 44 collapsedMap2))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "Empty_Allocation_1" test1,
@@ -130,6 +191,18 @@ tests = hUnitTestToTests $ TestList [TestLabel "Empty_Allocation_1" test1,
                                      TestLabel "Mixed_Allocation_BadID" test16,
                                      TestLabel "getState_QWire" test17,
                                      TestLabel "getState_CWire" test18,
-                                     TestLabel "getState_BadID" test19]
+                                     TestLabel "getState_BadID" test19,
+                                     TestLabel "collapseState_Names_1" test20,
+                                     TestLabel "collapseState_Names_2" test21,
+                                     TestLabel "collapseState_Allocs_1" test22,
+                                     TestLabel "collapseState_Allocs_2" test23,
+                                     TestLabel "collapseState_Allocs_3" test24,
+                                     TestLabel "collapseState_BadType" test25,
+                                     TestLabel "collapseState_NoAlloc" test26,
+                                     TestLabel "collapseState_Untouched_1" test27,
+                                     TestLabel "collapseState_Untouched_2" test28,
+                                     TestLabel "collapseState_Untouched_3" test29,
+                                     TestLabel "collapseState_Untouched_4" test30,
+                                     TestLabel "collapseState_Untouched_5" test31]
 
 main = defaultMain tests
