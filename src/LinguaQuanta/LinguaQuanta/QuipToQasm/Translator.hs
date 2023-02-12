@@ -38,9 +38,11 @@ translateGate wmap (RotGate name inv angle ins ctrls) = (wmap, stmts)
 translateGate wmap (PhaseGate t ctrls) = (wmap, stmts)
     where stmts = translGPhase wmap t ctrls
 translateGate wmap (QInitGate isOn id) = error msg
-    where msg = "QInitGate translation not implemented."
+    where msg = "QInit translation not implemented."
 translateGate wmap (QTermGate isOn id) = error msg
-    where msg = "QTermGate translation not implemented."
+    where msg = "QTerm translation not implemented."
+translateGate wmap (QDiscardGate id) = error msg
+    where msg = "QDiscard translation not implemented."
 translateGate wmap (QMeasGate w) = translateMeasurement wmap w
 
 -- | Takes as input the body of a Quipper circuit or subroutine (given by a

@@ -56,5 +56,6 @@ data Gate = NamedGate GateName InverseFlag [Wire] [Control]
           | PhaseGate Angle [Control]
           | QInitGate SetOnFlag Wire
           | QTermGate SetOnFlag Wire
+          | QDiscardGate Wire
           | QMeasGate Wire
           deriving (Show,Eq)

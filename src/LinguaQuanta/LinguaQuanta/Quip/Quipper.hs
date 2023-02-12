@@ -109,6 +109,7 @@ abstractGate (GPhase angle _ ctrls _) = Just gate
           gate   = PhaseGate angle qctrls
 abstractGate (QInit on wire _) = Just $ QInitGate on wire
 abstractGate (QTerm on wire _) = Just $ QTermGate on wire
+abstractGate (QDiscard wire)   = Just $ QDiscardGate wire
 abstractGate (QMeas wire)      = Just $ QMeasGate wire
 abstractGate (Comment _ _ _)   = Nothing
 
@@ -163,6 +164,7 @@ concretizeGate (PhaseGate angle ctrls) = gate
           gate   = GPhase angle [] qctrls False
 concretizeGate (QInitGate on wire) = QInit on wire False
 concretizeGate (QTermGate on wire) = QTerm on wire False
+concretizeGate (QDiscardGate wire) = QDiscard wire
 concretizeGate (QMeasGate wire)    = QMeas wire
 
 -- | Consumes a gate-based representation of a Quipper circuit. Returns the
