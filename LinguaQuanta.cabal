@@ -183,6 +183,11 @@ test-suite list-tests
   main-is:             List-Tests.hs
   type:                exitcode-stdio-1.0
 
+test-suite qasm-ast-tests
+  import:              basic-unit-test-props
+  main-is:             Qasm-AST-Tests.hs
+  type:                exitcode-stdio-1.0
+
 test-suite qasm-expression-tests
   import:              basic-unit-test-props
   main-is:             Qasm-Expression-Tests.hs
