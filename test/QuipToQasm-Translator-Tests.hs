@@ -7,6 +7,7 @@ import LinguaQuanta.Qasm.AST
 import LinguaQuanta.Qasm.Gate as Qasm
 import LinguaQuanta.Qasm.GateName as Qasm
 import LinguaQuanta.Qasm.Language
+import LinguaQuanta.Qasm.Operand
 import LinguaQuanta.Quip.Gate as Quip
 import LinguaQuanta.Quip.GateName as Quip
 import LinguaQuanta.Quip.Quipper
@@ -14,7 +15,7 @@ import LinguaQuanta.QuipToQasm.Translator
 
 import qualified Data.IntMap.Strict as IntMap
 
--------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------
 -- * Wire Tests
 
 iomap_1 = IntMap.empty
@@ -107,7 +108,7 @@ test10 = TestCase (assertEqual "Can convert mixed unitary gates."
                               [dstmt1, gstmt1, gstmt2, gstmt3, gstmt4]
                               (translate $ make_gate_circ [gate1, gate2, gate3, gate4]))
 
--------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------
 -- * Classical Wire Tests
 
 iomap_5 = IntMap.fromList[(1, QWire), (3, CWire)]
@@ -139,6 +140,19 @@ test15 = TestCase (assertEqual "Can convert a 2-to-2 bit circuit (with qubits)."
                                (translate $ make_wire_circ iomap_6 iomap_6))
 
 -----------------------------------------------------------------------------------------
+-- * QMeas translations.
+
+test16 = TestCase (assertEqual "Can translate a sequence QMeas gates (no prep)."
+                               [AstQubitDecl (Just 5) "input_qwires",
+                                AstBitDecl Nothing "shadow_cwire_0",
+                                AstAssign "shadow_cwire_0" Nothing $ QuipMeasure target1,
+                                AstBitDecl Nothing "shadow_cwire_1",
+                                AstAssign "shadow_cwire_1" Nothing $ QuipMeasure target2]
+                               (translate $ make_gate_circ [QMeasGate 1, QMeasGate 3]))
+    where target1 = Cell "input_qwires" 1
+          target2 = Cell "input_qwires" 3
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "Empty_Circ_0_to_0" test1,
@@ -155,6 +169,7 @@ tests = hUnitTestToTests $ TestList [TestLabel "Empty_Circ_0_to_0" test1,
                                      TestLabel "Empty_Bit_Circ_1_to_1" test12,
                                      TestLabel "Empty_Bit_Circ_2_to_0" test13,
                                      TestLabel "Empty_Bit_Circ_2_to_1" test14,
-                                     TestLabel "Empty_Bit_Circ_2_to_2" test15]
+                                     TestLabel "Empty_Bit_Circ_2_to_2" test15,
+                                     TestLabel "QMeas_Without_Prep" test16]
 
 main = defaultMain tests
