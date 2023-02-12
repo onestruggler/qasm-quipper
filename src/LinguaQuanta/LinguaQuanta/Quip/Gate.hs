@@ -57,5 +57,8 @@ data Gate = NamedGate GateName InverseFlag [Wire] [Control]
           | QInitGate SetOnFlag Wire
           | QTermGate SetOnFlag Wire
           | QDiscardGate Wire
+          | CInitGate SetOnFlag Wire
+          | CTermGate SetOnFlag Wire
+          | CDiscardGate Wire
           | QMeasGate Wire
           deriving (Show,Eq)
