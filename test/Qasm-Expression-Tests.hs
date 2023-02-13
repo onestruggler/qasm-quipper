@@ -528,6 +528,77 @@ test90 = TestCase (assertEqual "toRValue error, non-rvalue expression."
                                (toRValue Pi))
 
 -----------------------------------------------------------------------------------------
+-- Ancilla RValues
+
+ancilla_rval1 = Call "CInit0" []
+ancilla_rval2 = Call "CInit1" []
+ancilla_rval3 = Call "CTerm0" []
+ancilla_rval4 = Call "CTerm1" []
+ancilla_rval5 = Call "CDiscard" []
+ancilla_error = Call "CInit0" [Pi]
+
+test91 = TestCase (assertEqual "toRValue: ancillas (1/5)."
+                               (Left QuipCInit0 :: Either RValue ExprErr)
+                               (toRValue ancilla_rval1))
+
+test92 = TestCase (assertEqual "toRValue: ancillas (2/5)."
+                               (Left QuipCInit1 :: Either RValue ExprErr)
+                               (toRValue ancilla_rval2))
+
+test93 = TestCase (assertEqual "toRValue: ancillas (3/5)."
+                               (Left QuipCTerm0 :: Either RValue ExprErr)
+                               (toRValue ancilla_rval3))
+
+test94 = TestCase (assertEqual "toRValue: ancillas (4/5)."
+                               (Left QuipCTerm1 :: Either RValue ExprErr)
+                               (toRValue ancilla_rval4))
+
+test95 = TestCase (assertEqual "toRValue: ancillas (5/5)."
+                               (Left QuipCDiscard :: Either RValue ExprErr)
+                               (toRValue ancilla_rval5))
+
+test96 = TestCase (assertEqual "toRValue rejects ancilla calls of incorrect arity."
+                               (Right error :: Either RValue ExprErr)
+                               (toRValue ancilla_error))
+    where error = CallArityMismatch "CInit0" 1 0
+
+-----------------------------------------------------------------------------------------
+-- toVoidCall
+
+test97 = TestCase (assertEqual "toVoidCall: ancillas (1/5)."
+                               (Left $ QuipQInit0 $ QRef "q" :: Either VoidCall ExprErr)
+                               (toVoidCall "QInit0" [QasmId "q"]))
+
+test98 = TestCase (assertEqual "toVoidCall: ancillas (2/5)."
+                               (Left $ QuipQInit1 $ QRef "qb" :: Either VoidCall ExprErr)
+                               (toVoidCall "QInit1" [QasmId "qb"]))
+
+test99 = TestCase (assertEqual "toVoidCall: ancillas (3/5)."
+                               (Left $ QuipQTerm0 $ Cell "qs" 4 :: Either VoidCall ExprErr)
+                               (toVoidCall "QTerm0" [QasmCell "qs" $ DecInt "4"]))
+
+test100 = TestCase (assertEqual "toVoidCall: ancillas (4/5)."
+                                (Left $ QuipQTerm1 $ Cell "r" 7 :: Either VoidCall ExprErr)
+                                (toVoidCall "QTerm1" [QasmCell "r" $ DecInt "7"]))
+
+test101 = TestCase (assertEqual "toVoidCall: ancillas (5/5)."
+                                (Left $ QuipQDiscard $ QRef "x" :: Either VoidCall ExprErr)
+                                (toVoidCall "QDiscard" [QasmId "x"]))
+
+test102 = TestCase (assertEqual "toVoidCall rejects unknown calls."
+                                (Right $ UnknownCall "blah" 1 :: Either VoidCall ExprErr)
+                                (toVoidCall "blah" [QasmId "x"]))
+
+test103 = TestCase (assertEqual "toVoidCall rejects non-operands parameters."
+                                (Right NonOperandExpr :: Either VoidCall ExprErr)
+                                (toVoidCall "QDiscard" [Pi]))
+
+test104 = TestCase (assertEqual "toVoidCall rejects calls of incorrect arity."
+                                (Right error :: Either VoidCall ExprErr)
+                                (toVoidCall "QInit0" [QasmId "x", QasmId "y"]))
+    where error = CallArityMismatch "QInit0" 2 1
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores" test1,
@@ -619,6 +690,20 @@ tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores
                                      TestLabel "toRValue_Test3" test87,
                                      TestLabel "toRValue_Test4" test88,
                                      TestLabel "toRValue_Test5" test89,
-                                     TestLabel "toRValue_Test6" test90]
+                                     TestLabel "toRValue_Test6" test90,
+                                     TestLabel "toRValue_Ancilla_Test1" test91,
+                                     TestLabel "toRValue_Ancilla_Test2" test92,
+                                     TestLabel "toRValue_Ancilla_Test3" test93,
+                                     TestLabel "toRValue_Ancilla_Test4" test94,
+                                     TestLabel "toRValue_Ancilla_Test5" test95,
+                                     TestLabel "toRValue_Ancilla_Error" test96,
+                                     TestLabel "toVoidCall_Ancilla_Test1" test97,
+                                     TestLabel "toVoidCall_Ancilla_Test2" test98,
+                                     TestLabel "toVoidCall_Ancilla_Test3" test99,
+                                     TestLabel "toVoidCall_Ancilla_Test4" test100,
+                                     TestLabel "toVoidCall_Ancilla_Test5" test101,
+                                     TestLabel "toVoidCall_Unknown_Error" test102,
+                                     TestLabel "toVoidCall_NonOperand_Error" test103,
+                                     TestLabel "toVoidCall_Arity_Error" test104]
 
 main = defaultMain tests

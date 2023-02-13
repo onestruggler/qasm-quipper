@@ -7,9 +7,10 @@ module LinguaQuanta.Qasm.Expression
   , readDecInt
   , readFloat
   , toArrayIndex
-  , toRValue
   , toConstFloat
   , toConstInt
+  , toRValue
+  , toVoidCall
   , zero
   ) where
 
@@ -22,6 +23,7 @@ import LinguaQuanta.Qasm.Language as Qasm
 import LinguaQuanta.Qasm.Operand
   ( Operand(..)
   , RValue(..)
+  , VoidCall(..)
   )
 import Quantum.Synthesis.SymReal
   ( SymReal
@@ -143,19 +145,51 @@ toOperand (Qasm.QasmCell str idx) =
         Right err -> Right err
 toOperand _ = Right NonOperandExpr
 
+-- | Takes as input a function name, a unary call of input type Operand, and a
+-- list of arguments. If the argument list evaluates to a single operand, then
+-- the unary call is applied to given operand with the bound call returned.
+-- Otherwise, returns an error describing the first failure.
+operandToCall :: String -> (Operand -> a) -> [Expr] -> ExprEval a
+operandToCall name ctor [arg] =
+    case toOperand arg of
+        Left op   -> Left $ ctor op
+        Right err -> Right err
+operandToCall name _ args = Right $ CallArityMismatch name actual 1
+    where actual = length args
+
+-- | Takes as input a function name, a nullary call, and a list of arguments.
+-- If the argument list is empty, then the nullary call is returned. Otherwise,
+-- a CallArityMismatch error is returned.
+toNullaryCall :: String -> a -> [Expr] -> ExprEval a
+toNullaryCall name call []   = Left call
+toNullaryCall name _    args = Right $ CallArityMismatch name actual 0
+    where actual = length args
+
 -- | Evaluates an expression as an r-value (i.e., a valid expression for the
 -- right-hand side of an assignment operation). If the evaluation is possible,
--- then the corresponding integer is returned. Otherwise, returns an error
+-- then the corresponding RValue is returned. Otherwise, returns an error
 -- describing the first failure.
 toRValue :: Expr -> ExprEval RValue
-toRValue (Brack expr)         = toRValue expr
-toRValue (Call "QMeas" [arg]) =
-    case toOperand arg of
-        Left op   -> Left $ QuipMeasure op
-        Right err -> Right err
-toRValue (Call "QMeas" args) = Right $ CallArityMismatch "QMeas" actual 1
-    where actual = length args
-toRValue _ = Right UnknownRValue
+toRValue (Brack expr)                = toRValue expr
+toRValue (Call name@"QMeas" args)    = operandToCall name QuipMeasure  args
+toRValue (Call name@"CInit0" args)   = toNullaryCall name QuipCInit0   args
+toRValue (Call name@"CInit1" args)   = toNullaryCall name QuipCInit1   args
+toRValue (Call name@"CTerm0" args)   = toNullaryCall name QuipCTerm0   args
+toRValue (Call name@"CTerm1" args)   = toNullaryCall name QuipCTerm1   args
+toRValue (Call name@"CDiscard" args) = toNullaryCall name QuipCDiscard args
+toRValue _                           = Right UnknownRValue
+
+-- | Takes as input a string (name) and a list of expressions (args). Evaluates
+-- the inputs as a expression (Call name args) of void return type. If the
+-- evaluation is possible, then the corresponding VoidCall is returned.
+-- Otherwise, returns an error describing the first failure.
+toVoidCall :: String -> [Expr] -> ExprEval VoidCall
+toVoidCall name@"QInit0"   args = operandToCall name QuipQInit0   args
+toVoidCall name@"QInit1"   args = operandToCall name QuipQInit1   args
+toVoidCall name@"QTerm0"   args = operandToCall name QuipQTerm0   args
+toVoidCall name@"QTerm1"   args = operandToCall name QuipQTerm1   args
+toVoidCall name@"QDiscard" args = operandToCall name QuipQDiscard args
+toVoidCall name            args = Right $ UnknownCall name $ length args
 
 -------------------------------------------------------------------------------
 -- * Evaluation Methods.
