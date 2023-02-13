@@ -13,6 +13,7 @@ import LinguaQuanta.Qasm.Language (Type)
 import LinguaQuanta.Qasm.Operand
   ( Operand(..)
   , RValue
+  , VoidCall
   )
 
 -------------------------------------------------------------------------------
@@ -24,6 +25,7 @@ data AstStmt = AstGateStmt Int Gate
              | AstQubitDecl (Maybe Int) String
              | AstBitDecl (Maybe Int) String
              | AstAssign String (Maybe Int) RValue
+             | AstCall VoidCall
              deriving (Show, Eq)
 
 -------------------------------------------------------------------------------

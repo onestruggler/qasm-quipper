@@ -53,6 +53,7 @@ Stmt : Gate ';'                             { QasmGateStmt $1 }
      | QubitDeclStmt                        { $1 }
      | BitDeclStmt                          { $1 }
      | AssignStmt                           { $1 }
+     | Expr ';'                             { QasmExprStmt $1 }
 
 Designator : '[' Expr ']'                   { $2 }
 
@@ -97,6 +98,7 @@ Expr : Expr '+' Expr                        { Plus $1 $3 }
      | '(' Expr ')'                         { Brack $2 }
      | '-' Expr %prec NEG                   { Negate $2 }
      | id '(' ExprList ')'                  { Call $1 $3 }
+     | id '(' ')'                           { Call $1 [] }
      | euler                                { Euler }
      | pi                                   { Pi }
      | tau                                  { Tau }

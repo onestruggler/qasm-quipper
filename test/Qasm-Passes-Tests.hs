@@ -125,6 +125,7 @@ test11 = TestCase (assertEqual "elimPow supports empty files."
 -- toAst: assignment
 
 qdecStmt = QasmDeclStmt QubitT "qvar"
+cdecStmt = QasmDeclStmt BitT   "cvar"
 
 cdecAst = AstBitDecl Nothing "cvar"
 qdecAst = AstQubitDecl Nothing "qvar"
@@ -141,6 +142,62 @@ test13 = TestCase (assertEqual "toAst supports QasmInitDeclStmt."
                                (toAst [qdecStmt, asgnStmt]))
     where asgnStmt = QasmInitDeclStmt BitT "cvar" $  Call "QMeas" [QasmId "qvar"]
 
+-------------------------------------------------------------------------------
+-- toAst: expression statements
+
+qterm0   = QasmExprStmt $ Call "QTerm0"   [QasmId "qvar"]
+qterm1   = QasmExprStmt $ Call "QTerm1"   [QasmId "qvar"]
+qinit0   = QasmExprStmt $ Call "QInit0"   [QasmId "qvar"]
+qinit1   = QasmExprStmt $ Call "QInit1"   [QasmId "qvar"]
+qdiscard = QasmExprStmt $ Call "QDiscard" [QasmId "qvar"]
+
+qterm0Ast   = AstCall $ QuipQTerm0   $ QRef "qvar"
+qterm1Ast   = AstCall $ QuipQTerm1   $ QRef "qvar"
+qinit0Ast   = AstCall $ QuipQInit0   $ QRef "qvar"
+qinit1Ast   = AstCall $ QuipQInit1   $ QRef "qvar"
+qdiscardAst = AstCall $ QuipQDiscard $ QRef "qvar"
+
+test14 = TestCase (assertEqual "toAst supports ancilla qbit function calls."
+                               (Left ast)
+                               (toAst prog))
+    where prog = [qdecStmt, qterm0,    qinit1,    qterm1,    qinit0,    qdiscard]
+          ast  = [qdecAst,  qterm0Ast, qinit1Ast, qterm1Ast, qinit0Ast, qdiscardAst]
+
+test15 = TestCase (assertEqual "toAst rejects invalid ancilla qbit function calls."
+                               (Right err :: Either [AstStmt] AbstractionErr)
+                               (toAst [qdecStmt, QasmExprStmt $ Call "QInit0" []]))
+    where err = VoidCallAbstractionErr 2 $ CallArityMismatch "QInit0" 0 1
+
+cterm0   = QasmAssignStmt (CVar "cvar") $ Call "CTerm0"   []
+cterm1   = QasmAssignStmt (CVar "cvar") $ Call "CTerm1"   []
+cinit0   = QasmAssignStmt (CVar "cvar") $ Call "CInit0"   []
+cinit1   = QasmAssignStmt (CVar "cvar") $ Call "CInit1"   []
+cdiscard = QasmAssignStmt (CVar "cvar") $ Call "CDiscard" []
+
+cterm0Ast   = AstAssign "cvar" Nothing QuipCTerm0
+cterm1Ast   = AstAssign "cvar" Nothing QuipCTerm1
+cinit0Ast   = AstAssign "cvar" Nothing QuipCInit0
+cinit1Ast   = AstAssign "cvar" Nothing QuipCInit1
+cdiscardAst = AstAssign "cvar" Nothing QuipCDiscard
+
+test16 = TestCase(assertEqual "toAst supports ancilla cbit function calls."
+                              (Left ast)
+                              (toAst prog))
+    where prog = [cdecStmt, cterm0,    cinit1,    cterm1,    cinit0,    cdiscard]
+          ast  = [cdecAst,  cterm0Ast, cinit1Ast, cterm1Ast, cinit0Ast, cdiscardAst]
+
+test17 = TestCase (assertEqual "toAst rejects invalid ancilla cbit function calls."
+                               (Right err :: Either [AstStmt] AbstractionErr)
+                               (toAst [cdecStmt, stmt]))
+    where stmt = QasmAssignStmt (CVar "cvar") $ Call "CTerm0" [QasmId "qvar"]
+          err  = RValueAbstractionErr 2 $ CallArityMismatch "CTerm0" 1 0
+
+test18 = TestCase (assertEqual "toAst strips outer brackets from expressions.."
+                               (Left ast :: Either [AstStmt] AbstractionErr)
+                               (toAst [cdecStmt, stmt]))
+    where stmt = QasmExprStmt $ Brack $ Call "QTerm0" [QasmId "qvar"]
+          ast  = [cdecAst,  qterm0Ast]
+
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
@@ -156,6 +213,11 @@ tests = hUnitTestToTests $ TestList [TestLabel "toAst_EmptyFile" test1,
                                      TestLabel "elimPow_EmptyFile" test10,
                                      TestLabel "elimPow_Basic" test11,
                                      TestLabel "toAst_Assign_Test1" test12,
-                                     TestLabel "toAst_Assign_Test2" test13]
+                                     TestLabel "toAst_Assign_Test2" test13,
+                                     TestLabel "toAst_Quantum_Ancilla" test14,
+                                     TestLabel "toAst_Quantum_Ancilla_Err" test15,
+                                     TestLabel "toAst_Classical_Ancilla" test16,
+                                     TestLabel "toAst_Classical_Ancilla_Err" test17,
+                                     TestLabel "toAst_ExprStmt_Brackets" test18]
 
 main = defaultMain tests

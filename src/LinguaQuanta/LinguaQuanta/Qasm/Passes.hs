@@ -17,6 +17,7 @@ import LinguaQuanta.Qasm.Expression
   , toArrayIndex
   , toConstInt
   , toRValue
+  , toVoidCall
   )
 import LinguaQuanta.Qasm.Inversion (invertGate)
 import LinguaQuanta.Qasm.Gate
@@ -27,7 +28,7 @@ import LinguaQuanta.Qasm.Gate
   )
 import LinguaQuanta.Qasm.GateName (GateName(UserDefined))
 import LinguaQuanta.Qasm.Language
-  ( Expr
+  ( Expr(..)
   , GateExpr
   , LValue(..)
   , Stmt(..)
@@ -64,6 +65,8 @@ applySafePerLinePass f (line:lines) = f line ++ applySafePerLinePass f lines
 data AbstractionErr = GateAbstractionErr Int GateSummaryErr
                     | ArrayLenAbstractionErr Int ExprErr
                     | RValueAbstractionErr Int ExprErr
+                    | VoidCallAbstractionErr Int ExprErr
+                    | UnknownExprStmt Int
                     | NonPosArrayLen Int
                     deriving (Show, Eq)
 
@@ -142,13 +145,32 @@ abstractQasmInitDecl ln ty decl rval =
             Right err  -> Right err
         Right err -> Right err
 
+-- | Consumes a line number (ln) and an expression (expr) intended to act as a
+-- statement. If expr evaluates to a valid expression statement, then the
+-- corresponding abstract statement is returned. Otherwise, an error for the
+-- first failure is returned. is returned.
+abstractQasmExprStmt :: Int -> Expr -> AbstractionRes
+abstractQasmExprStmt ln (Brack expr) = astmts
+    where astmts = abstractQasmExprStmt ln expr
+abstractQasmExprStmt ln (Call name args) =
+    case toVoidCall name args of
+        Left call -> Left [AstCall call]
+        Right err -> Right $ VoidCallAbstractionErr ln err
+abstractQasmExprStmt ln _ = Right $ UnknownExprStmt ln
+
 -- | Converts a single statement into a sequence of equivalent AST statements.
 -- If then conversion fails, then an appropriate abstraction error is returned.
 abstractStmt :: Int -> Stmt -> AbstractionRes
-abstractStmt ln (QasmGateStmt expr)             = abstractQasmGate ln expr
-abstractStmt ln (QasmDeclStmt ty decl)          = abstractQasmDecl ln ty decl
-abstractStmt ln (QasmAssignStmt lval rval)      = abstractQasmAssign ln lval rval
-abstractStmt ln (QasmInitDeclStmt ty decl rval) = abstractQasmInitDecl ln ty decl rval
+abstractStmt ln (QasmGateStmt expr) = astmts
+    where astmts = abstractQasmGate ln expr
+abstractStmt ln (QasmDeclStmt ty decl) = astmts
+    where astmts = abstractQasmDecl ln ty decl
+abstractStmt ln (QasmAssignStmt lval rval) = astmts
+    where astmts = abstractQasmAssign ln lval rval
+abstractStmt ln (QasmInitDeclStmt ty decl rval) = astmts
+    where astmts = abstractQasmInitDecl ln ty decl rval
+abstractStmt ln (QasmExprStmt expr) = astmts
+    where astmts = abstractQasmExprStmt ln expr
 
 -- | Converts a list of statements into an AST. If the conversion fails, then
 -- an appropriate abstraction error is returned.

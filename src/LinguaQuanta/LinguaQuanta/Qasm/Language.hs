@@ -50,4 +50,5 @@ data Stmt = QasmGateStmt GateExpr
           | QasmDeclStmt Type String
           | QasmAssignStmt LValue Expr
           | QasmInitDeclStmt Type String Expr
+          | QasmExprStmt Expr
           deriving (Show, Eq)

@@ -18,6 +18,7 @@ import LinguaQuanta.Qasm.Language (Expr(..))
 import LinguaQuanta.Qasm.Operand
   ( Operand(..)
   , RValue(..)
+  , VoidCall(..)
   )
 
 -------------------------------------------------------------------------------
@@ -140,6 +141,11 @@ printLValue _ id (Just index) = printOperand $ Cell id index
 -- the rvalue, adhering to the legacy flag.
 printRValue :: Bool -> RValue -> String
 printRValue _ (QuipMeasure operand) = "QMeas(" ++ printOperand operand ++ ")"
+printRValue _ QuipCInit0            = "CInit0()"
+printRValue _ QuipCInit1            = "CInit1()"
+printRValue _ QuipCTerm0            = "CTerm0()"
+printRValue _ QuipCTerm1            = "CTerm1()"
+printRValue _ QuipCDiscard          = "CDiscard()"
 
 -------------------------------------------------------------------------------
 -- * Statement Printing.
@@ -176,6 +182,15 @@ printAssign legacy id index rval = lstr ++ " = " ++ rstr ++ ";"
     where lstr = printLValue legacy id index
           rstr = printRValue legacy rval
 
+-- | Consumes a legacy flag and an instance of a void call. Returns a textual
+-- representation of the void call, adhering to the legacy flag.
+printCall :: Bool -> VoidCall -> String
+printCall _ (QuipQInit0 op)   = "QInit0(" ++ printOperand op ++ ");"
+printCall _ (QuipQInit1 op)   = "QInit1(" ++ printOperand op ++ ");"
+printCall _ (QuipQTerm0 op)   = "QTerm0(" ++ printOperand op ++ ");"
+printCall _ (QuipQTerm1 op)   = "QTerm1(" ++ printOperand op ++ ");"
+printCall _ (QuipQDiscard op) = "QDiscard(" ++ printOperand op ++ ");"
+
 -- | Concretizes a statement, and produces its syntactic representation.
 printAstStmt :: Bool -> AstStmt -> String
 printAstStmt legacy (AstGateStmt n gate) = powMod ++ gateStr ++ ";"
@@ -184,6 +199,7 @@ printAstStmt legacy (AstGateStmt n gate) = powMod ++ gateStr ++ ";"
 printAstStmt legacy (AstQubitDecl len decl)   = printQubitDecl legacy len decl
 printAstStmt legacy (AstBitDecl len decl)     = printBitDecl legacy len decl
 printAstStmt legacy (AstAssign id index rval) = printAssign legacy id index rval
+printAstStmt legacy (AstCall call)            = printCall legacy call
 
 -- | Concretizes each statement, and produces its syntactic representation.
 printAst :: Bool -> [AstStmt] -> [String]
