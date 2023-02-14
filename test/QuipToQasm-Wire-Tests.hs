@@ -138,14 +138,12 @@ test24 = TestCase (assertEqual "collapseState updates decalarations correctly (3
                                name)
     where Just (QRef name) = getAllocation CWire 23 collapsedMap2
 
-
 test25 = TestCase (assertEqual "collapseState will not collapse classical wires."
                                (BadWireState CWire)
                                err)
     where Right err = collapseState 5 collapsedMap2
 
-
-test26 = TestCase (assertEqual "collapseState will not collapse classical wires."
+test26 = TestCase (assertEqual "collapseState will reject unallocated wires."
                                (UnallocatedWire 100)
                                err)
     where Right err = collapseState 100 collapsedMap2
@@ -169,6 +167,65 @@ test30 = TestCase (assertEqual "collapseState leaves other wires unchanged (4/5)
 test31 = TestCase (assertEqual "collapseState leaves other wires unchanged (5/5)."
                                (Just CWire :: Maybe WireType)
                                (getState 44 collapsedMap2))
+
+-----------------------------------------------------------------------------------------
+-- Bit termination (and integration with state collapse)
+
+Left termMap1 = termCBit 3 allocMixed
+Left termMap2 = termQBit 23 allocMixed
+
+test32 = TestCase (assertEqual "termCBit sets classical bits to inactive states."
+                               (Nothing :: Maybe WireType)
+                               (getState 3 termMap1))
+
+test33 = TestCase (assertEqual "termQBit sets classical bits to inactive states."
+                               (Nothing :: Maybe WireType)
+                               (getState 23 termMap2))
+
+test34 = TestCase (assertEqual "termBitByType leaves other wires unchanged (1/5)."
+                               (Just QWire :: Maybe WireType)
+                               (getState 1 termMap2))
+
+test35 = TestCase (assertEqual "termBitByType leaves other wires unchanged (2/5)."
+                               (Just QWire :: Maybe WireType)
+                               (getState 5 termMap2))
+
+test36 = TestCase (assertEqual "termBitByType leaves other wires unchanged (3/5)."
+                               (Just CWire :: Maybe WireType)
+                               (getState 9 termMap2))
+
+test37 = TestCase (assertEqual "termBitByType leaves other wires unchanged (4/5)."
+                               (Just QWire :: Maybe WireType)
+                               (getState 50 termMap2))
+
+test38 = TestCase (assertEqual "termBitByType leaves other wires unchanged (5/5)."
+                               (Just CWire :: Maybe WireType)
+                               (getState 44 termMap2))
+
+test39 = TestCase (assertEqual "termCBit will not terminate quantum wires."
+                               (BadWireState QWire)
+                               err)
+    where Right err = termCBit 5 termMap2
+
+test40 = TestCase (assertEqual "termQBit will not terminate classical wires."
+                               (BadWireState CWire)
+                               err)
+    where Right err = termQBit 44 termMap2
+
+test41 = TestCase (assertEqual "termCBit will reject unallocated wires."
+                               (UnallocatedWire 100)
+                               err)
+    where Right err = termCBit 100 collapsedMap2
+
+test42 = TestCase (assertEqual "termQBit will reject unallocated wires."
+                               (UnallocatedWire 100)
+                               err)
+    where Right err = termQBit 100 collapsedMap2
+
+test43 = TestCase (assertEqual "collapseState will reject inactive wires."
+                               WireInactive
+                               err)
+    where Right err = collapseState 23 termMap2
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
@@ -203,6 +260,18 @@ tests = hUnitTestToTests $ TestList [TestLabel "Empty_Allocation_1" test1,
                                      TestLabel "collapseState_Untouched_2" test28,
                                      TestLabel "collapseState_Untouched_3" test29,
                                      TestLabel "collapseState_Untouched_4" test30,
-                                     TestLabel "collapseState_Untouched_5" test31]
+                                     TestLabel "collapseState_Untouched_5" test31,
+                                     TestLabel "termCBit_Valid" test32,
+                                     TestLabel "termQBit_Valid" test33,
+                                     TestLabel "termBitByType_Untouched_1" test34,
+                                     TestLabel "termBitByType_Untouched_2" test35,
+                                     TestLabel "termBitByType_Untouched_3" test36,
+                                     TestLabel "termBitByType_Untouched_4" test37,
+                                     TestLabel "termBitByType_Untouched_5" test38,
+                                     TestLabel "termCBit_TypeCheck" test39,
+                                     TestLabel "termQBit_TypeCheck" test40,
+                                     TestLabel "termCBit_AllocCheck" test41,
+                                     TestLabel "termQBit_AllocCheck" test42,
+                                     TestLabel "collapseState_HandleInactive" test43]
 
 main = defaultMain tests

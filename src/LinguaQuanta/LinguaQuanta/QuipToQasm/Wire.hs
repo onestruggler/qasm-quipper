@@ -8,6 +8,8 @@ module LinguaQuanta.QuipToQasm.Wire
   , collapseState
   , getAllocation
   , getState
+  , termCBit
+  , termQBit
   , translateQWireInputs
   , translateCWireInputs
   ) where
@@ -16,7 +18,10 @@ module LinguaQuanta.QuipToQasm.Wire
 -- * Import Section.
 
 import qualified Data.IntMap.Strict as IntMap
-import Data.Maybe (isNothing)
+import Data.Maybe
+  ( fromJust
+  , isNothing
+  )
 import LinguaQuanta.Maybe (branchJust)
 import LinguaQuanta.Qasm.AST (AstStmt(..))
 import LinguaQuanta.Qasm.Gate (Operand(..))
@@ -34,7 +39,7 @@ _IN_QWIRE_REG = "input_qwires"
 _IN_CWIRE_REG :: String
 _IN_CWIRE_REG = "input_cwires"
 
--- | The prefix for bits allocation mid-translation.
+-- | The prefix for classical bits allocation mid-translation.
 _DYN_CWIRE_REG :: String
 _DYN_CWIRE_REG = "shadow_cwire_"
 
@@ -57,7 +62,7 @@ translateCWireInputs n = [AstBitDecl (Just n) _IN_CWIRE_REG]
 -- Quipper wire may have both a qalloc and a calloc if type conversions occur.
 data DeclAllocation = DeclAllocation { qalloc :: Maybe Operand
                                      , calloc :: Maybe Operand
-                                     , state  :: WireType
+                                     , state  :: Maybe WireType
                                      } deriving (Show, Eq)
 
 -- | Maps wire identifies to their corresponding OpenQASM variables.
@@ -79,13 +84,13 @@ allocHelper []        _  _  map = map
 allocHelper ((id, QWire):pairs) qs cs map = allocHelper pairs (qs + 1) cs map'
     where alloc = DeclAllocation { qalloc = Just $ Cell _IN_QWIRE_REG qs
                                  , calloc = Nothing
-                                 , state  = QWire
+                                 , state  = Just QWire
                                  }
           map' = IntMap.insert id alloc map
 allocHelper ((id, CWire):pairs) qs cs map = allocHelper pairs qs (cs + 1) map'
     where alloc = DeclAllocation { qalloc = Nothing
                                  , calloc = Just $ Cell _IN_CWIRE_REG cs
-                                 , state  = CWire
+                                 , state  = Just CWire
                                  }
           map' = IntMap.insert id alloc map
 
@@ -105,8 +110,7 @@ getAllocation ty id (WireLookup map _) =
 
 -- | Returns the current state of the wire.
 getState :: Wire -> WireLookup -> Maybe WireType
-getState id (WireLookup map _) = branchJust (IntMap.lookup id map) f
-    where f = Just . state
+getState id (WireLookup map _) = branchJust (IntMap.lookup id map) state
 
 -------------------------------------------------------------------------------
 -- * Update Wire States.
@@ -114,6 +118,7 @@ getState id (WireLookup map _) = branchJust (IntMap.lookup id map) f
 -- | Describes failures that can occur during type conversion and state change.
 data StateChangeErr = UnallocatedWire Wire
                     | BadWireState WireType
+                    | WireInactive
                     deriving (Show, Eq)
 
 -- | The return-value of a function that changes state.
@@ -130,9 +135,10 @@ type StateChangeFn a = WireLookup -> StateChangeRes a
 -- next available dynamic allocation is returned.
 nameClassicalDecl :: Int -> DeclAllocation -> StateChangeRes (Maybe String)
 nameClassicalDecl n alloc
-    | state alloc == CWire     = Right $ BadWireState CWire
-    | isNothing $ calloc alloc = Left $ Just $ _DYN_CWIRE_REG ++ show n
-    | otherwise                = Left Nothing
+    | state alloc == Just CWire = Right $ BadWireState CWire
+    | state alloc == Nothing    = Right WireInactive
+    | isNothing $ calloc alloc  = Left $ Just $ _DYN_CWIRE_REG ++ show n
+    | otherwise                 = Left Nothing
 
 -- | Takes as input a declaration allocation record (alloc) and (optionally)
 -- the name of a dynamically allocated bit (name). If name is provided, then
@@ -141,11 +147,11 @@ nameClassicalDecl n alloc
 toClassical :: DeclAllocation -> Maybe String -> DeclAllocation
 toClassical alloc Nothing = DeclAllocation { qalloc = qalloc alloc
                                            , calloc = calloc alloc
-                                           , state  = CWire
+                                           , state  = Just CWire
                                            }
 toClassical alloc (Just name) = DeclAllocation { qalloc = qalloc alloc
                                                , calloc = Just $ QRef name
-                                               , state  = CWire
+                                               , state  = Just CWire
                                                }
 
 -- | Takes as input a wire identifier (id) and a wire lookup. If id is not in
@@ -163,3 +169,36 @@ collapseState id (WireLookup map n) =
                              map'   = IntMap.insert id entry' map
                              n'     = if isNothing name then n else n + 1
                          in Left (WireLookup map' n', name)
+
+-- | Takes as input a wire type (ty) and a declaration allocation (alloc). If
+-- alloc is in state ty, then alloc is set to the inactive state and returned.
+-- Otherwise, an error is returned describing the actual type of alloc.
+toInactive :: WireType -> DeclAllocation -> StateChangeRes DeclAllocation
+toInactive ty alloc
+    | cur == Just ty = Left res
+    | cur == Nothing = Right WireInactive
+    | otherwise      = Right $ BadWireState $ fromJust cur
+    where cur = state alloc
+          res = DeclAllocation (qalloc alloc) (calloc alloc) Nothing
+
+-- | Takes as input a wire type (ty), a wire identifier (id), and a wire lookup
+-- (map). If id is allocated in map, and is in state ty, then a new wire lookup
+-- map is returned with the state of id set to inactive, and all other entries
+-- left unchanged. If the wire is undeclared, or in an inappropriate state,
+-- then an appropriate error is returned.
+termBitByType :: WireType -> Wire -> StateChangeFn WireLookup
+termBitByType ty id (WireLookup map n) =
+    case IntMap.lookup id map of
+        Nothing    -> Right $ UnallocatedWire id
+        Just entry -> case toInactive ty entry of
+            Right err   -> Right err
+            Left entry' -> let map' = IntMap.insert id entry' map
+                           in Left $ WireLookup map' n
+
+-- | Specializes termBitByType to classical wires.
+termCBit :: Wire -> StateChangeFn WireLookup
+termCBit = termBitByType CWire
+
+-- | Specializes termBitByType to quantum wires.
+termQBit :: Wire -> StateChangeFn WireLookup
+termQBit = termBitByType QWire
