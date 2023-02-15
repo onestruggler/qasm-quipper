@@ -8,6 +8,8 @@ module LinguaQuanta.QuipToQasm.Wire
   , collapseState
   , getAllocation
   , getState
+  , initCBit
+  , initQBit
   , termCBit
   , termQBit
   , translateQWireInputs
@@ -42,6 +44,10 @@ _IN_CWIRE_REG = "input_cwires"
 -- | The prefix for classical bits allocation mid-translation.
 _DYN_CWIRE_REG :: String
 _DYN_CWIRE_REG = "shadow_cwire_"
+
+-- | The prefix for quantum bits allocation mid-translation.
+_DYN_QWIRE_REG :: String
+_DYN_QWIRE_REG = "shadow_qwire_"
 
 -- | Takes as input the number of input qubits in a Quipper circuit. Returns a
 -- list of AST statements to declare the corresponding register.
@@ -119,6 +125,7 @@ getState id (WireLookup map _) = branchJust (IntMap.lookup id map) state
 data StateChangeErr = UnallocatedWire Wire
                     | BadWireState WireType
                     | WireInactive
+                    | DoubleInit Wire
                     deriving (Show, Eq)
 
 -- | The return-value of a function that changes state.
@@ -126,6 +133,23 @@ type StateChangeRes a = Either a StateChangeErr
 
 -- | The underlying type of a function that changes state.
 type StateChangeFn a = WireLookup -> StateChangeRes a
+
+-- | A tuple containing an updated wire lookup, and optionally, the name of a
+-- new declaration that was added to the lookup.
+type MaybeNDecl = (WireLookup, Maybe String)
+
+-- | Takes as input the number of dynamically allocated bits (n), a wire type
+-- (ty), and a declaration allocation record (alloc). If alloc does not have an
+-- associated declaration of type ty, then a dynamic declaration is returned,
+-- as determined by n. Otherwise, nothing is returned.
+getDynDecl :: WireType -> Int -> DeclAllocation -> Maybe String
+getDynDecl ty n alloc
+    | isNothing $ declFun alloc = Just $ declStr ++ show n
+    | otherwise                 = Nothing
+    where isCWire = ty == CWire
+          declFun = if isCWire then calloc else qalloc
+          declStr = if isCWire then _DYN_CWIRE_REG else _DYN_QWIRE_REG
+           
 
 -- | Takes as input the number of dynamically allocated bits (n) and a
 -- declaration allocation record (alloc). This function determines the required
@@ -137,38 +161,52 @@ nameClassicalDecl :: Int -> DeclAllocation -> StateChangeRes (Maybe String)
 nameClassicalDecl n alloc
     | state alloc == Just CWire = Right $ BadWireState CWire
     | state alloc == Nothing    = Right WireInactive
-    | isNothing $ calloc alloc  = Left $ Just $ _DYN_CWIRE_REG ++ show n
-    | otherwise                 = Left Nothing
+    | otherwise                 = Left $ getDynDecl CWire n alloc
 
--- | Takes as input a declaration allocation record (alloc) and (optionally)
--- the name of a dynamically allocated bit (name). If name is provided, then
--- (calloc alloc) is updated to reference name. In either case, (state alloc)
--- is updated to CWire. The new declaration allocation record is returned.
-toClassical :: DeclAllocation -> Maybe String -> DeclAllocation
-toClassical alloc Nothing = DeclAllocation { qalloc = qalloc alloc
-                                           , calloc = calloc alloc
-                                           , state  = Just CWire
-                                           }
-toClassical alloc (Just name) = DeclAllocation { qalloc = qalloc alloc
-                                               , calloc = Just $ QRef name
-                                               , state  = Just CWire
-                                               }
+-- | Takes as input a target wire type (ty), a declaration allocation record
+-- (alloc), and (optionally) the name of a dynamically allocated bit (name). If
+-- a name is provided, then the allocation of type ty (either calloc or qalloc)
+-- is updated to reference name. In either case, (state alloc) is updated to
+-- ty. The new declaration allocation record is returned.
+updateAlloc :: WireType -> DeclAllocation -> Maybe String -> DeclAllocation
+updateAlloc ty alloc Nothing = DeclAllocation { qalloc = qalloc alloc
+                                              , calloc = calloc alloc
+                                              , state  = Just ty
+                                              }
+updateAlloc QWire alloc (Just name) = DeclAllocation { qalloc = Just $ QRef name
+                                                     , calloc = calloc alloc
+                                                     , state  = Just QWire
+                                                     }
+updateAlloc CWire alloc (Just name) = DeclAllocation { qalloc = qalloc alloc
+                                                     , calloc = Just $ QRef name
+                                                     , state  = Just CWire
+                                                     }
+
+-- | Takes as input a wire type (ty), a wire identifier (id), the decalaration
+-- allocation associated with id (alloc), and a partially complete MaybeNDecl.
+-- By partially complete, it is assumed that the WireLookup within MaybeNDecl
+-- has not yet assigned id to state ty, nor has id been updated to reference
+-- the new declaration (when the optional declaration name is provided).
+-- Returns a new MaybeNDecl with the name unchanged, and the WireLookup updated
+-- to reflect these changes.
+updateMap :: WireType -> Wire -> DeclAllocation -> MaybeNDecl -> MaybeNDecl
+updateMap ty id alloc (WireLookup map n, name) = (WireLookup map' n', name)
+    where alloc' = updateAlloc ty alloc name
+          map'   = IntMap.insert id alloc' map
+          n'     = if isNothing name then n else n + 1
 
 -- | Takes as input a wire identifier (id) and a wire lookup. If id is not in
 -- the wire lookup, or if id is in a classical state, then an error is returned
 -- accordingly. Otherwise, id is collapsed to a classical state and the new
 -- wire lookup is returned. If the wire lookup does not map id to a classical
 -- bit, then the name of a new classical bit is also returned.
-collapseState :: Wire -> StateChangeFn (WireLookup, Maybe String)
-collapseState id (WireLookup map n) =
+collapseState :: Wire -> StateChangeFn MaybeNDecl
+collapseState id lookup@(WireLookup map n) =
     case IntMap.lookup id map of
         Nothing    -> Right $ UnallocatedWire id
         Just entry -> case nameClassicalDecl n entry of
             Right err -> Right err
-            Left name -> let entry' = toClassical entry name
-                             map'   = IntMap.insert id entry' map
-                             n'     = if isNothing name then n else n + 1
-                         in Left (WireLookup map' n', name)
+            Left name -> Left $ updateMap CWire id entry (lookup, name)
 
 -- | Takes as input a wire type (ty) and a declaration allocation (alloc). If
 -- alloc is in state ty, then alloc is set to the inactive state and returned.
@@ -202,3 +240,32 @@ termCBit = termBitByType CWire
 -- | Specializes termBitByType to quantum wires.
 termQBit :: Wire -> StateChangeFn WireLookup
 termQBit = termBitByType QWire
+
+-- | Takes as input a wire identifier (id) and an allocation map (map). If id
+-- is recorded in map, then its allocation is returned. Otherwise, a "default"
+-- allocation is returned with no declarations and an inactive state.
+getAllocationOrDefault :: Wire -> AllocMap -> DeclAllocation
+getAllocationOrDefault id map =
+    case IntMap.lookup id map of
+        Just entry -> entry
+        Nothing    -> DeclAllocation Nothing Nothing Nothing
+
+-- | Takes as input a wire type (ty), a wire identifier (id), and a wire lookup
+-- (map). If id is allocated in map, and is in the inactive state, then a new
+-- wire lookup map is returned with the state of id set to ty, and all other
+-- entries left unchanged. If the wire is undeclared, or in an inappropriate
+-- state, then an appropriate error is returned.
+initBitByType :: WireType -> Wire -> StateChangeFn (WireLookup, Maybe String)
+initBitByType ty id lookup@(WireLookup map n)
+    | isNothing $ state entry = Left $ updateMap ty id entry (lookup, name)
+    | otherwise               = Right $ DoubleInit id
+    where entry = getAllocationOrDefault id map
+          name  = getDynDecl ty n entry
+
+-- | Specializes initBitByType to classical wires.
+initCBit :: Wire -> StateChangeFn (WireLookup, Maybe String)
+initCBit = initBitByType CWire
+
+-- | Specializes initBitByType to quantum wires.
+initQBit :: Wire -> StateChangeFn (WireLookup, Maybe String)
+initQBit = initBitByType QWire

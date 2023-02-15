@@ -228,6 +228,113 @@ test43 = TestCase (assertEqual "collapseState will reject inactive wires."
     where Right err = collapseState 23 termMap2
 
 -----------------------------------------------------------------------------------------
+-- Bit initialization (and integration with state collapse)
+
+Left (initMap1, initName1) = initCBit 1000 allocMixed
+Left (initMap2, initName2) = initCBit 1001 initMap1
+Left (initMap3, initName3) = initQBit 2000 initMap2
+Left (initMap4, initName4) = initQBit 2001 initMap3
+
+test44 = TestCase (assertEqual "initCBit returns the correct names (1/2)."
+                               (Just "shadow_cwire_0" :: Maybe String)
+                               initName1)
+
+test45 = TestCase (assertEqual "initCBit returns the correct names (2/2)."
+                               (Just "shadow_cwire_1" :: Maybe String)
+                               initName2)
+
+test46 = TestCase (assertEqual "initQBit returns the correct names (1/2)."
+                               (Just "shadow_qwire_2" :: Maybe String)
+                               initName3)
+
+test47 = TestCase (assertEqual "initQBit returns the correct names (2/2)."
+                               (Just "shadow_qwire_3" :: Maybe String)
+                               initName4)
+
+test48 = TestCase (assertEqual "initCBit sets decl to CWire state (1/2)."
+                               (Just CWire :: Maybe WireType)
+                               (getState 1000 initMap1))
+
+test49 = TestCase (assertEqual "initCBit sets decl to CWire state (2/2)."
+                               (Just CWire :: Maybe WireType)
+                               (getState 1001 initMap2))
+
+test50 = TestCase (assertEqual "initQBit sets decl to QWire state (1/2)."
+                               (Just QWire :: Maybe WireType)
+                               (getState 2000 initMap3))
+
+test51 = TestCase (assertEqual "initQBit sets decl to QWire state (2/2)."
+                               (Just QWire :: Maybe WireType)
+                               (getState 2001 initMap4))
+
+test52 = TestCase (assertEqual "initBitByType leaves other wires unchanged (1/7)."
+                               (Just QWire :: Maybe WireType)
+                               (getState 1 initMap4))
+
+test53 = TestCase (assertEqual "initBitByType leaves other wires unchanged (2/7)."
+                               (Just QWire :: Maybe WireType)
+                               (getState 5 initMap4))
+
+test54 = TestCase (assertEqual "initBitByType leaves other wires unchanged (3/7)."
+                               (Just CWire :: Maybe WireType)
+                               (getState 3 initMap4))
+
+test55 = TestCase (assertEqual "initBitByType leaves other wires unchanged (4/7)."
+                               (Just CWire :: Maybe WireType)
+                               (getState 9 initMap4))
+
+test56 = TestCase (assertEqual "initBitByType leaves other wires unchanged (5/7)."
+                               (Just QWire :: Maybe WireType)
+                               (getState 23 initMap4))
+
+test57 = TestCase (assertEqual "initBitByType leaves other wires unchanged (6/7)."
+                               (Just QWire :: Maybe WireType)
+                               (getState 50 initMap4))
+
+test58 = TestCase (assertEqual "initBitByType leaves other wires unchanged (7/7)."
+                               (Just CWire :: Maybe WireType)
+                               (getState 44 initMap4))
+
+test59 = TestCase (assertEqual "initCBit will reject double initializations."
+                               (DoubleInit 1000)
+                               err)
+    where Right err = initCBit 1000 initMap4
+
+test60 = TestCase (assertEqual "initQBit will reject double initializations."
+                               (DoubleInit 2000)
+                               err)
+    where Right err = initQBit 2000 initMap4
+
+Left (reinitMap1, reinitName1) = initCBit 3 termMap1
+Left (reinitMap2, reinitName2) = initCBit 23 termMap2
+Left (reinitMap3, reinitName3) = initQBit 3 termMap1
+Left (reinitMap4, reinitName4) = initQBit 23 termMap2
+
+test61 = TestCase (assertEqual "initCBit returns no name on cbit reinitialization (1/2)."
+                               (Nothing :: Maybe String)
+                               reinitName1)
+
+test62 = TestCase (assertEqual "initCBit returns no name on cbit reinitialization (2/2)."
+                               (Just "shadow_cwire_0" :: Maybe String)
+                               reinitName2)
+
+test63 = TestCase (assertEqual "initCBit returns no name on cbit reinitialization (1/2)."
+                               (Just "shadow_qwire_0" :: Maybe String)
+                               reinitName3)
+
+test64 = TestCase (assertEqual "initCBit returns no name on cbit reinitialization (2/2)."
+                               (Nothing :: Maybe String)
+                               reinitName4)
+
+Left measReinitName1                   = termCBit 3 allocMixed
+Left (measReinitMap2, measReinitName2) = initQBit 3 measReinitName1
+Left (measReinitMap3, measReinitName3) = collapseState 3 measReinitMap2
+
+test65 = TestCase (assertEqual "collapseState reuses existing allocations whne possible."
+                               (Nothing :: Maybe String)
+                               measReinitName3)
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "Empty_Allocation_1" test1,
@@ -272,6 +379,28 @@ tests = hUnitTestToTests $ TestList [TestLabel "Empty_Allocation_1" test1,
                                      TestLabel "termQBit_TypeCheck" test40,
                                      TestLabel "termCBit_AllocCheck" test41,
                                      TestLabel "termQBit_AllocCheck" test42,
-                                     TestLabel "collapseState_HandleInactive" test43]
+                                     TestLabel "collapseState_HandleInactive" test43,
+                                     TestLabel "initCBit_Name_1" test44,
+                                     TestLabel "initCBit_Name_2" test45,
+                                     TestLabel "initQBit_Name_1" test46,
+                                     TestLabel "initQBit_Name_2" test47,
+                                     TestLabel "initCBit_State_1" test48,
+                                     TestLabel "initCBit_State_2" test49,
+                                     TestLabel "initQBit_State_1" test50,
+                                     TestLabel "initQBit_State_2" test51,
+                                     TestLabel "initBitByType_Untouched_1" test52,
+                                     TestLabel "initBitByType_Untouched_2" test53,
+                                     TestLabel "initBitByType_Untouched_3" test54,
+                                     TestLabel "initBitByType_Untouched_4" test55,
+                                     TestLabel "initBitByType_Untouched_5" test56,
+                                     TestLabel "initBitByType_Untouched_6" test57,
+                                     TestLabel "initBitByType_Untouched_7" test58,
+                                     TestLabel "initCBit_DoubleInit" test59,
+                                     TestLabel "initQBit_DoubleInit" test60,
+                                     TestLabel "initCBit_Reinit_1" test61,
+                                     TestLabel "initCBit_Reinit_2" test62,
+                                     TestLabel "initQBit_Reinit_1" test63,
+                                     TestLabel "initQBit_Reinit_2" test64,
+                                     TestLabel "collapseState_Unuse" test65]
 
 main = defaultMain tests
