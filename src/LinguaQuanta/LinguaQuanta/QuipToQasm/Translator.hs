@@ -43,6 +43,12 @@ translateGate wmap (QTermGate isOn id) = error msg
     where msg = "QTerm translation not implemented."
 translateGate wmap (QDiscardGate id) = error msg
     where msg = "QDiscard translation not implemented."
+translateGate wmap (CInitGate isOn id) = error msg
+    where msg = "CInit translation not implemented."
+translateGate wmap (CTermGate isOn id) = error msg
+    where msg = "CTerm translation not implemented."
+translateGate wmap (CDiscardGate id) = error msg
+    where msg = "CDiscard translation not implemented."
 translateGate wmap (QMeasGate w) = translateMeasurement wmap w
 
 -- | Takes as input the body of a Quipper circuit or subroutine (given by a
