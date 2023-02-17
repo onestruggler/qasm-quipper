@@ -12,6 +12,14 @@ import LinguaQuanta.Quip.Wire
   ( countQWires
   , countCWires
   )
+import LinguaQuanta.QuipToQasm.Ancilla
+  ( translateCDiscard
+  , translateCInit
+  , translateCTerm
+  , translateQDiscard
+  , translateQInit
+  , translateQTerm
+  )
 import LinguaQuanta.QuipToQasm.Gate
   ( namedGateTransl
   , rotGateTransl
@@ -37,19 +45,13 @@ translateGate wmap (RotGate name inv angle ins ctrls) = (wmap, stmts)
     where stmts = rotGateTransl wmap name inv angle ins ctrls
 translateGate wmap (PhaseGate t ctrls) = (wmap, stmts)
     where stmts = translGPhase wmap t ctrls
-translateGate wmap (QInitGate isOn id) = error msg
-    where msg = "QInit translation not implemented."
-translateGate wmap (QTermGate isOn id) = error msg
-    where msg = "QTerm translation not implemented."
-translateGate wmap (QDiscardGate id) = error msg
-    where msg = "QDiscard translation not implemented."
-translateGate wmap (CInitGate isOn id) = error msg
-    where msg = "CInit translation not implemented."
-translateGate wmap (CTermGate isOn id) = error msg
-    where msg = "CTerm translation not implemented."
-translateGate wmap (CDiscardGate id) = error msg
-    where msg = "CDiscard translation not implemented."
-translateGate wmap (QMeasGate w) = translateMeasurement wmap w
+translateGate wmap (QInitGate isOn id) = translateQInit wmap id isOn
+translateGate wmap (QTermGate isOn id) = translateQTerm wmap id isOn
+translateGate wmap (QDiscardGate id)   = translateQDiscard wmap id
+translateGate wmap (CInitGate isOn id) = translateCInit wmap id isOn
+translateGate wmap (CTermGate isOn id) = translateCTerm wmap id isOn
+translateGate wmap (CDiscardGate id)   = translateCDiscard wmap id
+translateGate wmap (QMeasGate w)       = translateMeasurement wmap w
 
 -- | Takes as input the body of a Quipper circuit or subroutine (given by a
 -- list of gates). Returns the body of an equivalent OpenQASM program (given by

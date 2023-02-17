@@ -142,7 +142,7 @@ test15 = TestCase (assertEqual "Can convert a 2-to-2 bit circuit (with qubits)."
 -----------------------------------------------------------------------------------------
 -- * QMeas translations.
 
-test16 = TestCase (assertEqual "Can translate a sequence QMeas gates (no prep)."
+test16 = TestCase (assertEqual "Can translate a sequence of QMeas gates (no prep)."
                                [AstQubitDecl (Just 5) "input_qwires",
                                 AstBitDecl Nothing "shadow_cwire_0",
                                 AstAssign "shadow_cwire_0" Nothing $ QuipMeasure target1,
@@ -151,6 +151,38 @@ test16 = TestCase (assertEqual "Can translate a sequence QMeas gates (no prep)."
                                (translate $ make_gate_circ [QMeasGate 1, QMeasGate 3]))
     where target1 = Cell "input_qwires" 1
           target2 = Cell "input_qwires" 3
+
+-----------------------------------------------------------------------------------------
+-- * Ancilla translations.
+
+iomap_7 = IntMap.fromList [(0, QWire), (1, CWire), (2, QWire), (3, CWire)]
+iomap_8 = IntMap.fromList [(1, CWire), (2, QWire)]
+
+test17 = TestCase (assertEqual "Can translate a sequence of init and term gates."
+                               [AstQubitDecl (Just 2) "input_qwires",
+                                AstBitDecl (Just 2) "input_cwires",
+                                AstQubitDecl Nothing "shadow_qwire_0",
+                                AstCall $ QuipQInit1 $ QRef "shadow_qwire_0",
+                                AstCall $ QuipQTerm1 $ QRef "shadow_qwire_0",
+                                AstCall $ QuipQDiscard $ Cell "input_qwires" 0,
+                                AstCall $ QuipQInit0 $ QRef "shadow_qwire_0",
+                                AstCall $ QuipQTerm0 $ QRef "shadow_qwire_0",
+                                AstBitDecl Nothing "shadow_cwire_1",
+                                AstAssign "shadow_cwire_1" Nothing QuipCInit1,
+                                AstAssign "shadow_cwire_1" Nothing QuipCTerm1,
+                                AstAssign "input_cwires" (Just 1) QuipCDiscard,
+                                AstAssign "shadow_cwire_1" Nothing QuipCInit0,
+                                AstAssign "shadow_cwire_1" Nothing QuipCTerm0]
+                               (translate qcirc))
+    where gates = [QInitGate True 5, QTermGate True 5, QDiscardGate 0,
+                   QInitGate False 5, QTermGate False 5,
+                   CInitGate True 5, CTermGate True 5, CDiscardGate 3,
+                   CInitGate False 5, CTermGate False 5]
+          qcirc = GateCirc { inputs  = iomap_7
+                           , gates   = gates
+                           , outputs = iomap_8
+                           , size    = 5
+                           }
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
@@ -170,6 +202,7 @@ tests = hUnitTestToTests $ TestList [TestLabel "Empty_Circ_0_to_0" test1,
                                      TestLabel "Empty_Bit_Circ_2_to_0" test13,
                                      TestLabel "Empty_Bit_Circ_2_to_1" test14,
                                      TestLabel "Empty_Bit_Circ_2_to_2" test15,
-                                     TestLabel "QMeas_Without_Prep" test16]
+                                     TestLabel "QMeas_Without_Prep" test16,
+                                     TestLabel "Ancilla" test17]
 
 main = defaultMain tests
