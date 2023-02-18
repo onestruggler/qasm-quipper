@@ -7,6 +7,10 @@ module LinguaQuanta.QasmToQuip.Translator (translate) where
 
 import LinguaQuanta.Qasm.AST (AstStmt(..))
 import LinguaQuanta.Qasm.Gate as Qasm
+import LinguaQuanta.Qasm.Operand
+  ( RValue(..)
+  , VoidCall(..)
+  )
 import LinguaQuanta.QasmToQuip.Gate
   ( d1RotTransl
   , d2RotTransl
@@ -31,10 +35,62 @@ import LinguaQuanta.Quip.Wire (WireType(..))
 import LinguaQuanta.Quip.Quipper (GateCirc(..))
 
 -------------------------------------------------------------------------------
--- * Gate Translation.
+-- * Utilities.
 
--- |
+-- | Represents the gates produced by a translation, and the resulting changes
+-- to the WireAllocMap.
+type TranslRes = (WireAllocMap, [Quip.Gate])
+
+-- | Encodes update functions for both QRef and Cell.
 type UpdatePair = (ScalarUpdate, CellUpdate)
+
+-- | Takes as input a pair of update functions and an operand. Determines the
+-- type of operand, and applies the correct update function.
+getUpdateFn :: UpdatePair -> Operand -> (WireAllocMap -> Maybe WireAllocMap)
+getUpdateFn (fn, _) (QRef id)     = fn id
+getUpdateFn (_, fn) (Cell id idx) = fn id idx
+
+-------------------------------------------------------------------------------
+-- * Call Translation.
+
+-- | Takes as input the current allocation map and a void call. Returns the
+-- set of gates corresponding to the call, together with an updated wire
+-- allocation map (according to the semantics of the call). If the call is not
+-- supported in translation, then an error is raised.
+translateCall :: WireAllocMap -> VoidCall -> TranslRes
+translateCall wmap (QuipQInit0 op) = error msg
+    where msg = "QInit0 translation not implemented."
+translateCall wmap (QuipQInit1 op) = error msg
+    where msg = "QInit1 translation not implemented."
+translateCall wmap (QuipQTerm0 op) = error msg
+    where msg = "QTerm0 translation not implemented."
+translateCall wmap (QuipQTerm1 op) = error msg
+    where msg = "QTerm1 translation not implemented."
+translateCall wmap (QuipQDiscard op) = error msg
+    where msg = "QDiscard translation not implemented."
+
+-------------------------------------------------------------------------------
+-- * Assignment Translation.
+
+-- | Takes as input the current allocation map, the name of a declaration that
+-- should be overwritten (optionally with an index), and the r-value with which
+-- the declaration should be overwritten.
+translateAssign :: WireAllocMap -> String -> Maybe Int -> RValue -> TranslRes
+translateAssign wmap id idx QuipCInit0 = error msg
+    where msg = "QInit0 translation not implemented."
+translateAssign wmap id idx QuipCInit1 = error msg
+    where msg = "QInit1 translation not implemented."
+translateAssign wmap id idx QuipCTerm0 = error msg
+    where msg = "QTerm0 translation not implemented."
+translateAssign wmap id idx QuipCTerm1 = error msg
+    where msg = "QTerm1 translation not implemented."
+translateAssign wmap id idx QuipCDiscard = error msg
+    where msg = "QDiscard translation not implemented."
+translateAssign wmap id idx (QuipMeasure op) = error msg
+    where msg = "QMeas translation not implemented."
+
+-------------------------------------------------------------------------------
+-- * Gate Translation.
 
 -- | Takes as input an allocation map (wmap), a gate repetition count (n), and
 -- a Quipper gate (g). Returns a tuple (ops, gates) where ops contains the
@@ -56,12 +112,6 @@ translateGate wmap 0 (Qasm.GPhaseGate param ops mod) = (ops, stmts)
 translateGate wmap n gate = (ops, concat $ replicate n $ gates)
     where (ops, gates) = translateGate wmap 0 gate
 
--- | Takes as input a pair of update functions and an operand. Determines the
--- type of operand, and applies the correct update function.
-getUpdateFn :: UpdatePair -> Operand -> (WireAllocMap -> Maybe WireAllocMap)
-getUpdateFn (fn, _) (QRef id)     = fn id
-getUpdateFn (_, fn) (Cell id idx) = fn id idx
-
 -- | Takes as input an allocation map (wmap), a pair of update functions (fns),
 -- and a list of operands (ops). For each operand, applies the corresponding
 -- update in fns to wmap. Returns the resulting wmap.
@@ -82,7 +132,7 @@ updateOperands wmap fns (op:ops) =
 -- | Takes as input an allocation map and an AST statement. Returns the
 -- allocation map obtained by applying the statement, and a list of gates
 -- corresponding to the statement.
-translateStmt :: WireAllocMap -> AstStmt -> (WireAllocMap, [Quip.Gate])
+translateStmt :: WireAllocMap -> AstStmt -> TranslRes
 translateStmt wmap (AstQubitDecl size name) =
     case allocate QWire name size wmap of
         Nothing    -> error $ "Duplication qubit allocation: " ++ name
@@ -94,13 +144,15 @@ translateStmt wmap (AstBitDecl size name) =
 translateStmt wmap (AstGateStmt n gate) = (wmap', gates)
     where (ops, gates) = translateGate wmap n gate
           wmap'        = updateOperands wmap (useScalar, useCell) ops
-translateStmt wmap (AstAssign decl index rval) = error msg
-    where msg = "Assignment translation not implemented."
+translateStmt wmap (AstAssign decl index rval) = res
+    where res = translateAssign wmap decl index rval
+translateStmt wmap (AstCall call) = res
+    where res = translateCall wmap call
 
 -- | Takes as input an allocation map and a list of AST statements. Returns the
 -- allocation map obtained by applying all statements in order, and a list of
 -- gates corresponding to the list of statements. 
-translateStmts :: WireAllocMap -> [AstStmt] -> (WireAllocMap, [Quip.Gate])
+translateStmts :: WireAllocMap -> [AstStmt] -> TranslRes
 translateStmts wmap []           = (wmap, [])
 translateStmts wmap (stmt:stmts) = (wmap'', gates ++ rest)
     where (wmap', gates) = translateStmt wmap stmt
