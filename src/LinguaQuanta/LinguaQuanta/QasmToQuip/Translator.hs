@@ -18,10 +18,12 @@ import LinguaQuanta.QasmToQuip.Gate
   , namedGateTransl
   , translGPhase
   )
+import LinguaQuanta.QasmToQuip.Operand
+  ( UpdatePair
+  , getUpdateFn
+  )
 import LinguaQuanta.QasmToQuip.Wire
-  ( CellUpdate
-  , ScalarUpdate
-  , WireAllocMap
+  ( WireAllocMap
   , allocate
   , initialAllocations
   , toQuipperInputs
@@ -40,15 +42,6 @@ import LinguaQuanta.Quip.Quipper (GateCirc(..))
 -- | Represents the gates produced by a translation, and the resulting changes
 -- to the WireAllocMap.
 type TranslRes = (WireAllocMap, [Quip.Gate])
-
--- | Encodes update functions for both QRef and Cell.
-type UpdatePair = (ScalarUpdate, CellUpdate)
-
--- | Takes as input a pair of update functions and an operand. Determines the
--- type of operand, and applies the correct update function.
-getUpdateFn :: UpdatePair -> Operand -> (WireAllocMap -> Maybe WireAllocMap)
-getUpdateFn (fn, _) (QRef id)     = fn id
-getUpdateFn (_, fn) (Cell id idx) = fn id idx
 
 -------------------------------------------------------------------------------
 -- * Call Translation.

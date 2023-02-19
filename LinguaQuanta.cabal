@@ -32,6 +32,7 @@ library
                        LinguaQuanta.Qasm.Printer
                        LinguaQuanta.QasmToQuip.Control
                        LinguaQuanta.QasmToQuip.Gate
+                       LinguaQuanta.QasmToQuip.Operand
                        LinguaQuanta.QasmToQuip.Translator
                        LinguaQuanta.QasmToQuip.Wire
                        LinguaQuanta.Quip.Gate
@@ -224,6 +225,12 @@ test-suite qasmtoquip-control-tests
 test-suite qasmtoquip-gate-tests
   import:              basic-unit-test-props
   main-is:             QasmToQuip-Gate-Tests.hs
+  build-depends:       containers
+  type:                exitcode-stdio-1.0
+
+test-suite qasmtoquip-operand-tests
+  import:              basic-unit-test-props
+  main-is:             QasmToQuip-Operand-Tests.hs
   build-depends:       containers
   type:                exitcode-stdio-1.0
 
