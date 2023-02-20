@@ -18,6 +18,13 @@ import LinguaQuanta.QasmToQuip.Gate
   , namedGateTransl
   , translGPhase
   )
+import LinguaQuanta.QasmToQuip.Assign
+  ( translateCDiscard
+  , translateCInit0
+  , translateCInit1
+  , translateCTerm0
+  , translateCTerm1
+  )
 import LinguaQuanta.QasmToQuip.Operand
   ( UpdatePair
   , getUpdateFn
@@ -69,16 +76,11 @@ translateCall wmap (QuipQDiscard op) = error msg
 -- should be overwritten (optionally with an index), and the r-value with which
 -- the declaration should be overwritten.
 translateAssign :: WireAllocMap -> String -> Maybe Int -> RValue -> TranslRes
-translateAssign wmap id idx QuipCInit0 = error msg
-    where msg = "QInit0 translation not implemented."
-translateAssign wmap id idx QuipCInit1 = error msg
-    where msg = "QInit1 translation not implemented."
-translateAssign wmap id idx QuipCTerm0 = error msg
-    where msg = "QTerm0 translation not implemented."
-translateAssign wmap id idx QuipCTerm1 = error msg
-    where msg = "QTerm1 translation not implemented."
-translateAssign wmap id idx QuipCDiscard = error msg
-    where msg = "QDiscard translation not implemented."
+translateAssign wmap id idx QuipCInit0       = translateCInit0 wmap id idx
+translateAssign wmap id idx QuipCInit1       = translateCInit1 wmap id idx
+translateAssign wmap id idx QuipCTerm0       = translateCTerm0 wmap id idx
+translateAssign wmap id idx QuipCTerm1       = translateCTerm1 wmap id idx
+translateAssign wmap id idx QuipCDiscard     = translateCDiscard wmap id idx
 translateAssign wmap id idx (QuipMeasure op) = error msg
     where msg = "QMeas translation not implemented."
 

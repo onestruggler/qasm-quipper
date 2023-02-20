@@ -9,6 +9,7 @@ import LinguaQuanta.Qasm.Gate as Qasm
 import LinguaQuanta.Qasm.GateName as Qasm
 import LinguaQuanta.Qasm.GateName
 import LinguaQuanta.Qasm.Language
+import LinguaQuanta.Qasm.Operand
 import LinguaQuanta.QasmToQuip.Translator
 import LinguaQuanta.Quip.Gate as Quip
 import LinguaQuanta.Quip.GateName as Quip
@@ -31,7 +32,7 @@ circ4 = translate [dstmt2, dstmt3]
 
 test1 = TestCase (assertEqual "translate (inputs): empty circuit."
                               IntMap.empty
-                              (outputs circ1))
+                              (inputs circ1))
 
 test2 = TestCase (assertEqual "translate (gates): empty circuit."
                               []
@@ -49,7 +50,7 @@ circ2_io = IntMap.fromList [(0, QWire)]
 
 test5 = TestCase (assertEqual "translate (inputs): single qbit."
                               circ2_io
-                              (outputs circ2))
+                              (inputs circ2))
 
 test6 = TestCase (assertEqual "translate (gates): single qbit."
                               []
@@ -67,7 +68,7 @@ circ3_io = IntMap.fromList [(0, QWire), (1, QWire), (2, QWire), (3, QWire)]
 
 test9 = TestCase (assertEqual "translate (inputs): qbit array."
                               circ3_io
-                              (outputs circ3))
+                              (inputs circ3))
 
 test10 = TestCase (assertEqual "translate (gates): qbit array."
                                []
@@ -85,7 +86,7 @@ circ4_io = IntMap.fromList [(0, QWire), (1, QWire), (2, QWire), (3, QWire), (4, 
 
 test13 = TestCase (assertEqual "translate (inputs): qbit array and single qubit."
                                circ4_io
-                               (outputs circ4))
+                               (inputs circ4))
 
 test14 = TestCase (assertEqual "translate (gates): qbit array and single qubit."
                                []
@@ -130,7 +131,7 @@ circ7 = translate [dstmt2, dstmt3, gstmt3, gstmt2, gstmt4]
 
 test17 = TestCase (assertEqual "translate (inputs): isolated CCX gate."
                                circ4_io
-                               (outputs circ5))
+                               (inputs circ5))
 
 test18 = TestCase (assertEqual "translate (gates): isolated named gate."
                                [qgate1]
@@ -145,8 +146,8 @@ test20 = TestCase (assertEqual "translate (size): isolated named gate."
                                (size circ5))
 
 test21 = TestCase (assertEqual "translate (inputs): isolated gphase gate."
-                              circ3_io
-                              (outputs circ6))
+                               circ3_io
+                               (inputs circ6))
 
 test22 = TestCase (assertEqual "translate (gates): isolated gphase gate."
                                [qgate2]
@@ -162,7 +163,7 @@ test24 = TestCase (assertEqual "translate (size): isolated gphase gate."
 
 test25 = TestCase (assertEqual "translate (inputs): mixed unitary gates."
                                circ4_io
-                               (outputs circ7))
+                               (inputs circ7))
 
 test26 = TestCase (assertEqual "translate (gates): mixed unitary gates."
                                [qgate3, qgate3, qgate2, qgate1, qgate1, qgate1]
@@ -195,7 +196,7 @@ circ8 = translate [dstmt2, dstmt3, gstmt5, gstmt6, gstmt7]
 
 test29 = TestCase (assertEqual "translate (inputs): miscellaneous rotations."
                                circ4_io
-                               (outputs circ8))
+                               (inputs circ8))
 
 test30 = case toConstFloat $ Div p1 Pi of
     Right err -> TestCase (assertFailure "Unable to parse p1.")
@@ -249,7 +250,7 @@ circ9_io = IntMap.fromList [(0, CWire)]
 
 test33 = TestCase (assertEqual "translate (inputs): single cbit."
                                circ9_io
-                               (outputs circ9))
+                               (inputs circ9))
 
 test34 = TestCase (assertEqual "translate (gates): single cbit."
                                []
@@ -268,7 +269,7 @@ circ10_io = IntMap.fromList [(0, CWire), (1, CWire), (2, CWire), (3, CWire)]
 
 test37 = TestCase (assertEqual "translate (inputs): cbit array."
                                circ10_io
-                               (outputs circ10))
+                               (inputs circ10))
 
 test38 = TestCase (assertEqual "translate (gates): cbit array."
                                []
@@ -286,7 +287,7 @@ circ11_io = IntMap.fromList [(0, CWire), (1, CWire), (2, CWire), (3, CWire), (4,
 
 test41 = TestCase (assertEqual "translate (inputs): cbit array and single cbit."
                                circ11_io
-                               (outputs circ11))
+                               (inputs circ11))
 
 test42 = TestCase (assertEqual "translate (gates): cbit array and single cbit."
                                []
@@ -313,7 +314,7 @@ circ12_io = IntMap.fromList [(0, QWire), (1, QWire), (2, QWire), (3, QWire),
 
 test45 = TestCase (assertEqual "translate (inputs): mixed qbit and cbit."
                                circ12_io
-                               (outputs circ12))
+                               (inputs circ12))
 
 test46 = TestCase (assertEqual "translate (gates): mixed qbit and cbit."
                                []
@@ -326,6 +327,36 @@ test47 = TestCase (assertEqual "translate (outputs): mixed qbit and cbit."
 test48 = TestCase (assertEqual "translate (size): mixed qbit and cbit."
                                10
                                (size circ12))
+
+-----------------------------------------------------------------------------------------
+-- Inverse classical ancilla translation.
+
+circ13 = translate [AstBitDecl (Just 20) "cvars",
+                    AstAssign "cvars" (Just 2) QuipCInit0,
+                    AstAssign "cvars" (Just 4) QuipCInit1,
+                    AstAssign "cvars" (Just 5) QuipCTerm0,
+                    AstAssign "cvars" (Just 4) QuipCTerm1,
+                    AstAssign "cvars" (Just 10) QuipCDiscard]
+
+test49 = TestCase (assertEqual "translate (inputs): classical ancillas."
+                               18
+                               (IntMap.size $ inputs circ13))
+
+test50 = TestCase (assertEqual "translate (gates): classical ancillas."
+                               [CInitGate False 2,
+                                CInitGate True 4,
+                                CTermGate False 5,
+                                CTermGate True 4,
+                                CDiscardGate 10]
+                               (gates circ13))
+
+test51 = TestCase (assertEqual "translate (outputs): classical ancillas."
+                               17
+                               (IntMap.size $ outputs circ13))
+
+test52 = TestCase (assertEqual "translate (size): classical ancillas."
+                               20
+                               (size circ13))
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
@@ -377,6 +408,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "Empty_Inputs" test1,
                                      TestLabel "Mixed_Inputs" test45,
                                      TestLabel "Mixed_Gates" test46,
                                      TestLabel "Mixed_Outputs" test47,
-                                     TestLabel "Mixed_Size" test48]
+                                     TestLabel "Mixed_Size" test48,
+                                     TestLabel "CAncilla_Inputs" test49,
+                                     TestLabel "CAncilla_Gates" test50,
+                                     TestLabel "CAncilla_Outputs" test51,
+                                     TestLabel "CAncilla_Size" test52]
 
 main = defaultMain tests
