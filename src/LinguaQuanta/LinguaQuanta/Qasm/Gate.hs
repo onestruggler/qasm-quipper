@@ -25,7 +25,7 @@ module LinguaQuanta.Qasm.Gate
 
 import LinguaQuanta.Qasm.Expression
   ( ExprErr(..)
-  , toArrayIndex
+  , parseGateOperand
   , toConstInt
   )
 import LinguaQuanta.Qasm.GateName
@@ -123,7 +123,7 @@ isInverted (GPhaseGate _ _ mod)  = hasInversionMod mod
 
 data GateSummaryErr = NonConstParam ExprErr Expr
                     | NonPosParam Int Expr
-                    | BadArrIndex ExprErr Expr
+                    | BadArrIndex ExprErr
                     | UnexpectedParamCount Int Int
                     | UnexpectedOperandCount Int Int
                     deriving (Show, Eq)
@@ -148,16 +148,12 @@ tryParseParam expr =
         Left n    -> if n > 0 then Left n else Right (NonPosParam n expr)
         Right err -> Right (NonConstParam err expr)
 
--- | Takes as input a gate operand (op). If op is a QVar, then a QRef operand
--- is returned. If op is a QReg with constant index, then a Cell operand is
--- returned. Otherwise, a gate summarization is returned to explain why the
--- array cell index is non-constant.
+-- | Wrapper to parseGateOperand.
 tryParseOperand :: GateOperand -> Either Operand GateSummaryErr
-tryParseOperand (QVar id) = Left $ QRef id
-tryParseOperand (QReg id idx) =
-    case toArrayIndex idx of
-        Left n    -> Left $ Cell id n
-        Right err -> Right $ BadArrIndex err idx
+tryParseOperand gop =
+    case parseGateOperand gop of
+        Left op   -> Left op
+        Right err -> Right $ BadArrIndex err
 
 -- | Applies tryParseOperand to a list of GateOperands. The first error from
 -- left-to-right is returned.

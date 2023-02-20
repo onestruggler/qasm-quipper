@@ -599,6 +599,40 @@ test104 = TestCase (assertEqual "toVoidCall rejects calls of incorrect arity."
     where error = CallArityMismatch "QInit0" 2 1
 
 -----------------------------------------------------------------------------------------
+-- Support for QasmMeasure expression.
+
+test105 = TestCase (assertEqual "toConstInt rejects QasmMeasure."
+                                (Right UnexpectedMeasure :: Either Int ExprErr)
+                                (toConstInt $ QasmMeasure $ QVar "x"))
+
+test106 = TestCase (assertEqual "toConstInt rejects QasmMeasure."
+                                (Right UnexpectedMeasure :: Either Double ExprErr)
+                                (toConstFloat $ QasmMeasure $ QVar "x"))
+
+test107 = TestCase (assertEqual "toRValue supports valid QasmMeasure statements."
+                                (Left $ Measure $ QRef "x" :: Either RValue ExprErr)
+                                (toRValue $ QasmMeasure $ QVar "x"))
+
+test108 = TestCase (assertEqual "toRValue rejects QasmMeasure statements with bad idxs."
+                                (Right $ NegArrIdx (-5) :: Either RValue ExprErr)
+                                (toRValue $ QasmMeasure $ QReg "x" $ DecInt "-5"))
+
+-----------------------------------------------------------------------------------------
+-- parseGateOperand.
+
+test109 = TestCase (assertEqual "parseGateOperand supports QVar."
+                                (Left $ QRef "x" :: Either Operand ExprErr)
+                                (parseGateOperand $ QVar "x"))
+
+test110 = TestCase (assertEqual "parseGateOperand supports QVar."
+                                (Left $ Cell "x" 5 :: Either Operand ExprErr)
+                                (parseGateOperand $ QReg "x" $ DecInt "5"))
+
+test111 = TestCase (assertEqual "parseGateOperand rejects bad indices."
+                                (Right $ NegArrIdx (-5) :: Either Operand ExprErr)
+                                (parseGateOperand $ QReg "x" $ DecInt "-5"))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores" test1,
@@ -704,6 +738,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores
                                      TestLabel "toVoidCall_Ancilla_Test5" test101,
                                      TestLabel "toVoidCall_Unknown_Error" test102,
                                      TestLabel "toVoidCall_NonOperand_Error" test103,
-                                     TestLabel "toVoidCall_Arity_Error" test104]
+                                     TestLabel "toVoidCall_Arity_Error" test104,
+                                     TestLabel "toConstInt_QasmMeasure" test105,
+                                     TestLabel "toConstFloat_QasmMeasure" test106,
+                                     TestLabel "toRValue_QasmMeasure" test107,
+                                     TestLabel "toRValue_QasmMeasure_NonOp" test108]
 
 main = defaultMain tests
