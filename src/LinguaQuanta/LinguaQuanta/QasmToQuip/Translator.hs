@@ -11,6 +11,13 @@ import LinguaQuanta.Qasm.Operand
   ( RValue(..)
   , VoidCall(..)
   )
+import LinguaQuanta.QasmToQuip.Call
+  ( translateQDiscard
+  , translateQInit0
+  , translateQInit1
+  , translateQTerm0
+  , translateQTerm1
+  )
 import LinguaQuanta.QasmToQuip.Gate
   ( d1RotTransl
   , d2RotTransl
@@ -58,16 +65,11 @@ type TranslRes = (WireAllocMap, [Quip.Gate])
 -- allocation map (according to the semantics of the call). If the call is not
 -- supported in translation, then an error is raised.
 translateCall :: WireAllocMap -> VoidCall -> TranslRes
-translateCall wmap (QuipQInit0 op) = error msg
-    where msg = "QInit0 translation not implemented."
-translateCall wmap (QuipQInit1 op) = error msg
-    where msg = "QInit1 translation not implemented."
-translateCall wmap (QuipQTerm0 op) = error msg
-    where msg = "QTerm0 translation not implemented."
-translateCall wmap (QuipQTerm1 op) = error msg
-    where msg = "QTerm1 translation not implemented."
-translateCall wmap (QuipQDiscard op) = error msg
-    where msg = "QDiscard translation not implemented."
+translateCall wmap (QuipQInit0 op)   = translateQInit0 wmap op
+translateCall wmap (QuipQInit1 op)   = translateQInit1 wmap op
+translateCall wmap (QuipQTerm0 op)   = translateQTerm0 wmap op
+translateCall wmap (QuipQTerm1 op)   = translateQTerm1 wmap op
+translateCall wmap (QuipQDiscard op) = translateQDiscard wmap op
 
 -------------------------------------------------------------------------------
 -- * Assignment Translation.

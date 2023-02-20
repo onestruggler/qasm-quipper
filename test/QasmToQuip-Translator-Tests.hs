@@ -359,6 +359,36 @@ test52 = TestCase (assertEqual "translate (size): classical ancillas."
                                (size circ13))
 
 -----------------------------------------------------------------------------------------
+-- Inverse quantum ancilla translation.
+
+circ14 = translate [AstQubitDecl (Just 20) "qvars",
+                    AstCall $ QuipQInit0 $ Cell "qvars" 2,
+                    AstCall $ QuipQInit1 $ Cell "qvars" 4,
+                    AstCall $ QuipQTerm0 $ Cell "qvars" 5,
+                    AstCall $ QuipQTerm1 $ Cell "qvars" 4,
+                    AstCall $ QuipQDiscard $ Cell "qvars" 10]
+
+test53 = TestCase (assertEqual "translate (inputs): quantum ancillas."
+                               18
+                               (IntMap.size $ inputs circ14))
+
+test54 = TestCase (assertEqual "translate (gates): quantum ancillas."
+                               [QInitGate False 2,
+                                QInitGate True 4,
+                                QTermGate False 5,
+                                QTermGate True 4,
+                                QDiscardGate 10]
+                               (gates circ14))
+
+test55 = TestCase (assertEqual "translate (outputs): quantum ancillas."
+                               17
+                               (IntMap.size $ outputs circ14))
+
+test56 = TestCase (assertEqual "translate (size): quantum ancillas."
+                               20
+                               (size circ14))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "Empty_Inputs" test1,
@@ -412,6 +442,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "Empty_Inputs" test1,
                                      TestLabel "CAncilla_Inputs" test49,
                                      TestLabel "CAncilla_Gates" test50,
                                      TestLabel "CAncilla_Outputs" test51,
-                                     TestLabel "CAncilla_Size" test52]
+                                     TestLabel "CAncilla_Size" test52,
+                                     TestLabel "QAncilla_Inputs" test53,
+                                     TestLabel "QAncilla_Gates" test54,
+                                     TestLabel "QAncilla_Outputs" test55,
+                                     TestLabel "QAncilla_Size" test56]
 
 main = defaultMain tests
