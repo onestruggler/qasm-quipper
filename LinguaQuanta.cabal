@@ -32,6 +32,7 @@ library
                        LinguaQuanta.Qasm.Printer
                        LinguaQuanta.QasmToQuip.Ancilla
                        LinguaQuanta.QasmToQuip.Assign
+                       LinguaQuanta.QasmToQuip.Call
                        LinguaQuanta.QasmToQuip.Control
                        LinguaQuanta.QasmToQuip.Gate
                        LinguaQuanta.QasmToQuip.Operand
@@ -227,6 +228,12 @@ test-suite qasmtoquip-ancilla-tests
 test-suite qasmtoquip-assign-tests
   import:              basic-unit-test-props
   main-is:             QasmToQuip-Assign-Tests.hs
+  build-depends:       containers
+  type:                exitcode-stdio-1.0
+
+test-suite qasmtoquip-call-tests
+  import:              basic-unit-test-props
+  main-is:             QasmToQuip-Call-Tests.hs
   build-depends:       containers
   type:                exitcode-stdio-1.0
 

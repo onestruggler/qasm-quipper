@@ -13,10 +13,10 @@ import LinguaQuanta.Quip.Wire
 -----------------------------------------------------------------------------------------
 -- Sets up a simple wire allocation map.
 
-(Just allocsTmp0) = allocate QWire "var1" Nothing initialAllocations
+(Just allocsTmp0) = allocate CWire "var1" Nothing initialAllocations
 (Just allocsTmp1) = allocate CWire "var2" Nothing allocsTmp0
-(Just allocsTmp2) = allocate QWire "var3" (Just 3) allocsTmp1
-(Just allocs)     = allocate QWire "var4" (Just 5) allocsTmp2
+(Just allocsTmp2) = allocate CWire "var3" (Just 3) allocsTmp1
+(Just allocs)     = allocate CWire "var4" (Just 5) allocsTmp2
 
 -----------------------------------------------------------------------------------------
 -- simple tests
