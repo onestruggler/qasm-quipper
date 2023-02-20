@@ -129,6 +129,29 @@ test20 = TestCase (assertEqual "translateQTerm1: with Cell operand (gates)."
                                termOneGates2)
 
 -----------------------------------------------------------------------------------------
+-- translateReset
+
+(resetMap1, resetGates1) = translateReset allocs $ QRef "var1"
+(resetMap2, resetGates2) = translateReset allocs $ Cell "var3" 2
+
+test21 = TestCase (assertEqual "translateReset: with QRef operand (map)."
+                               allocs
+                               resetMap1)
+
+test22 = TestCase (assertEqual "translateReset: with QRef operand (gates)."
+                               [QDiscardGate 0, QInitGate False 0]
+                               resetGates1)
+
+
+test23 = TestCase (assertEqual "translateReset: with Cell operand (map)."
+                               allocs
+                               resetMap2)
+
+test24 = TestCase (assertEqual "translateReset: with Cell operand (gates)."
+                               [QDiscardGate 4, QInitGate False 4]
+                               resetGates2)
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "translateQDiscard_QRef_Map" test1,
@@ -150,6 +173,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "translateQDiscard_QRef_Map" test
                                      TestLabel "translateQTerm1_QRef_Map" test17,
                                      TestLabel "translateQTerm1_QRef_Gates" test18,
                                      TestLabel "translateQTerm1_Cell_Map" test19,
-                                     TestLabel "translateQTerm1_Cell_Gates" test20]
+                                     TestLabel "translateQTerm1_Cell_Gates" test20,
+                                     TestLabel "translateReset_QRef_Map" test21,
+                                     TestLabel "translateReset_QRef_Gates" test22,
+                                     TestLabel "translateReset_Cell_Map" test23,
+                                     TestLabel "translateReset_Cell_Gates" test24]
 
 main = defaultMain tests

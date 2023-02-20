@@ -6,6 +6,7 @@ module LinguaQuanta.QasmToQuip.Call
   , translateQInit1
   , translateQTerm0
   , translateQTerm1
+  , translateReset 
   ) where
 
 -------------------------------------------------------------------------------
@@ -16,6 +17,7 @@ import LinguaQuanta.QasmToQuip.Ancilla
   ( translateAncilla
   , updateWireMap
   )
+import LinguaQuanta.QasmToQuip.Operand (getWire)
 import LinguaQuanta.QasmToQuip.Wire
   ( WireAllocMap
   , initCell
@@ -81,3 +83,16 @@ translateQTerm1 :: WireAllocMap -> Operand -> TranslRes
 translateQTerm1 wmap op = (wmap', gates)
     where gates = translateAncilla wmap op $ QTermGate True
           wmap' = updateWireMap wmap op (termScalar, termCell)
+
+-------------------------------------------------------------------------------
+-- * Measure/Reset Translation.
+
+-- | Takes as input a wire allocation map and an operand to reset. Returns a
+-- sequence of Quipper instructions to reset the corresponding wire (according
+-- to the allocation map). The wire map remains unchanged.
+translateReset :: WireAllocMap -> Operand -> TranslRes
+translateReset wmap op =
+    case getWire op wmap of
+        Just w  -> let gates = [QDiscardGate w, QInitGate False w]
+                   in (wmap, gates)
+        Nothing -> error $ "Failed to handle reset at: " ++ show op

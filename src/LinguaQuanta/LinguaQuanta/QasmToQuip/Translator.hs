@@ -17,6 +17,7 @@ import LinguaQuanta.QasmToQuip.Call
   , translateQInit1
   , translateQTerm0
   , translateQTerm1
+  , translateReset
   )
 import LinguaQuanta.QasmToQuip.Gate
   ( d1RotTransl
@@ -70,6 +71,9 @@ translateCall wmap (QuipQInit1 op)   = translateQInit1 wmap op
 translateCall wmap (QuipQTerm0 op)   = translateQTerm0 wmap op
 translateCall wmap (QuipQTerm1 op)   = translateQTerm1 wmap op
 translateCall wmap (QuipQDiscard op) = translateQDiscard wmap op
+translateCall wmap (VoidReset op)    = translateReset wmap op
+translateCall wmap (VoidMeasure op)  = error msg
+    where msg = "VoidMeasure translation not implemented."
 
 -------------------------------------------------------------------------------
 -- * Assignment Translation.
@@ -85,6 +89,8 @@ translateAssign wmap id idx QuipCTerm1       = translateCTerm1 wmap id idx
 translateAssign wmap id idx QuipCDiscard     = translateCDiscard wmap id idx
 translateAssign wmap id idx (QuipMeasure op) = error msg
     where msg = "QMeas translation not implemented."
+translateAssign wmap id idx (Measure op) = error msg
+    where msg = "OpenQASM measure translation not implemented."
 
 -------------------------------------------------------------------------------
 -- * Gate Translation.

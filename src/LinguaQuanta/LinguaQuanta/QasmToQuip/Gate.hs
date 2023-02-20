@@ -314,8 +314,8 @@ toRotGate Qasm.GateCPhase param inv ins ctrls = gates
 toRotGate Qasm.GateCP param inv ins ctrls = gates
     where gates = expandCP param inv ins ctrls
 -- Special case: User-defined rotations.
-toRotGate (Qasm.UserDefined _) _ _ _ _ = error msg
-    where msg = "User-defined gate translations not implemented."
+toRotGate (Qasm.UserDefined name) _ _ _ _ = error msg
+    where msg = "User-defined gate " ++ name ++ " not implemented."
 -- Error case.
 toRotGate name _ _ _ _ = error msg
     where msg = "Unexpected RotGate in OpenQASM: " ++ show name
@@ -395,8 +395,8 @@ toNamedGate Qasm.GateCSwap _ ins ctrls = gates
 -- Special case: Toffoli gate.
 toNamedGate Qasm.GateCCX _ ins ctrls = expandToffoli ins ctrls
 -- Special case: User-defined gate.
-toNamedGate (Qasm.UserDefined _) _ _ _ = error msg
-    where msg = "User-defined gate translations not implemented."
+toNamedGate (Qasm.UserDefined name) _ _ _ = error msg
+    where msg = "User-defined gate " ++ name ++ " not implemented."
 -- Error case.
 toNamedGate _ name _ _ = error msg
     where msg = "Unexpected NamedGate in OpenQASM: " ++ show name
