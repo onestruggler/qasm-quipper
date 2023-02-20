@@ -172,7 +172,7 @@ printQubitDecl True  len decl = "qreg " ++ decl ++ printArrLen len ++ ";"
 -- declaration is returned using the same len and decl.
 printBitDecl :: Bool -> Maybe Int -> String -> String
 printBitDecl False len decl = "bit"  ++ printArrLen len ++ " " ++ decl ++ ";"
-printBitDecl True  len decl = "creg" ++ decl ++ printArrLen len ++ ";"
+printBitDecl True  len decl = "creg " ++ decl ++ printArrLen len ++ ";"
 
 -- | Consumes a legacy flag, the name of a declaration, optionally an index
 -- into the declaration (e.g., if the declaration is an array), and an rvalue.
