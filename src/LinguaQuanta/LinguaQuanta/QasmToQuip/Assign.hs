@@ -6,12 +6,17 @@ module LinguaQuanta.QasmToQuip.Assign
   , translateCInit1
   , translateCTerm0
   , translateCTerm1
+  , translateMeasure
   ) where
 
 -------------------------------------------------------------------------------
 -- * Import Section.
 
-import LinguaQuanta.QasmToQuip.Operand (toOperand)
+import LinguaQuanta.Qasm.Operand (Operand)
+import LinguaQuanta.QasmToQuip.Operand
+  ( getWire
+  , toOperand
+  )
 import LinguaQuanta.QasmToQuip.Ancilla
   ( translateAncilla
   , updateWireMap
@@ -23,7 +28,11 @@ import LinguaQuanta.QasmToQuip.Wire
   , termCell
   , termScalar
   )
-import LinguaQuanta.Quip.Gate (Gate(..))
+import LinguaQuanta.Quip.GateName (GateName(..))
+import LinguaQuanta.Quip.Gate
+  ( Control(..)
+  , Gate(..)
+  )
 
 -------------------------------------------------------------------------------
 -- * Ancilla Translation.
@@ -86,3 +95,23 @@ translateCTerm1 wmap decl idx = (wmap', gates)
     where argop = toOperand decl idx
           gates = translateAncilla wmap argop $ CTermGate True
           wmap' = updateWireMap wmap argop (termScalar, termCell)
+
+-------------------------------------------------------------------------------
+-- * Measurement Translation.
+
+-- | Takes as input a wire allocation map, the lhs of an assignment statement
+-- (represented by a String for the declaration name, and a Maybe Int for the)
+-- optional array cell index), and an operand represeting the target of a
+-- measure operation (this is assigned to the lhs). Returns the Quipper gates
+-- required to measure the rhs operand, and to store the result to the lhs.
+translateMeasure :: WireAllocMap -> String -> Maybe Int -> Operand -> [Gate]
+translateMeasure wmap decl idx qop =
+    case getWire cop wmap of
+        Just cw -> case getWire qop wmap of
+            Just qw -> [CDiscardGate cw,
+                        QInitGate False cw,
+                        NamedGate GateX False [cw] [Pos qw],
+                        QMeasGate cw]
+            Nothing -> error $ "Failed to handle measure at: " ++ show qop
+        Nothing -> error $ "Failed to handle measure to: " ++ show cop
+    where cop = toOperand decl idx

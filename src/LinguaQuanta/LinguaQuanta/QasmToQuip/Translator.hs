@@ -32,6 +32,7 @@ import LinguaQuanta.QasmToQuip.Assign
   , translateCInit1
   , translateCTerm0
   , translateCTerm1
+  , translateMeasure
   )
 import LinguaQuanta.QasmToQuip.Operand
   ( UpdatePair
@@ -89,8 +90,8 @@ translateAssign wmap id idx QuipCTerm1       = translateCTerm1 wmap id idx
 translateAssign wmap id idx QuipCDiscard     = translateCDiscard wmap id idx
 translateAssign wmap id idx (QuipMeasure op) = error msg
     where msg = "QMeas translation not implemented."
-translateAssign wmap id idx (Measure op) = error msg
-    where msg = "OpenQASM measure translation not implemented."
+translateAssign wmap id idx (Measure op) = (wmap, gates)
+    where gates = translateMeasure wmap id idx op
 
 -------------------------------------------------------------------------------
 -- * Gate Translation.

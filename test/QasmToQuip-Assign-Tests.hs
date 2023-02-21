@@ -4,9 +4,11 @@ import qualified Data.IntMap.Strict as IntMap
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit
+import LinguaQuanta.Qasm.Operand
 import LinguaQuanta.QasmToQuip.Assign
 import LinguaQuanta.QasmToQuip.Wire
 import LinguaQuanta.Quip.Gate
+import LinguaQuanta.Quip.GateName
 import LinguaQuanta.Quip.Wire
 
 -----------------------------------------------------------------------------------------
@@ -128,6 +130,45 @@ test20 = TestCase (assertEqual "translateCTerm1: with Cell operand (gates)."
                                termOneGates2)
 
 -----------------------------------------------------------------------------------------
+-- * Measurement Translation.
+
+(Just allocsTmp3) = allocate QWire "qvar" Nothing initialAllocations
+(Just allocsTmp4) = allocate CWire "cvar" Nothing allocsTmp3
+(Just allocsTmp5) = allocate QWire "qreg" (Just 4) allocsTmp4
+(Just measAllocs) = allocate CWire "creg" (Just 5) allocsTmp5
+
+qvar = QRef "qvar"
+qreg = Cell "qreg" 2
+
+test21 = TestCase (assertEqual "translateMeasure: QVar to CVar."
+                               [CDiscardGate 1,
+                                QInitGate False 1,
+                                NamedGate GateX False [1] [Pos 0],
+                                QMeasGate 1]
+                               (translateMeasure measAllocs "cvar" Nothing qvar))
+
+test22 = TestCase (assertEqual "translateMeasure: QVar to CReg."
+                               [CDiscardGate 7,
+                                QInitGate False 7,
+                                NamedGate GateX False [7] [Pos 0],
+                                QMeasGate 7]
+                               (translateMeasure measAllocs "creg" (Just 1) qvar))
+
+test23 = TestCase (assertEqual "translateMeasure: QReg to CVar."
+                               [CDiscardGate 1,
+                                QInitGate False 1,
+                                NamedGate GateX False [1] [Pos 4],
+                                QMeasGate 1]
+                               (translateMeasure measAllocs "cvar" Nothing qreg))
+
+test24 = TestCase (assertEqual "translateMeasure: QReg to CReg."
+                               [CDiscardGate 7,
+                                QInitGate False 7,
+                                NamedGate GateX False [7] [Pos 4],
+                                QMeasGate 7]
+                               (translateMeasure measAllocs "creg" (Just 1) qreg))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "translateCDiscard_QRef_Map" test1,
@@ -149,6 +190,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "translateCDiscard_QRef_Map" test
                                      TestLabel "translateCTerm1_QRef_Map" test17,
                                      TestLabel "translateCTerm1_QRef_Gates" test18,
                                      TestLabel "translateCTerm1_Cell_Map" test19,
-                                     TestLabel "translateCTerm1_Cell_Gates" test20]
+                                     TestLabel "translateCTerm1_Cell_Gates" test20,
+                                     TestLabel "translateMeasure_QVar_CVar" test21,
+                                     TestLabel "translateMeasure_QVar_CReg" test22,
+                                     TestLabel "translateMeasure_QReg_CVar" test23,
+                                     TestLabel "translateMeasure_QReg_CReg" test24]
 
 main = defaultMain tests

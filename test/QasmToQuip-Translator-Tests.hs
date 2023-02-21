@@ -389,6 +389,32 @@ test56 = TestCase (assertEqual "translate (size): quantum ancillas."
                                (size circ14))
 
 -----------------------------------------------------------------------------------------
+-- Measurement translations.
+
+circ15 = translate [AstQubitDecl Nothing "qvar",
+                    AstBitDecl Nothing "cvar",
+                    AstAssign "cvar" Nothing $ Measure $ QRef "qvar"]
+
+test57 = TestCase (assertEqual "translate (inputs): measure and assign/"
+                               2
+                               (IntMap.size $ inputs circ15))
+
+test58 = TestCase (assertEqual "translate (gates): measure and assign."
+                               [CDiscardGate 1,
+                                QInitGate False 1,
+                                Quip.NamedGate Quip.GateX False [1] [Quip.Pos 0],
+                                QMeasGate 1]
+                               (gates circ15))
+
+test59 = TestCase (assertEqual "translate (outputs): measure and assign."
+                               2
+                               (IntMap.size $ outputs circ15))
+
+test60 = TestCase (assertEqual "translate (size): measure and assign."
+                               2
+                               (size circ15))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "Empty_Inputs" test1,
@@ -446,6 +472,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "Empty_Inputs" test1,
                                      TestLabel "QAncilla_Inputs" test53,
                                      TestLabel "QAncilla_Gates" test54,
                                      TestLabel "QAncilla_Outputs" test55,
-                                     TestLabel "QAncilla_Size" test56]
+                                     TestLabel "QAncilla_Size" test56,
+                                     TestLabel "QMeas_Assign_Inputs" test57,
+                                     TestLabel "QMeas_Assign_Gates" test58,
+                                     TestLabel "QMeas_Assign_Outputs" test59,
+                                     TestLabel "QMeas_Assign_Size" test60]
 
 main = defaultMain tests
