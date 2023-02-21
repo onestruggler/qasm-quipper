@@ -19,6 +19,7 @@ data Expr = Plus Expr Expr
           | QasmId String
           | QasmCell String Expr
           | Call String [Expr]
+          | QasmMeasure GateOperand
           deriving (Show, Eq)
 
 data GateOperand = QVar String
@@ -51,4 +52,5 @@ data Stmt = QasmGateStmt GateExpr
           | QasmAssignStmt LValue Expr
           | QasmInitDeclStmt Type String Expr
           | QasmExprStmt Expr
+          | QasmResetStmt GateOperand
           deriving (Show, Eq)

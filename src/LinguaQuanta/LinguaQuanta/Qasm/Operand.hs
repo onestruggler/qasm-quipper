@@ -19,6 +19,7 @@ data RValue = QuipMeasure Operand
             | QuipCTerm0
             | QuipCTerm1
             | QuipCDiscard
+            | Measure Operand
             deriving (Show, Eq)
 
 -- | Abstract represenation of a void function call that appears in a concrete
@@ -28,4 +29,6 @@ data VoidCall = QuipQInit0 Operand
               | QuipQTerm0 Operand
               | QuipQTerm1 Operand
               | QuipQDiscard Operand
+              | VoidReset Operand
+              | VoidMeasure Operand
               deriving (Show, Eq)

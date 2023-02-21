@@ -4,6 +4,7 @@ module LinguaQuanta.Qasm.Expression
   ( ExprErr(..)
   , avgExpr
   , negateExpr
+  , parseGateOperand
   , readDecInt
   , readFloat
   , toArrayIndex
@@ -18,7 +19,10 @@ module LinguaQuanta.Qasm.Expression
 -- * Import Section.
 
 import LinguaQuanta.List (splitAtFirst)
-import LinguaQuanta.Qasm.Language (Expr)
+import LinguaQuanta.Qasm.Language
+  ( Expr
+  , GateOperand
+  )
 import LinguaQuanta.Qasm.Language as Qasm
 import LinguaQuanta.Qasm.Operand
   ( Operand(..)
@@ -42,6 +46,7 @@ data ExprErr = BadType String
              | CallArityMismatch String Int Int
              | NegArrIdx Int
              | NonOperandExpr
+             | UnexpectedMeasure
              deriving (Show, Eq)
 
 type ExprEval a = Either a ExprErr
@@ -145,6 +150,17 @@ toOperand (Qasm.QasmCell str idx) =
         Right err -> Right err
 toOperand _ = Right NonOperandExpr
 
+-- | Takes as input a gate operand (op). If op is a QVar, then a QRef operand
+-- is returned. If op is a QReg with constant index, then a Cell operand is
+-- returned. Otherwise, a gate summarization is returned to explain why the
+-- array cell index is non-constant.
+parseGateOperand :: GateOperand -> ExprEval Operand
+parseGateOperand (QVar id) = Left $ QRef id
+parseGateOperand (QReg id idx) =
+    case toArrayIndex idx of
+        Left n    -> Left $ Cell id n
+        Right err -> Right err
+
 -- | Takes as input a function name, a unary call of input type Operand, and a
 -- list of arguments. If the argument list evaluates to a single operand, then
 -- the unary call is applied to given operand with the bound call returned.
@@ -165,6 +181,15 @@ toNullaryCall name call []   = Left call
 toNullaryCall name _    args = Right $ CallArityMismatch name actual 0
     where actual = length args
 
+-- | Takes as input the argument to a measurement call. If the argument can be
+-- evaluated as an operand, then the corresponding measurement call is
+-- returned. Otherwise, nothing is returned.
+toMeasure :: GateOperand -> ExprEval RValue
+toMeasure expr =
+    case parseGateOperand expr of
+        Left op   -> Left $ Measure op
+        Right err -> Right err
+
 -- | Evaluates an expression as an r-value (i.e., a valid expression for the
 -- right-hand side of an assignment operation). If the evaluation is possible,
 -- then the corresponding RValue is returned. Otherwise, returns an error
@@ -177,6 +202,7 @@ toRValue (Call name@"CInit1" args)   = toNullaryCall name QuipCInit1   args
 toRValue (Call name@"CTerm0" args)   = toNullaryCall name QuipCTerm0   args
 toRValue (Call name@"CTerm1" args)   = toNullaryCall name QuipCTerm1   args
 toRValue (Call name@"CDiscard" args) = toNullaryCall name QuipCDiscard args
+toRValue (QasmMeasure arg)           = toMeasure arg
 toRValue _                           = Right UnknownRValue
 
 -- | Takes as input a string (name) and a list of expressions (args). Evaluates
@@ -230,6 +256,7 @@ toConstInt (Qasm.DecFloat _)     = Right $ BadType "float"
 toConstInt (Qasm.DecInt str)     = Left $ readDecInt str
 toConstInt (Qasm.QasmId str)     = Right $ NonConstId str
 toConstInt (Qasm.QasmCell str _) = Right $ NonConstId str
+toConstInt (QasmMeasure _)       = Right $ UnexpectedMeasure
 
 -- | Converts an OpenQASM function call to a SymReal expression. If the
 -- conversion is possible, then the corresponding symbolic real is returned.
@@ -275,6 +302,7 @@ toSymReal Qasm.Tau              = Left $ SR.Times SR.Pi $ SR.Const 2
 toSymReal (Qasm.DecInt str)     = Left $ SR.Const $ toInteger $ readDecInt str
 toSymReal (Qasm.QasmId str)     = Right $ NonConstId str
 toSymReal (Qasm.QasmCell str _) = Right $ NonConstId str
+toSymReal (QasmMeasure _)       = Right $ UnexpectedMeasure
 toSymReal (Qasm.DecFloat str)   = Left $ SR.Decimal val str
     where val = toRational $ readFloat str
 

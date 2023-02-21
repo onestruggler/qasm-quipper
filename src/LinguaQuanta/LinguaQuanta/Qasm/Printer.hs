@@ -140,12 +140,13 @@ printLValue _ id (Just index) = printOperand $ Cell id index
 -- | Consumes a legacy flag and an rvalue. Returns a textual representation of
 -- the rvalue, adhering to the legacy flag.
 printRValue :: Bool -> RValue -> String
-printRValue _ (QuipMeasure operand) = "QMeas(" ++ printOperand operand ++ ")"
-printRValue _ QuipCInit0            = "CInit0()"
-printRValue _ QuipCInit1            = "CInit1()"
-printRValue _ QuipCTerm0            = "CTerm0()"
-printRValue _ QuipCTerm1            = "CTerm1()"
-printRValue _ QuipCDiscard          = "CDiscard()"
+printRValue _ (QuipMeasure op) = "QMeas(" ++ printOperand op ++ ")"
+printRValue _ QuipCInit0       = "CInit0()"
+printRValue _ QuipCInit1       = "CInit1()"
+printRValue _ QuipCTerm0       = "CTerm0()"
+printRValue _ QuipCTerm1       = "CTerm1()"
+printRValue _ QuipCDiscard     = "CDiscard()"
+printRValue _ (Measure op)     = "measure " ++ printOperand op
 
 -------------------------------------------------------------------------------
 -- * Statement Printing.
@@ -171,13 +172,16 @@ printQubitDecl True  len decl = "qreg " ++ decl ++ printArrLen len ++ ";"
 -- declaration is returned using the same len and decl.
 printBitDecl :: Bool -> Maybe Int -> String -> String
 printBitDecl False len decl = "bit"  ++ printArrLen len ++ " " ++ decl ++ ";"
-printBitDecl True  len decl = "creg" ++ decl ++ printArrLen len ++ ";"
+printBitDecl True  len decl = "creg " ++ decl ++ printArrLen len ++ ";"
 
 -- | Consumes a legacy flag, the name of a declaration, optionally an index
 -- into the declaration (e.g., if the declaration is an array), and an rvalue.
 -- Returns a textual representation of assigning the rvalue to the given index
 -- of the declaration, adhering to the legacy flag.
 printAssign :: Bool -> String -> Maybe Int -> RValue -> String
+printAssign True id index rval@(Measure op) = rstr ++ " -> " ++ lstr ++ ";"
+    where lstr = printLValue True id index
+          rstr = printRValue True rval
 printAssign legacy id index rval = lstr ++ " = " ++ rstr ++ ";"
     where lstr = printLValue legacy id index
           rstr = printRValue legacy rval
@@ -190,6 +194,8 @@ printCall _ (QuipQInit1 op)   = "QInit1(" ++ printOperand op ++ ");"
 printCall _ (QuipQTerm0 op)   = "QTerm0(" ++ printOperand op ++ ");"
 printCall _ (QuipQTerm1 op)   = "QTerm1(" ++ printOperand op ++ ");"
 printCall _ (QuipQDiscard op) = "QDiscard(" ++ printOperand op ++ ");"
+printCall _ (VoidReset op)    = "reset " ++ printOperand op ++ ";"
+printCall _ (VoidMeasure op)  = "measure " ++ printOperand op ++ ";"
 
 -- | Concretizes a statement, and produces its syntactic representation.
 printAstStmt :: Bool -> AstStmt -> String

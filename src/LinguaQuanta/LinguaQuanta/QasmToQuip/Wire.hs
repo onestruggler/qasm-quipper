@@ -399,7 +399,7 @@ toQuipperInputs = toWireSubset isInput
 
 -- | Takes as input a wire allocation map. Returns a mapping from wire indices
 -- to wire types, where each wire corresponds to a Quipper output.
-toQuipperOutputs :: WireAllocMap -> IntMap.IntMap WireType
+toQuipperOutputs :: WireAllocMap -> WireSubset
 toQuipperOutputs = toWireSubset isOutput
 
 -- | Returns the size of a Quipper circuit, as indicated by a WireAllocMap.

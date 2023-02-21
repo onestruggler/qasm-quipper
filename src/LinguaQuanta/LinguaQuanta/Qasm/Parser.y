@@ -18,6 +18,8 @@ import LinguaQuanta.Qasm.Language
     inv             { Token _ TokenInv }
     pow             { Token _ TokenPow }
     gphase          { Token _ TokenGPhase }
+    reset           { Token _ TokenReset }
+    measure         { Token _ TokenMeasure }
     bit             { Token _ TokenBit }
     creg            { Token _ TokenCReg }
     qreg            { Token _ TokenQReg }
@@ -29,6 +31,7 @@ import LinguaQuanta.Qasm.Language
     tau             { Token _ (TokenTau $$) }
     id              { Token _ (TokenID $$) }
     '='             { Token _ TokenEquals }
+    '->'            { Token _ TokenArrow }
     '@'             { Token _ TokenAt }
     '+'             { Token _ TokenPlus }
     '-'             { Token _ TokenMinus }
@@ -54,6 +57,7 @@ Stmt : Gate ';'                             { QasmGateStmt $1 }
      | BitDeclStmt                          { $1 }
      | AssignStmt                           { $1 }
      | Expr ';'                             { QasmExprStmt $1 }
+     | reset GateOperand ';'                { QasmResetStmt $2 }
 
 Designator : '[' Expr ']'                   { $2 }
 
@@ -71,8 +75,11 @@ BitDeclStmt : BitType id ';'                { QasmDeclStmt $1 $2 }
             | creg id ';'                   { QasmDeclStmt BitT $2 }
             | creg id Designator ';'        { QasmDeclStmt (BitArrT $3) $2 }
 
+MeasureExpr : measure GateOperand           { QasmMeasure $2 }
+
 AssignStmt : BitType id '=' Expr ';'        { QasmInitDeclStmt $1 $2 $4 }
            | LValue '=' Expr ';'            { QasmAssignStmt $1 $3 }
+           | MeasureExpr '->' LValue ';'    { QasmAssignStmt $3 $1 }
 
 LValue : id                                 { CVar $1 }
        | id Designator                      { CReg $1 $2 }
@@ -106,6 +113,7 @@ Expr : Expr '+' Expr                        { Plus $1 $3 }
      | decint                               { DecInt $1 }
      | id                                   { QasmId $1 }
      | id Designator                        { QasmCell $1 $2 }
+     | MeasureExpr                          { $1 }
 
 GateOperands : GateOperand                  { [$1] }
              | GateOperand ',' GateOperands { $1 : $3 }

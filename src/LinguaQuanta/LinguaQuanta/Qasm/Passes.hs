@@ -14,6 +14,7 @@ module LinguaQuanta.Qasm.Passes
 import LinguaQuanta.Qasm.AST (AstStmt(..))
 import LinguaQuanta.Qasm.Expression
   ( ExprErr
+  , parseGateOperand
   , toArrayIndex
   , toConstInt
   , toRValue
@@ -30,10 +31,12 @@ import LinguaQuanta.Qasm.GateName (GateName(UserDefined))
 import LinguaQuanta.Qasm.Language
   ( Expr(..)
   , GateExpr
+  , GateOperand
   , LValue(..)
   , Stmt(..)
   , Type(..)
   )
+import LinguaQuanta.Qasm.Operand (VoidCall(..))
 
 -------------------------------------------------------------------------------
 -- * Pass Template.
@@ -66,6 +69,7 @@ data AbstractionErr = GateAbstractionErr Int GateSummaryErr
                     | ArrayLenAbstractionErr Int ExprErr
                     | RValueAbstractionErr Int ExprErr
                     | VoidCallAbstractionErr Int ExprErr
+                    | MeasureCallAbstractionErr Int ExprErr
                     | UnknownExprStmt Int
                     | NonPosArrayLen Int
                     deriving (Show, Eq)
@@ -148,7 +152,7 @@ abstractQasmInitDecl ln ty decl rval =
 -- | Consumes a line number (ln) and an expression (expr) intended to act as a
 -- statement. If expr evaluates to a valid expression statement, then the
 -- corresponding abstract statement is returned. Otherwise, an error for the
--- first failure is returned. is returned.
+-- first failure is returned.
 abstractQasmExprStmt :: Int -> Expr -> AbstractionRes
 abstractQasmExprStmt ln (Brack expr) = astmts
     where astmts = abstractQasmExprStmt ln expr
@@ -156,7 +160,20 @@ abstractQasmExprStmt ln (Call name args) =
     case toVoidCall name args of
         Left call -> Left [AstCall call]
         Right err -> Right $ VoidCallAbstractionErr ln err
+abstractQasmExprStmt ln (QasmMeasure gop) =
+    case parseGateOperand gop of
+        Left op   -> Left [AstCall $ VoidMeasure op]
+        Right err -> Right $ MeasureCallAbstractionErr ln err
 abstractQasmExprStmt ln _ = Right $ UnknownExprStmt ln
+
+-- | Consume a line number (ln) and the argument to a reset statement (expr).
+-- If expr evaluates to a valid operand, then a VoidReset parameterized by the
+-- operand is returned. Otherwise, an error for the first failure is returned.
+abstractQasmResetStmt :: Int -> GateOperand -> AbstractionRes
+abstractQasmResetStmt ln gop =
+    case parseGateOperand gop of
+        Left op   -> Left [AstCall $ VoidReset op]
+        Right err -> Right $ MeasureCallAbstractionErr ln err
 
 -- | Converts a single statement into a sequence of equivalent AST statements.
 -- If then conversion fails, then an appropriate abstraction error is returned.
@@ -171,6 +188,8 @@ abstractStmt ln (QasmInitDeclStmt ty decl rval) = astmts
     where astmts = abstractQasmInitDecl ln ty decl rval
 abstractStmt ln (QasmExprStmt expr) = astmts
     where astmts = abstractQasmExprStmt ln expr
+abstractStmt ln (QasmResetStmt expr) = astmts
+    where astmts = abstractQasmResetStmt ln expr
 
 -- | Converts a list of statements into an AST. If the conversion fails, then
 -- an appropriate abstraction error is returned.

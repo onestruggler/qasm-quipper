@@ -44,6 +44,9 @@ tokens :-
     <0>             creg                              { constLex TokenCReg }
     <0>             qreg                              { constLex TokenQReg }
     <0>             qubit                             { constLex TokenQubit }
+    -- Non-Unitary Operator Keywords.
+    <0>             reset                             { constLex TokenReset }
+    <0>             measure                           { constLex TokenMeasure }
     -- Literals and Identifiers.
     <0>             \. @decint @floatexp?             { charLex TokenFloat }
     <0>             @decint \. @decint? @floatexp?    { charLex TokenFloat }
@@ -55,6 +58,7 @@ tokens :-
     <0>             $idchars [$idchars $decimal]*     { charLex TokenID }
     -- Assignment.
     <0>             \=                                { constLex TokenEquals }
+    <0>             \-\>                              { constLex TokenArrow }
     -- Operators.
     <0>             \@                                { constLex TokenAt }
     <0>             \+                                { constLex TokenPlus }
@@ -88,6 +92,8 @@ data TokenClass = TokenCtrl
                 | TokenInv
                 | TokenPow
                 | TokenGPhase
+                | TokenReset
+                | TokenMeasure
                 | TokenBit
                 | TokenCReg
                 | TokenQReg
@@ -99,6 +105,7 @@ data TokenClass = TokenCtrl
                 | TokenTau String
                 | TokenID String
                 | TokenEquals
+                | TokenArrow
                 | TokenAt
                 | TokenPlus
                 | TokenMinus
@@ -122,6 +129,8 @@ unlex TokenNegCtrl     = "negctrl"
 unlex TokenInv         = "inv"
 unlex TokenPow         = "pow"
 unlex TokenGPhase      = "gphase"
+unlex TokenReset       = "reset"
+unlex TokenMeasure     = "measure"
 unlex TokenQReg        = "qreg"
 unlex TokenQubit       = "qubit"
 unlex (TokenFloat x)   = show x
@@ -131,6 +140,7 @@ unlex (TokenPi tok)    = show tok
 unlex (TokenTau tok)   = show tok
 unlex (TokenID str)    = show str
 unlex TokenEquals      = "="
+unlex TokenArrow       = "->"
 unlex TokenAt          = "@"
 unlex TokenPlus        = "+"
 unlex TokenMinus       = "-"
