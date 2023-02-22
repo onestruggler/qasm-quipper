@@ -41,6 +41,7 @@ import LinguaQuanta.QasmToQuip.Operand
 import LinguaQuanta.QasmToQuip.Wire
   ( WireAllocMap
   , allocate
+  , hasLoans
   , initialAllocations
   , toQuipperInputs
   , toQuipperOutputs
@@ -168,9 +169,11 @@ translateStmts wmap (stmt:stmts) = (wmap'', gates ++ rest)
 -- | Takes as input an abstract OpenQASM circuit. Returns an equivalent Quipper
 -- gate circuit.
 translate :: [AstStmt] -> GateCirc
-translate circ = GateCirc { inputs  = toQuipperInputs wmap
-                          , gates   = gates
-                          , outputs = toQuipperOutputs wmap
-                          , size    = toSize wmap
-                          }
+translate circ
+    | hasLoans wmap = error "Loaned wire not returend to wire allocation map."
+    | otherwise     = GateCirc { inputs  = toQuipperInputs wmap
+                               , gates   = gates
+                               , outputs = toQuipperOutputs wmap
+                               , size    = toSize wmap
+                               }
     where (wmap, gates) = translateStmts initialAllocations circ
