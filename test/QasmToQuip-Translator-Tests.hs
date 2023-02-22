@@ -306,7 +306,6 @@ test44 = TestCase (assertEqual "translate (size): cbit array and single cbit."
 
 circ12 = translate [dstmt2, dstmt5, dstmt3, dstmt6]
 
-
 circ12_io = IntMap.fromList [(0, QWire), (1, QWire), (2, QWire), (3, QWire),
                              (4, CWire), (5, CWire), (6, CWire), (7, CWire),
                              (8, QWire),
@@ -395,7 +394,7 @@ circ15 = translate [AstQubitDecl Nothing "qvar",
                     AstBitDecl Nothing "cvar",
                     AstAssign "cvar" Nothing $ Measure $ QRef "qvar"]
 
-test57 = TestCase (assertEqual "translate (inputs): measure and assign/"
+test57 = TestCase (assertEqual "translate (inputs): measure and assign."
                                2
                                (IntMap.size $ inputs circ15))
 
@@ -413,6 +412,37 @@ test59 = TestCase (assertEqual "translate (outputs): measure and assign."
 test60 = TestCase (assertEqual "translate (size): measure and assign."
                                2
                                (size circ15))
+
+-----------------------------------------------------------------------------------------
+-- * Void measure translations.
+
+circ16 = translate [AstQubitDecl Nothing "qvar",
+                    AstQubitDecl (Just 5) "qreg",
+                    AstCall $ VoidMeasure $ QRef "qvar",
+                    AstCall $ VoidMeasure $ Cell "qreg" 2]
+
+test61 = TestCase (assertEqual "translate (inputs): void measure."
+                               6
+                               (IntMap.size $ inputs circ16))
+
+test62 = TestCase (assertEqual "translate (gates): void measure."
+                               [QInitGate False 6,
+                                Quip.NamedGate Quip.GateX False [6] [Quip.Pos 0],
+                                QMeasGate 6,
+                                CDiscardGate 6,
+                                QInitGate False 7,
+                                Quip.NamedGate Quip.GateX False [7] [Quip.Pos 3],
+                                QMeasGate 7,
+                                CDiscardGate 7]
+                               (gates circ16))
+
+test63 = TestCase (assertEqual "translate (outputs): void measure."
+                               6
+                               (IntMap.size $ outputs circ16))
+
+test64 = TestCase (assertEqual "translate (size): void measure."
+                               7
+                               (size circ16))
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
@@ -476,6 +506,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "Empty_Inputs" test1,
                                      TestLabel "QMeas_Assign_Inputs" test57,
                                      TestLabel "QMeas_Assign_Gates" test58,
                                      TestLabel "QMeas_Assign_Outputs" test59,
-                                     TestLabel "QMeas_Assign_Size" test60]
+                                     TestLabel "QMeas_Assign_Size" test60,
+                                     TestLabel "QMeas_Void_Inputs" test61,
+                                     TestLabel "QMeas_Void_Gates" test62,
+                                     TestLabel "QMeas_Void_Outputs" test63,
+                                     TestLabel "QMeas_Void_Size" test64]
 
 main = defaultMain tests

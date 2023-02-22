@@ -18,6 +18,7 @@ import LinguaQuanta.QasmToQuip.Call
   , translateQTerm0
   , translateQTerm1
   , translateReset
+  , translateVoidMeasure
   )
 import LinguaQuanta.QasmToQuip.Gate
   ( d1RotTransl
@@ -74,8 +75,7 @@ translateCall wmap (QuipQTerm0 op)   = translateQTerm0 wmap op
 translateCall wmap (QuipQTerm1 op)   = translateQTerm1 wmap op
 translateCall wmap (QuipQDiscard op) = translateQDiscard wmap op
 translateCall wmap (VoidReset op)    = translateReset wmap op
-translateCall wmap (VoidMeasure op)  = error msg
-    where msg = "VoidMeasure translation not implemented."
+translateCall wmap (VoidMeasure op)  = translateVoidMeasure wmap op
 
 -------------------------------------------------------------------------------
 -- * Assignment Translation.
