@@ -681,6 +681,49 @@ test136 = TestCase (assertEqual "getCellIndex: fails for scalar declarations."
                                 (getCellIndex "decl1" 0 alloc4))
 
 -----------------------------------------------------------------------------------------
+-- Wire Loans.
+
+(loanMap1 ,w1)  = loanWire alloc0
+(loanMap2, w2)  = loanWire loanMap1
+(Just loanMap3) = returnWire w1 loanMap2
+(loanMap4, w3)  = loanWire loanMap3
+(Just loanMap5) = returnWire w3 loanMap4
+(Just loanMap6) = returnWire w2 loanMap5
+
+test137 = TestCase (assertBool "loanWire returns distinct wires (1/2)."
+                               (w1 /= w2))
+
+test138 = TestCase (assertBool "loanWire returns distinct wires (2/2)."
+                               (w2 /= w3))
+
+test139 = TestCase (assertBool "WireAllocMaps track outstanding loans (1/7)."
+                               (not $ hasLoans alloc0))
+
+test140 = TestCase (assertBool "WireAllocMaps track outstanding loans (2/7)."
+                               (hasLoans loanMap1))
+
+test141 = TestCase (assertBool "WireAllocMaps track outstanding loans (3/7)."
+                               (hasLoans loanMap2))
+
+test142 = TestCase (assertBool "WireAllocMaps track outstanding loans (4/7)."
+                               (hasLoans loanMap3))
+
+test143 = TestCase (assertBool "WireAllocMaps track outstanding loans (5/7)."
+                               (hasLoans loanMap4))
+
+test144 = TestCase (assertBool "WireAllocMaps track outstanding loans (6/7)."
+                               (hasLoans loanMap5))
+
+test145 = TestCase (assertBool "WireAllocMaps track outstanding loans (7/7)."
+                               (not $ hasLoans loanMap6))
+
+test146 = TestCase (assertBool "returnWire fails if the wire was never loaned."
+                               (isNothing $ returnWire 100 loanMap2))
+
+test147 = TestCase (assertBool "returnWire fails if the wire was already returned."
+                               (isNothing $ returnWire w1 loanMap6))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "WireAPI_UniqueStates_1" test1,
@@ -818,6 +861,17 @@ tests = hUnitTestToTests $ TestList [TestLabel "WireAPI_UniqueStates_1" test1,
                                      TestLabel "getCellIndex_Valid_1" test133,
                                      TestLabel "getCellIndex_Valid_2" test134,
                                      TestLabel "getCellIndex_UndeclaredErr" test135,
-                                     TestLabel "getCellIndex_ScalarErr" test136]
+                                     TestLabel "getCellIndex_ScalarErr" test136,
+                                     TestLabel "loanWire_Distinct_1" test137,
+                                     TestLabel "loanWire_Distinct_2" test138,
+                                     TestLabel "hasLoan_1" test139,
+                                     TestLabel "hasLoan_2" test140,
+                                     TestLabel "hasLoan_3" test141,
+                                     TestLabel "hasLoan_4" test142,
+                                     TestLabel "hasLoan_5" test143,
+                                     TestLabel "hasLoan_6" test144,
+                                     TestLabel "hasLoan_7" test145,
+                                     TestLabel "returnWire_CanFail_1" test146,
+                                     TestLabel "returnWire_CanFail_2" test147]
 
 main = defaultMain tests
