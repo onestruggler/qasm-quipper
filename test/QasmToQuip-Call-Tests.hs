@@ -8,6 +8,7 @@ import LinguaQuanta.Qasm.Operand
 import LinguaQuanta.QasmToQuip.Call
 import LinguaQuanta.QasmToQuip.Wire
 import LinguaQuanta.Quip.Gate
+import LinguaQuanta.Quip.GateName
 import LinguaQuanta.Quip.Wire
 
 -----------------------------------------------------------------------------------------
@@ -152,6 +153,40 @@ test24 = TestCase (assertEqual "translateReset: with Cell operand (gates)."
                                resetGates2)
 
 -----------------------------------------------------------------------------------------
+-- translateVoidMeasure
+
+(measMap1, measGates1) = translateVoidMeasure allocs $ QRef "var1"
+(measMap2, measGates2) = translateVoidMeasure measMap1 $ Cell "var3" 2
+
+test25 = TestCase (assertEqual "translateVoidMeasure: with QRef operand (map:size)."
+                               (toSize allocs + 1)
+                               (toSize measMap1))
+
+test26 = TestCase (assertBool "translateVoidMeasure: with QRef operand (map:loans)."
+                              (not $ hasLoans measMap1))
+
+test27 = TestCase (assertEqual "translateVoidMeasure: with Cell operand (map:size)."
+                               (toSize allocs + 1)
+                               (toSize measMap2))
+
+test28 = TestCase (assertBool "translateVoidMeasure: with Cell operand (map:loans)."
+                              (not $ hasLoans measMap1))
+
+test29 = TestCase (assertEqual "translateVoidMeasure: with QRef operand (gates)."
+                               [QInitGate False 10,
+                                NamedGate GateX False [10] [Pos 0],
+                                QMeasGate 10,
+                                CDiscardGate 10]
+                               measGates1)
+
+test30 = TestCase (assertEqual "translateVoidMeasure: with Cell operand (gates)."
+                               [QInitGate False 11,
+                                NamedGate GateX False [11] [Pos 4],
+                                QMeasGate 11,
+                                CDiscardGate 11]
+                               measGates2)
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "translateQDiscard_QRef_Map" test1,
@@ -177,6 +212,12 @@ tests = hUnitTestToTests $ TestList [TestLabel "translateQDiscard_QRef_Map" test
                                      TestLabel "translateReset_QRef_Map" test21,
                                      TestLabel "translateReset_QRef_Gates" test22,
                                      TestLabel "translateReset_Cell_Map" test23,
-                                     TestLabel "translateReset_Cell_Gates" test24]
+                                     TestLabel "translateReset_Cell_Gates" test24,
+                                     TestLabel "translateVoidMeasure_QRef_Size" test25,
+                                     TestLabel "translateVoidMeasure_QRef_Loan" test26,
+                                     TestLabel "translateVoidMeasure_Cell_Size" test27,
+                                     TestLabel "translateVoidMeasure_Cell_Loan" test28,
+                                     TestLabel "translateVoidMeasure_QRef_Gates" test29,
+                                     TestLabel "translateVoidMeasure_Cell_Gates" test30]
 
 main = defaultMain tests
