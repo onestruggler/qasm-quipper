@@ -169,6 +169,65 @@ test24 = TestCase (assertEqual "translateMeasure: QReg to CReg."
                                (translateMeasure measAllocs "creg" (Just 1) qreg))
 
 -----------------------------------------------------------------------------------------
+-- * QMeas Translation.
+
+(qmeasMap1, qmeasGates1) = translateQMeas measAllocs "cvar" Nothing qvar
+
+test25 = TestCase (assertEqual "translateQMeas: QVar to CVar (gates)."
+                               [QMeasGate 0]
+                               qmeasGates1)
+
+test26 = TestCase (assertEqual "translateQMeas: QVar to CVar (state, 1/2)."
+                               (Just CWire :: Maybe WireType)
+                               (IntMap.lookup 0 $ toQuipperOutputs qmeasMap1))
+
+test27 = TestCase (assertEqual "translateQMeas: QVar to CVar (state, 2/2)."
+                               (Nothing :: Maybe WireType)
+                               (IntMap.lookup 1 $ toQuipperOutputs qmeasMap1))
+
+(qmeasMap2, qmeasGates2) = translateQMeas measAllocs "creg" (Just 1) qvar
+
+test28 = TestCase (assertEqual "translateQMeas: QVar to CReg (gates)."
+                               [QMeasGate 0]
+                               qmeasGates2)
+
+test29 = TestCase (assertEqual "translateQMeas: QVar to CReg (state, 1/2)."
+                               (Just CWire :: Maybe WireType)
+                               (IntMap.lookup 0 $ toQuipperOutputs qmeasMap2))
+
+test30 = TestCase (assertEqual "translateQMeas: QVar to CReg (state, 2/2)."
+                               (Nothing :: Maybe WireType)
+                               (IntMap.lookup 7 $ toQuipperOutputs qmeasMap2))
+
+(qmeasMap3, qmeasGates3) = translateQMeas measAllocs "cvar" Nothing qreg
+
+test31 = TestCase (assertEqual "translateQMeas: QReg to CVar (gates)."
+                               [QMeasGate 4]
+                               qmeasGates3)
+
+test32 = TestCase (assertEqual "translateQMeas: QReg to CVar (state, 1/2)."
+                               (Just CWire :: Maybe WireType)
+                               (IntMap.lookup 4 $ toQuipperOutputs qmeasMap3))
+
+test33 = TestCase (assertEqual "translateQMeas: QReg to CVar (state, 2/2)."
+                               (Nothing :: Maybe WireType)
+                               (IntMap.lookup 1 $ toQuipperOutputs qmeasMap3))
+
+(qmeasMap4, qmeasGates4) = translateQMeas measAllocs "creg" (Just 1) qreg
+
+test34 = TestCase (assertEqual "translateQMeas: QReg to CReg (gates)."
+                               [QMeasGate 4]
+                               qmeasGates4)
+
+test35 = TestCase (assertEqual "translateQMeas: QReg to CReg (state, 1/2)."
+                               (Just CWire :: Maybe WireType)
+                               (IntMap.lookup 4 $ toQuipperOutputs qmeasMap4))
+
+test36 = TestCase (assertEqual "translateQMeas: QReg to CReg (state, 2/2)."
+                               (Nothing :: Maybe WireType)
+                               (IntMap.lookup 7 $ toQuipperOutputs qmeasMap4))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "translateCDiscard_QRef_Map" test1,
@@ -194,6 +253,18 @@ tests = hUnitTestToTests $ TestList [TestLabel "translateCDiscard_QRef_Map" test
                                      TestLabel "translateMeasure_QVar_CVar" test21,
                                      TestLabel "translateMeasure_QVar_CReg" test22,
                                      TestLabel "translateMeasure_QReg_CVar" test23,
-                                     TestLabel "translateMeasure_QReg_CReg" test24]
+                                     TestLabel "translateMeasure_QReg_CReg" test24,
+                                     TestLabel "translateQMeas_QVar_CVar_Gates" test25,
+                                     TestLabel "translateQMeas_QVar_CVar_State_1" test26,
+                                     TestLabel "translateQMeas_QVar_CVar_State_2" test27,
+                                     TestLabel "translateQMeas_QVar_CReg_Gates" test28,
+                                     TestLabel "translateQMeas_QVar_CReg_State_1" test29,
+                                     TestLabel "translateQMeas_QVar_CReg_State_2" test30,
+                                     TestLabel "translateQMeas_QReg_CVar_Gates" test31,
+                                     TestLabel "translateQMeas_QReg_CVar_State_1" test32,
+                                     TestLabel "translateQMeas_QReg_CVar_State_2" test33,
+                                     TestLabel "translateQMeas_QReg_CReg_Gates" test34,
+                                     TestLabel "translateQMeas_QReg_CReg_State_1" test35,
+                                     TestLabel "translateQMeas_QReg_CReg_State_2" test36]
 
 main = defaultMain tests

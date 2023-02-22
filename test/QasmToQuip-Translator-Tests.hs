@@ -445,6 +445,29 @@ test64 = TestCase (assertEqual "translate (size): void measure."
                                (size circ16))
 
 -----------------------------------------------------------------------------------------
+-- Measurement translations.
+
+circ17 = translate [AstQubitDecl Nothing "qvar",
+                    AstBitDecl Nothing "cvar",
+                    AstAssign "cvar" Nothing $ QuipMeasure $ QRef "qvar"]
+
+test65 = TestCase (assertEqual "translate (inputs): measure and assign."
+                               1
+                               (IntMap.size $ inputs circ17))
+
+test66 = TestCase (assertEqual "translate (gates): measure and assign."
+                               [QMeasGate 0]
+                               (gates circ17))
+
+test67 = TestCase (assertEqual "translate (outputs): measure and assign."
+                               1
+                               (IntMap.size $ outputs circ17))
+
+test68 = TestCase (assertEqual "translate (size): measure and assign."
+                               2
+                               (size circ17))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "Empty_Inputs" test1,
@@ -510,6 +533,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "Empty_Inputs" test1,
                                      TestLabel "QMeas_Void_Inputs" test61,
                                      TestLabel "QMeas_Void_Gates" test62,
                                      TestLabel "QMeas_Void_Outputs" test63,
-                                     TestLabel "QMeas_Void_Size" test64]
+                                     TestLabel "QMeas_Void_Size" test64,
+                                     TestLabel "InvQMeas_Inputs" test65,
+                                     TestLabel "InvQMeas_Gates" test66,
+                                     TestLabel "InvQMeas_Outputs" test67,
+                                     TestLabel "InvQMeas_Size" test68]
 
 main = defaultMain tests

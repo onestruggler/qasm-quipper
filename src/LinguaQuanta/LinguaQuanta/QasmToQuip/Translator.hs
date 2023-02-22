@@ -34,6 +34,7 @@ import LinguaQuanta.QasmToQuip.Assign
   , translateCTerm0
   , translateCTerm1
   , translateMeasure
+  , translateQMeas
   )
 import LinguaQuanta.QasmToQuip.Operand
   ( UpdatePair
@@ -89,9 +90,8 @@ translateAssign wmap id idx QuipCInit1       = translateCInit1 wmap id idx
 translateAssign wmap id idx QuipCTerm0       = translateCTerm0 wmap id idx
 translateAssign wmap id idx QuipCTerm1       = translateCTerm1 wmap id idx
 translateAssign wmap id idx QuipCDiscard     = translateCDiscard wmap id idx
-translateAssign wmap id idx (QuipMeasure op) = error msg
-    where msg = "QMeas translation not implemented."
-translateAssign wmap id idx (Measure op) = (wmap, gates)
+translateAssign wmap id idx (QuipMeasure op) = translateQMeas wmap id idx op
+translateAssign wmap id idx (Measure op)     = (wmap, gates)
     where gates = translateMeasure wmap id idx op
 
 -------------------------------------------------------------------------------
