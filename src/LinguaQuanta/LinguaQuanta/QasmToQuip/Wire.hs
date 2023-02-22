@@ -23,6 +23,10 @@ module LinguaQuanta.QasmToQuip.Wire
   , initWire
   , isOutput
   , loanWire
+  , mvCellToCell
+  , mvCellToScalar
+  , mvScalarToCell
+  , mvScalarToScalar
   , returnWire
   , termCell
   , termScalar
@@ -394,6 +398,92 @@ returnWire w (WireAllocMap tot cur loans map)
 -- | Returns true if a wire allocation map has outstanding loans.
 hasLoans :: WireAllocMap -> Bool
 hasLoans (WireAllocMap _ _ loans _) = not $ Set.null loans
+
+-------------------------------------------------------------------------------
+-- * Measurement-based State Collapse Interface.
+
+-- | Function to correct the wire state for the destination.
+mvUpdateDecl :: WireState -> WireState
+mvUpdateDecl st = WireState { wireIndex = wireIndex st
+                            , initFirst = Just True
+                            , termAtEnd = termAtEnd st
+                            }
+
+-- | Implementation details for mv{Cell,Scalar}ToScalar.
+setScalarDecl :: Maybe WireState -> ScalarUpdate
+setScalarDecl Nothing   _  _                        = Nothing
+setScalarDecl (Just st) id (WireAllocMap x y z map) =
+    case Map.lookup id map of
+        Nothing           -> Nothing
+        Just (ty, Left _) -> let map' = Map.insert id (ty, Left st) map
+                             in Just $ WireAllocMap x y z map'
+        Just (_, Right _) -> Nothing
+
+-- | Implementation details for mv{Cell,Scalar}ToCell.
+setCellDecl :: Maybe WireState -> CellUpdate
+setCellDecl Nothing   _  _   _                        = Nothing
+setCellDecl (Just st) id idx (WireAllocMap x y z map) =
+    case Map.lookup id map of
+        Nothing            -> Nothing
+        Just (_, Left _)   -> Nothing
+        Just (ty, Right c) -> if IntMap.member idx c
+                              then let c'   = IntMap.insert idx st c
+                                       map' = Map.insert id (ty, Right c') map
+                                   in Just $ WireAllocMap x y z map'
+                              else Nothing
+
+-- | Implementation details for mvScalarTo{Cell,Scalar}.
+getScalarDecl :: WireAllocMap -> String -> Maybe WireState
+getScalarDecl (WireAllocMap _ _ _ map) id =
+    case Map.lookup id map of
+        Nothing               -> Nothing
+        Just (_, Left scalar) -> Just $ mvUpdateDecl scalar
+        Just (_, Right _)     -> Nothing
+
+-- | Implementation details for mvCellTo{Cell,Scalar}.
+getCellDecl :: WireAllocMap -> String -> Int -> Maybe WireState
+getCellDecl (WireAllocMap _ _ _ map) id idx =
+    case Map.lookup id map of
+        Nothing           -> Nothing
+        Just (_, Left _)  -> Nothing
+        Just (_, Right c) -> case IntMap.lookup idx c of
+            Nothing -> Nothing
+            Just st -> Just $ mvUpdateDecl st
+
+-- | Takes as input a scalar entry (String), a cell entry (String, Int), and a
+-- wire allocation map (wmap). Returns an updated version of wmap where the
+-- entry at (String, Int) is replaced by the entry at (String). If either entry
+-- is invalid, then nothing is returned.
+mvScalarToScalar :: String -> ScalarUpdate
+mvScalarToScalar srcId dstId wmap =
+    case setScalarDecl srcDecl dstId wmap of
+        Just wmap' -> termScalar srcId wmap'
+        Nothing    -> Nothing
+    where srcDecl = getScalarDecl wmap srcId
+
+-- | See mvScalarToScalar, except scalar to cell.
+mvScalarToCell :: String -> CellUpdate
+mvScalarToCell srcId dstId dstIdx wmap =
+    case setCellDecl srcDecl dstId dstIdx wmap of
+        Just wmap' -> termScalar srcId wmap'
+        Nothing    -> Nothing
+    where srcDecl = getScalarDecl wmap srcId
+
+-- | See mvScalarToScalar, except cell to scalar.
+mvCellToScalar :: String -> Int -> ScalarUpdate
+mvCellToScalar srcId srcIdx dstId wmap =
+    case setScalarDecl srcDecl dstId wmap of
+        Just wmap' -> termCell srcId srcIdx wmap'
+        Nothing    -> Nothing
+    where srcDecl = getCellDecl wmap srcId srcIdx
+
+-- | See mvScalarToScalar, except cell to cell.
+mvCellToCell :: String -> Int -> CellUpdate
+mvCellToCell srcId srcIdx dstId dstIdx wmap =
+    case setCellDecl srcDecl dstId dstIdx wmap of
+        Just wmap' -> termCell srcId srcIdx wmap'
+        Nothing    -> Nothing
+    where srcDecl = getCellDecl wmap srcId srcIdx
 
 -------------------------------------------------------------------------------
 -- * Conversions From WireAllocMaps to Quipper IO.
