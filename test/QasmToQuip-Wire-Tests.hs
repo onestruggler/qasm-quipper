@@ -798,6 +798,22 @@ test163 = TestCase (assertEqual "mvCellToCell with invalid dst."
                                 (Nothing :: Maybe WireAllocMap)
                                 (mvCellToCell "decl3" 1 "decl2" 10 scalarRes1))
 
+test164 = TestCase (assertEqual "mv{S,C}To{S,C} impacts circuit size (1/4)."
+                                10
+                                (toSize mvMap1))
+
+test165 = TestCase (assertEqual "mv{S,C}To{S,C} impacts circuit size (2/4)."
+                                10
+                                (toSize mvMap2))
+
+test166 = TestCase (assertEqual "mv{S,C}To{S,C} impacts circuit size (3/4)."
+                                10
+                                (toSize mvMap3))
+
+test167 = TestCase (assertEqual "mv{S,C}To{S,C} impacts circuit size (4/4)."
+                                10
+                                (toSize mvMap4))
+
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
@@ -963,6 +979,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "WireAPI_UniqueStates_1" test1,
                                      TestLabel "mvCellTocell_Type" test160,
                                      TestLabel "mvCellToCell_State" test161,
                                      TestLabel "mvCellToCell_BadSrc" test162,
-                                     TestLabel "mvCellToCell_BadDst" test163]
+                                     TestLabel "mvCellToCell_BadDst" test163,
+                                     TestLabel "mv{S,C}To{S,C}_Size_1" test163,
+                                     TestLabel "mv{S,C}To{S,C}_Size_2" test164,
+                                     TestLabel "mv{S,C}To{S,C}_Size_3" test165,
+                                     TestLabel "mv{S,C}To{S,C}_Size_4" test166]
 
 main = defaultMain tests

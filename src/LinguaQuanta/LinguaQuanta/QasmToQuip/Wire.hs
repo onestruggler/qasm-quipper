@@ -154,10 +154,17 @@ type DeclWireState = Either WireState (IntMap.IntMap WireState)
 -- | Helper type to map declaration names to DeclWireStates.
 type DeclWireStateMap = Map.Map String (WireType, DeclWireState)
 
+-- | Helper type to track loaned ancillas.
+type LoanRegistry = Set.Set Int
+
+-- | Helper type to count QWire/CWire pairings.
+type TypePairRegistry = Set.Set Int
+
 -- | Maintains a mapping from declarartions to WireStates.
 data WireAllocMap = WireAllocMap Int
                                  (MaxTracker Int)
-                                 (Set.Set Int)
+                                 LoanRegistry
+                                 TypePairRegistry
                                  DeclWireStateMap
                                  deriving (Eq, Show)
 
@@ -174,7 +181,10 @@ data DeclType = Undeclared
 
 -- | Returns an empty wire allocation map.
 initialAllocations :: WireAllocMap
-initialAllocations = WireAllocMap 0 (initTracker 0) Set.empty Map.empty
+initialAllocations = WireAllocMap 0 (initTracker 0) loans pairs map
+    where loans = Set.empty
+          pairs = Set.empty
+          map   = Map.empty
 
 -- | Helper function to allocate wires of an array.
 populateWires :: Int -> Int -> IntMap.IntMap WireState
@@ -189,7 +199,7 @@ populateWires wct size = foldr f IntMap.empty [0..(size - 1)]
 -- to the map associated to each of name[0] through to name[n-1]. Otherwise,
 -- nothing is returned.
 allocate :: WireType -> String -> (Maybe Int) -> TryMapUpdate
-allocate ty name size (WireAllocMap tot cur loans map) =
+allocate ty name size (WireAllocMap tot cur loans pairs map) =
     if Map.member name map
     then Nothing
     else case size of
@@ -198,12 +208,13 @@ allocate ty name size (WireAllocMap tot cur loans map) =
     where add c st = Just $ WireAllocMap (tot + c)
                                          (updateTracker cur $ \x -> x + c)
                                          loans
+                                         pairs
                                          (Map.insert name (ty, st) map)
 
 -- | Takes as input a declaration name and a wire allocation map. Returns the
 -- type of the declaration, according to the declaration map.
 getDeclType :: String -> WireAllocMap -> DeclType
-getDeclType name (WireAllocMap _ _ _ map) =
+getDeclType name (WireAllocMap _ _ _ _ map) =
     case Map.lookup name map of
         Nothing                -> Undeclared
         Just (ty, Left _)      -> Scalar ty
@@ -213,7 +224,7 @@ getDeclType name (WireAllocMap _ _ _ map) =
 -- scalar declaration of the same name, then returns the corresponding wire
 -- index. Otherwise, returns nothing.
 getScalarIndex :: String -> WireAllocMap -> Maybe Int
-getScalarIndex name (WireAllocMap _ _ _ map) =
+getScalarIndex name (WireAllocMap _ _ _ _ map) =
     case Map.lookup name map of
         Nothing           -> Nothing
         Just (_, Left st) -> Just $ wireIndex st
@@ -224,7 +235,7 @@ getScalarIndex name (WireAllocMap _ _ _ map) =
 -- with a cell at index idx, then returns the corresponding wire index.
 -- Oterwise, returns nothing.
 getCellIndex :: String -> Int -> WireAllocMap -> Maybe Int
-getCellIndex name idx (WireAllocMap _ _ _ map) =
+getCellIndex name idx (WireAllocMap _ _ _ _ map) =
     case Map.lookup name map of
         Nothing               -> Nothing
         Just (_, Left _)      -> Nothing
@@ -285,10 +296,10 @@ applyToScalar pred update name map =
 -- Note: This method assumes that update is applicable to w. If the declaration
 -- exists and the update is not applicable, then an error is reported.
 initScalar :: ScalarUpdate
-initScalar name (WireAllocMap tot cur loans map) =
+initScalar name (WireAllocMap tot cur loans pairs map) =
     branchJust (applyToScalar initPred initWire name map) $ \(b, map') ->
         let cur' = updateTracker cur $ \x -> x + fromEnum b
-        in Just $ WireAllocMap tot cur' loans map'
+        in Just $ WireAllocMap tot cur' loans pairs map'
 
 -- | Takes as input a declaration name (name) and a wire allocation map (map).
 -- If map contains a declaration (ty, w) of type Scalar, then replaces the
@@ -298,10 +309,10 @@ initScalar name (WireAllocMap tot cur loans map) =
 -- Note: This method assumes that update is applicable to w. If the declaration
 -- exists and the update is not applicable, then an error is reported.
 termScalar :: ScalarUpdate
-termScalar name (WireAllocMap tot cur loans map) =
+termScalar name (WireAllocMap tot cur loans pairs map) =
     branchJust (applyToScalar isOutput termWire name map) $ \(b, map') ->
         let cur' = updateTracker cur $ \x -> x - fromEnum b
-        in Just $ WireAllocMap tot cur' loans map'
+        in Just $ WireAllocMap tot cur' loans pairs map'
 
 -- | Takes as input a declaration name (name) and a wire allocation map (map).
 -- If map contains a declaration (ty, w) of type Scalar, then replaces the
@@ -310,9 +321,9 @@ termScalar name (WireAllocMap tot cur loans map) =
 -- Note: This method assumes that update is applicable to w. If the declaration
 -- exists and the update is not applicable, then an error is reported.
 useScalar :: ScalarUpdate
-useScalar name (WireAllocMap tot cur loans map) =
+useScalar name (WireAllocMap tot cur loans pairs map) =
     branchJust (applyToScalar isWire useWire name map) $ \(_, map') ->
-        Just $ WireAllocMap tot cur loans map'
+        Just $ WireAllocMap tot cur loans pairs map'
 
 -- | Helper method to interact with array declarations. Takes as input a wire
 -- predicate (pred), a wire updater (update), a declaration name (name), an
@@ -342,10 +353,10 @@ applyToCell pred update name idx map =
 -- Note: This method assumes that update is applicable to w. If the declaration
 -- exists and the update is not applicable, then an error is reported.
 initCell :: CellUpdate
-initCell name idx (WireAllocMap tot cur loans map) =
+initCell name idx (WireAllocMap tot cur loans pairs map) =
     branchJust (applyToCell initPred initWire name idx map) $ \(b, map') ->
         let cur' = updateTracker cur $ \x -> x + fromEnum b
-        in Just $ WireAllocMap tot cur' loans map'
+        in Just $ WireAllocMap tot cur' loans pairs map'
 
 -- | Takes as input a declaration name (name), an array index (idx), and a wire
 -- allocation map (map). If map contains a declaration (ty, w) of type Array of
@@ -356,10 +367,10 @@ initCell name idx (WireAllocMap tot cur loans map) =
 -- Note: This method assumes that update is applicable to w. If the declaration
 -- exists and the update is not applicable, then an error is reported.
 termCell :: CellUpdate
-termCell name idx (WireAllocMap tot cur loans map) =
+termCell name idx (WireAllocMap tot cur loans pairs map) =
     branchJust (applyToCell isOutput termWire name idx map) $ \(b, map') ->
         let cur' = updateTracker cur $ \x -> x - fromEnum b
-        in Just $ WireAllocMap tot cur' loans map'
+        in Just $ WireAllocMap tot cur' loans pairs map'
 
 -- | Takes as input a declaration name (name), an array index (idx) and a wire
 -- allocation map (map). If map contains a declaration (ty, w) of type Array of
@@ -369,9 +380,9 @@ termCell name idx (WireAllocMap tot cur loans map) =
 -- Note: This method assumes that update is applicable to w. If the declaration
 -- exists and the update is not applicable, then an error is reported.
 useCell :: CellUpdate
-useCell name idx (WireAllocMap tot cur loans map) =
+useCell name idx (WireAllocMap tot cur loans pairs map) =
     branchJust (applyToCell isWire useWire name idx map) $ \(_, map') ->
-        Just $ WireAllocMap tot cur loans map'
+        Just $ WireAllocMap tot cur loans pairs map'
 
 -------------------------------------------------------------------------------
 -- * Ancilla-like Interface.
@@ -379,25 +390,25 @@ useCell name idx (WireAllocMap tot cur loans map) =
 -- | Takes as input a wire allocation map (wmap). Determines an unused wire w
 -- in wmap. Returns wmap updated to loan w, together with w.
 loanWire :: WireAllocMap -> (WireAllocMap, Int)
-loanWire (WireAllocMap tot cur loans map) = (wmap, tot)
+loanWire (WireAllocMap tot cur loans pairs map) = (wmap, tot)
     where tot'   = tot + 1
           cur'   = updateTracker cur $ \x -> x + 1
           loans' = Set.insert tot loans
-          wmap   = WireAllocMap tot' cur' loans' map
+          wmap   = WireAllocMap tot' cur' loans' pairs map
 
 -- | Takes as input a wire index (w) and a wire allocation map (wmap). If w is
 -- on loan from wmap, then the loan is terminated, and the updated wire
 -- allocation map is returned. Otherwise, nothing is returned.
 returnWire :: Int -> WireAllocMap -> Maybe WireAllocMap
-returnWire w (WireAllocMap tot cur loans map)
-    | Set.member w loans = Just $ WireAllocMap tot cur' loans' map
+returnWire w (WireAllocMap tot cur loans pairs map)
+    | Set.member w loans = Just $ WireAllocMap tot cur' loans' pairs map
     | otherwise          = Nothing
     where cur'   = updateTracker cur $ \x -> x - 1
           loans' = Set.delete w loans
 
 -- | Returns true if a wire allocation map has outstanding loans.
 hasLoans :: WireAllocMap -> Bool
-hasLoans (WireAllocMap _ _ loans _) = not $ Set.null loans
+hasLoans (WireAllocMap _ _ loans _ _) = not $ Set.null loans
 
 -------------------------------------------------------------------------------
 -- * Measurement-based State Collapse Interface.
@@ -412,29 +423,31 @@ mvUpdateDecl st = WireState { wireIndex = wireIndex st
 -- | Implementation details for mv{Cell,Scalar}ToScalar.
 setScalarDecl :: Maybe WireState -> ScalarUpdate
 setScalarDecl Nothing   _  _                        = Nothing
-setScalarDecl (Just st) id (WireAllocMap x y z map) =
+setScalarDecl (Just st) id (WireAllocMap x y z pairs map) =
     case Map.lookup id map of
         Nothing           -> Nothing
-        Just (ty, Left _) -> let map' = Map.insert id (ty, Left st) map
-                             in Just $ WireAllocMap x y z map'
+        Just (ty, Left _) -> let map'   = Map.insert id (ty, Left st) map
+                                 pairs' = Set.insert (wireIndex st) pairs
+                             in Just $ WireAllocMap x y z pairs' map'
         Just (_, Right _) -> Nothing
 
 -- | Implementation details for mv{Cell,Scalar}ToCell.
 setCellDecl :: Maybe WireState -> CellUpdate
 setCellDecl Nothing   _  _   _                        = Nothing
-setCellDecl (Just st) id idx (WireAllocMap x y z map) =
+setCellDecl (Just st) id idx (WireAllocMap x y z pairs map) =
     case Map.lookup id map of
         Nothing            -> Nothing
         Just (_, Left _)   -> Nothing
         Just (ty, Right c) -> if IntMap.member idx c
-                              then let c'   = IntMap.insert idx st c
-                                       map' = Map.insert id (ty, Right c') map
-                                   in Just $ WireAllocMap x y z map'
+                              then let c'     = IntMap.insert idx st c
+                                       map'   = Map.insert id (ty, Right c') map
+                                       pairs' = Set.insert (wireIndex st) pairs
+                                   in Just $ WireAllocMap x y z pairs' map'
                               else Nothing
 
 -- | Implementation details for mvScalarTo{Cell,Scalar}.
 getScalarDecl :: WireAllocMap -> String -> Maybe WireState
-getScalarDecl (WireAllocMap _ _ _ map) id =
+getScalarDecl (WireAllocMap _ _ _ _ map) id =
     case Map.lookup id map of
         Nothing               -> Nothing
         Just (_, Left scalar) -> Just $ mvUpdateDecl scalar
@@ -442,7 +455,7 @@ getScalarDecl (WireAllocMap _ _ _ map) id =
 
 -- | Implementation details for mvCellTo{Cell,Scalar}.
 getCellDecl :: WireAllocMap -> String -> Int -> Maybe WireState
-getCellDecl (WireAllocMap _ _ _ map) id idx =
+getCellDecl (WireAllocMap _ _ _ _ map) id idx =
     case Map.lookup id map of
         Nothing           -> Nothing
         Just (_, Left _)  -> Nothing
@@ -511,7 +524,7 @@ wireFold pred (ty, (Right cells)) subset = IntMap.foldr f subset cells
 -- the predicate, then (n, ty) is added to the subset, where n is the wire
 -- index and ty is the type associated with the wire.
 toWireSubset :: WirePred -> WireAllocMap -> WireSubset
-toWireSubset pred (WireAllocMap _ _ _ map) = Map.foldr f IntMap.empty map
+toWireSubset pred (WireAllocMap _ _ _ _ map) = Map.foldr f IntMap.empty map
     where f = wireFold pred
 
 -- | Takes as input a wire allocation map. Returns a mapping from wire indices
@@ -526,4 +539,4 @@ toQuipperOutputs = toWireSubset isOutput
 
 -- | Returns the size of a Quipper circuit, as indicated by a WireAllocMap.
 toSize :: WireAllocMap -> Int
-toSize (WireAllocMap _ cur _ _) = maxval cur
+toSize (WireAllocMap _ cur _ pairs _) = maxval cur - Set.size pairs

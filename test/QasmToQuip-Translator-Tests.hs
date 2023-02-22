@@ -464,7 +464,7 @@ test67 = TestCase (assertEqual "translate (outputs): measure and assign."
                                (IntMap.size $ outputs circ17))
 
 test68 = TestCase (assertEqual "translate (size): measure and assign."
-                               2
+                               1
                                (size circ17))
 
 -----------------------------------------------------------------------------------------
