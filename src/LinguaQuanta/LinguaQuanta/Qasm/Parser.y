@@ -13,6 +13,8 @@ import LinguaQuanta.Qasm.Language
 %error { happyError }
 
 %token
+    include         { Token _ TokenInclude }
+    path            { Token _ (TokenPath $$) }
     ctrl            { Token _ TokenCtrl }
     negctrl         { Token _ TokenNegCtrl }
     inv             { Token _ TokenInv }
@@ -48,6 +50,14 @@ import LinguaQuanta.Qasm.Language
 %left '*' '/'
 %left NEG
 %%
+
+Program : IncludeList StmtList              { Program $1 $2 }
+        | StmtList                          { Program [] $1 }
+
+IncludeList : Include                       { [$1] }
+            | Include IncludeList           { $1 : $2 }
+
+Include : include path ';'                  { QasmInclude $2 }
 
 StmtList : Stmt                             { [$1] }
          | Stmt StmtList                    { $1 : $2 }
@@ -128,6 +138,6 @@ lexwrap = (alexQasmMonadScan >>=)
 happyError :: Token -> Alex a
 happyError (Token p t) = alexQasmError p ("parse error at token '" ++ unlex t ++ "'")
 
-parseQasm :: FilePath -> String -> Either String [Stmt]
+parseQasm :: FilePath -> String -> Either String Program
 parseQasm = runAlexQasm parse
 }

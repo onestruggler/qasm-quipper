@@ -10,6 +10,7 @@ module LinguaQuantaExe.QasmUtils
 -- * Import Section..
 
 import LinguaQuanta.Qasm.AST (AstStmt)
+import LinguaQuanta.Qasm.Language (Program(..))
 import LinguaQuanta.Qasm.Parser (parseQasm)
 import LinguaQuanta.Qasm.Passes (toAst)
 import LinguaQuanta.Qasm.Printer (printAst)
@@ -28,8 +29,8 @@ import System.IO (hPutStrLn)
 parseQasmAST :: DoTaskFn [AstStmt]
 parseQasmAST file text =
     case parseQasm file text of
-        Left err  -> Left err
-        Right res -> case toAst res of
+        Left err                -> Left err
+        Right (Program _ stmts) -> case toAst stmts of
             Left ast  -> Right ast
             Right err -> Left (show err)
 

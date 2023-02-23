@@ -45,7 +45,7 @@ data Type = BitT
           deriving (Show, Eq)
 
 -------------------------------------------------------------------------------
--- * Statements.
+-- * Program.
 
 data Stmt = QasmGateStmt GateExpr
           | QasmDeclStmt Type String
@@ -54,3 +54,7 @@ data Stmt = QasmGateStmt GateExpr
           | QasmExprStmt Expr
           | QasmResetStmt GateOperand
           deriving (Show, Eq)
+
+data QasmInclude = QasmInclude String deriving (Show, Eq)
+
+data Program = Program [QasmInclude] [Stmt] deriving (Show, Eq)
