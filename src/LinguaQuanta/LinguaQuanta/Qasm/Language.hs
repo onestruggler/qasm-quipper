@@ -47,6 +47,8 @@ data Type = BitT
 -------------------------------------------------------------------------------
 -- * Program.
 
+type Version = String
+
 data Stmt = QasmGateStmt GateExpr
           | QasmDeclStmt Type String
           | QasmAssignStmt LValue Expr
@@ -57,4 +59,4 @@ data Stmt = QasmGateStmt GateExpr
 
 data QasmInclude = QasmInclude String deriving (Show, Eq)
 
-data Program = Program [QasmInclude] [Stmt] deriving (Show, Eq)
+data Program = Program Version [QasmInclude] [Stmt] deriving (Show, Eq)

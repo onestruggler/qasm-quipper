@@ -30,7 +30,7 @@ parseQasmAST :: DoTaskFn [AstStmt]
 parseQasmAST file text =
     case parseQasm file text of
         Left err                -> Left err
-        Right (Program _ stmts) -> case toAst stmts of
+        Right (Program _ _ stmts) -> case toAst stmts of
             Left ast  -> Right ast
             Right err -> Left (show err)
 

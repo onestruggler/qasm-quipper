@@ -28,10 +28,16 @@ $filepath   = [$alpha $decimal \. \- '_']
 
 tokens :-
     <0>             $white+                           ;
+    -- Format Parsing.
+    <0>             OPENQASM                          { (constLex TokenOpenQasm)
+                                                        `andBegin` version }
+    <version>       $space+                           ;
+    <version>       $decimal+ (\. $decimal+)?         { charLex TokenVer }
+    <version>       \;                                { constLex TokenSemicolon }
+    <version>       \n                                { begin 0 }
     -- Header Parsing.
     <0>             include                           { (constLex TokenInclude)
-                                                        `andBegin`
-                                                        includefn }
+                                                        `andBegin` includefn }
     <includefn>     $space+                           ;
     <includefn>     \" $filepath* \"                  { charLex TokenPath }
     <includefn>     \;                                { constLex TokenSemicolon }
@@ -97,7 +103,9 @@ setFilePath :: FilePath -> Alex ()
 setFilePath = alexSetUserState . AlexUserState
 
 -- The tokens returned by the parser.
-data TokenClass = TokenInclude
+data TokenClass = TokenOpenQasm
+                | TokenVer String
+                | TokenInclude
                 | TokenPath String
                 | TokenCtrl
                 | TokenNegCtrl
@@ -136,6 +144,8 @@ data Token = Token AlexPosn TokenClass deriving (Show)
 
 -- Converts tokens into strings for nicer error messages.
 unlex :: TokenClass -> String
+unlex TokenOpenQasm    = "OPENQASM"
+unlex (TokenVer str)   = str  
 unlex TokenInclude     = "include"
 unlex (TokenPath fp)   = fp
 unlex TokenCtrl        = "ctrl"

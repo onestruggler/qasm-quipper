@@ -13,6 +13,8 @@ import LinguaQuanta.Qasm.Language
 %error { happyError }
 
 %token
+    openqasm        { Token _ TokenOpenQasm }
+    version         { Token _ (TokenVer $$) }
     include         { Token _ TokenInclude }
     path            { Token _ (TokenPath $$) }
     ctrl            { Token _ TokenCtrl }
@@ -51,8 +53,12 @@ import LinguaQuanta.Qasm.Language
 %left NEG
 %%
 
-Program : IncludeList StmtList              { Program $1 $2 }
-        | StmtList                          { Program [] $1 }
+Program : Version IncludeList StmtList      { Program $1  $2 $3 }
+        | Version StmtList                  { Program $1  [] $2 }
+        | IncludeList StmtList              { Program "3" $1 $2 }
+        | StmtList                          { Program "3" [] $1 }
+
+Version : openqasm version ';'              { $2 }
 
 IncludeList : Include                       { [$1] }
             | Include IncludeList           { $1 : $2 }
