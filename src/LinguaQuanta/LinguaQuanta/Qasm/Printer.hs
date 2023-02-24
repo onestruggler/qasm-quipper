@@ -318,6 +318,13 @@ printAstStmt legacy (AstBitDecl len decl)     = printBitDecl legacy len decl
 printAstStmt legacy (AstAssign id index rval) = printAssign legacy id index rval
 printAstStmt legacy (AstCall call)            = printCall legacy call
 
+-- | Returns the version string, according to whether the output is legacy.
+printVersion :: Bool -> String
+printVersion legacy = "OPENQASM " ++ vnum ++ ";"
+    where vnum = if legacy then "2.0" else "3"
+
 -- | Concretizes each statement, and produces its syntactic representation.
 printAst :: Bool -> [AstStmt] -> [String]
-printAst legacy = map $ printAstStmt legacy
+printAst legacy stmts = vers:body
+    where body = map (printAstStmt legacy) stmts
+          vers = printVersion legacy
