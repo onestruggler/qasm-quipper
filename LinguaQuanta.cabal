@@ -24,6 +24,7 @@ library
                        LinguaQuanta.Qasm.Expression
                        LinguaQuanta.Qasm.Gate
                        LinguaQuanta.Qasm.GateName
+                       LinguaQuanta.Qasm.Header
                        LinguaQuanta.Qasm.Inversion
                        LinguaQuanta.Qasm.Language
                        LinguaQuanta.Qasm.Operand
@@ -202,6 +203,11 @@ test-suite qasm-expression-tests
 test-suite qasm-gate-tests
   import:              basic-unit-test-props
   main-is:             Qasm-Gate-Tests.hs
+  type:                exitcode-stdio-1.0
+
+test-suite qasm-header-tests
+  import:              basic-unit-test-props
+  main-is:             Qasm-Header-Tests.hs
   type:                exitcode-stdio-1.0
 
 test-suite qasm-inversion-tests
