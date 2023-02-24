@@ -84,18 +84,18 @@ BitType : bit                               { BitT }
         | bit Designator                    { BitArrT $2 }
 
 QubitDeclStmt : QubitType id ';'            { QasmDeclStmt $1 $2 }
-              | qreg id ';'                 { QasmDeclStmt QubitT $2 }
-              | qreg id Designator ';'      { QasmDeclStmt (QubitArrT $3) $2 }
+              | qreg id ';'                 { QasmLDeclStmt QubitT $2 }
+              | qreg id Designator ';'      { QasmLDeclStmt (QubitArrT $3) $2 }
 
 BitDeclStmt : BitType id ';'                { QasmDeclStmt $1 $2 }
-            | creg id ';'                   { QasmDeclStmt BitT $2 }
-            | creg id Designator ';'        { QasmDeclStmt (BitArrT $3) $2 }
+            | creg id ';'                   { QasmLDeclStmt BitT $2 }
+            | creg id Designator ';'        { QasmLDeclStmt (BitArrT $3) $2 }
 
 MeasureExpr : measure GateOperand           { QasmMeasure $2 }
 
 AssignStmt : BitType id '=' Expr ';'        { QasmInitDeclStmt $1 $2 $4 }
            | LValue '=' Expr ';'            { QasmAssignStmt $1 $3 }
-           | MeasureExpr '->' LValue ';'    { QasmAssignStmt $3 $1 }
+           | MeasureExpr '->' LValue ';'    { QasmLAssignStmt $3 $1 }
 
 LValue : id                                 { CVar $1 }
        | id Designator                      { CReg $1 $2 }

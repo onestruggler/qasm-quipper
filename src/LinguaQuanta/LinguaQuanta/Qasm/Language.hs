@@ -51,7 +51,9 @@ type Version = String
 
 data Stmt = QasmGateStmt GateExpr
           | QasmDeclStmt Type String
+          | QasmLDeclStmt Type String
           | QasmAssignStmt LValue Expr
+          | QasmLAssignStmt LValue Expr
           | QasmInitDeclStmt Type String Expr
           | QasmExprStmt Expr
           | QasmResetStmt GateOperand
