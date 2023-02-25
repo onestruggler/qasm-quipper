@@ -1,9 +1,3 @@
-gate quip_rz(theta) a {
-    // Legacy support for OpenQASM 2.0:
-    U(0, theta, theta) a; // Equivalent to gphase(theta).
-    rz(2 * theta) a;
-}
-
 gate quip_ix a {
     y a;
     s a;
@@ -13,8 +7,14 @@ gate quip_ix a {
 }
 
 gate quip_omega a {
-    // Legacy support for OpenQASM 2.0:
-    U(0, pi / 4, pi / 4) a; // Equivalent to gphase(pi / 4).
+    // The omega gate is a specific global phase gate. Since controls are not
+    // possible in OpenQASM 2.0, then this gate is a no-op in OpenQASM 2.0.
+    // Therefore, this gate can implement any global phase in OpenQASM 2.0, so
+    // long as it implements a global phase of exp(i*pi/4) in OpenQASM 3.
+    p(pi / 4) a;
+    x a;
+    p(pi / 4) a;
+    x a;
 }
 
 gate quip_e a {

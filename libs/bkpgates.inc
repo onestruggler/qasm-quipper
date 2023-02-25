@@ -4,14 +4,15 @@ gate swap a, b {
     cx a, b;  
 }
 
-gate cswap a, b, c {
-    ccx a, b, c;
-    ccx a, c, b;
-    ccx a, b, c;
+gate cswap c, a, b {
+    ccx c, a, b;
+    ccx c, b, a;
+    ccx c, a, b;
 }
 
 gate sx a {
-    U(0, pi, pi) a;
+    // This gate is off by a global phase of -1. However, controls are not a
+    // feature in OpenQASM 2.0, so the global phase is unobservable.
     h a;
     sdg a;
     h a;
@@ -19,28 +20,34 @@ gate sx a {
 }
 
 gate p(theta) a {
-    // Legacy support for OpenQASM 2.0:
-    U(0, theta / 2, theta / 2) a; // Equivalent to gphase(theta / 2).
+    // This gate is off by a global phase of theta / 2. However, controls are
+    // not a feature in OpenQASM 2.0, so the global phase is unobservable.
     rz(theta) a;
 }
 
-gate cp(theta) a, b {
-    p(theta / 2) b;
-    cx a, b;
-    p(-theta / 2) b;
-    cx a, b;
+gate cp(theta) c, t {
+    p(theta / 2) t;
+    cx c, t;
+    p(-theta / 2) t;
+    cx c, t;
 }
 
-gate crx(theta) a, b {
-    rx(theta / 2) b;
-    cx a, b;
-    rx(-theta / 2) b;
-    cx a, b;
+gate crx(theta) c, t {
+    rx(theta / 2) t;
+    cx c, t;
+    rx(-theta / 2) t;
+    cx c, t;
 }
 
-gate cry(theta) a, b {
-    ry(theta / 2) b;
-    cx a, b;
-    ry(-theta / 2) b;
-    cx a, b;
+gate cry(theta) c, t {
+    ry(theta / 2) t;
+    cx c, t;
+    ry(-theta / 2) t;
+    cx c, t;
+}
+
+gate cu(theta, phi, lambda, gamma) c, t {
+    p(gamma) c;
+    p((phi+lambda)/2) c; // U-gates in OpenQASM 2.0 and 3 differ by a phase.
+    cu3(theta, phi, lambda) c, t;
 }
