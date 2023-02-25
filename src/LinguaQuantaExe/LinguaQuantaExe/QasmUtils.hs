@@ -62,7 +62,7 @@ parseQasmAST file text =
         Left err                         -> Left err
         Right (Program vers incls stmts) -> case analyzerHeader vers incls of
             Left err     -> Left err
-            Right header -> case toAst stmts of
+            Right header -> case toAst header stmts of
                 Left ast  -> Right ast
                 Right err -> Left $ show err
 

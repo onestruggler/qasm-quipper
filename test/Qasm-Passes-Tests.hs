@@ -11,20 +11,29 @@ import LinguaQuanta.Qasm.AST
 import LinguaQuanta.Qasm.Expression
 import LinguaQuanta.Qasm.Gate
 import LinguaQuanta.Qasm.GateName
+import LinguaQuanta.Qasm.Header
 import LinguaQuanta.Qasm.Language
 import LinguaQuanta.Qasm.Operand
 import LinguaQuanta.Qasm.Passes
+
+-----------------------------------------------------------------------------------------
+-- Computes the most permissive header.
+
+(Just tmp0)   = toQasmHeader "3"
+(Left tmp1)   = addLib "stdgates.inc" tmp0
+(Left tmp2)   = addLib "quipgates.inc" tmp1
+(Left libhdr) = addLib "quipfuncs.inc" tmp2
 
 -----------------------------------------------------------------------------------------
 -- toAst
 
 test1 = TestCase (assertEqual "toAst supports empty files."
                               (Left [])
-                              (toAst []))
+                              (toAst libhdr []))
 
 test2 = TestCase (assertEqual "toAst supports basic features."
                               (Left [astDecl1, astDecl2, astDecl3, astGate1])
-                              (toAst [dec1Stmt, dec2Stmt, dec3Stmt, gateStmt]))
+                              (toAst libhdr [dec1Stmt, dec2Stmt, dec3Stmt, gateStmt]))
     where dec1Stmt = QasmDeclStmt QubitT "v1"
           dec2Stmt = QasmDeclStmt QubitT "v2"
           dec3Stmt = QasmDeclStmt (QubitArrT (DecInt "7")) "arr"
@@ -39,18 +48,18 @@ test2 = TestCase (assertEqual "toAst supports basic features."
 
 test3 = TestCase (assertEqual "toAst returns gate errors."
                               (Right (GateAbstractionErr 2 (UnexpectedParamCount 1 0)))
-                              (toAst [declStmt, gateStmt]))
+                              (toAst libhdr [declStmt, gateStmt]))
     where declStmt = QasmDeclStmt QubitT "v1"
           gateExpr = NamedGateOp "cx" [Pi] [QVar "v1", QVar "v2", QVar "v3"]
           gateStmt = QasmGateStmt gateExpr
 
 test4 = TestCase (assertEqual "toAst returns array length errors (non-integral)."
                               (Right (ArrayLenAbstractionErr 1 (BadType "angle")))
-                              (toAst [QasmDeclStmt (QubitArrT Pi) "arr"]))
+                              (toAst libhdr [QasmDeclStmt (QubitArrT Pi) "arr"]))
 
 test5 = TestCase (assertEqual "toAst returns array length errors (non-positive)."
                               (Right (NonPosArrayLen 1))
-                              (toAst [QasmDeclStmt (QubitArrT zero) "arr"]))
+                              (toAst libhdr [QasmDeclStmt (QubitArrT zero) "arr"]))
 
 -----------------------------------------------------------------------------------------
 -- elimInv
@@ -133,13 +142,12 @@ asgnAst = AstAssign "cvar" Nothing $ QuipMeasure $ QRef "qvar"
 
 test12 = TestCase (assertEqual "toAst supports QasmAssignStmt."
                                (Left [qdecAst, cdecAst, asgnAst])
-                               (toAst [qdecStmt, cdecStmt, asgnStmt]))
+                               (toAst libhdr [qdecStmt, cdecStmt, asgnStmt]))
     where asgnStmt = QasmAssignStmt (CVar "cvar") $ Call "QMeas" [QasmId "qvar"]
-          cdecStmt = QasmDeclStmt BitT "cvar"
 
 test13 = TestCase (assertEqual "toAst supports QasmInitDeclStmt."
                                (Left [qdecAst, cdecAst, asgnAst])
-                               (toAst [qdecStmt, asgnStmt]))
+                               (toAst libhdr [qdecStmt, asgnStmt]))
     where asgnStmt = QasmInitDeclStmt BitT "cvar" $  Call "QMeas" [QasmId "qvar"]
 
 -----------------------------------------------------------------------------------------
@@ -159,13 +167,13 @@ qdiscardAst = AstCall $ QuipQDiscard $ QRef "qvar"
 
 test14 = TestCase (assertEqual "toAst supports ancilla qbit function calls."
                                (Left ast)
-                               (toAst prog))
+                               (toAst libhdr prog))
     where prog = [qdecStmt, qterm0,    qinit1,    qterm1,    qinit0,    qdiscard]
           ast  = [qdecAst,  qterm0Ast, qinit1Ast, qterm1Ast, qinit0Ast, qdiscardAst]
 
 test15 = TestCase (assertEqual "toAst rejects invalid ancilla qbit function calls."
                                (Right err :: Either [AstStmt] AbstractionErr)
-                               (toAst [qdecStmt, QasmExprStmt $ Call "QInit0" []]))
+                               (toAst libhdr [qdecStmt, QasmExprStmt $ Call "QInit0" []]))
     where err = VoidCallAbstractionErr 2 $ CallArityMismatch "QInit0" 0 1
 
 cterm0   = QasmAssignStmt (CVar "cvar") $ Call "CTerm0"   []
@@ -182,19 +190,19 @@ cdiscardAst = AstAssign "cvar" Nothing QuipCDiscard
 
 test16 = TestCase (assertEqual "toAst supports ancilla cbit function calls."
                               (Left ast)
-                              (toAst prog))
+                              (toAst libhdr prog))
     where prog = [cdecStmt, cterm0,    cinit1,    cterm1,    cinit0,    cdiscard]
           ast  = [cdecAst,  cterm0Ast, cinit1Ast, cterm1Ast, cinit0Ast, cdiscardAst]
 
 test17 = TestCase (assertEqual "toAst rejects invalid ancilla cbit function calls."
                                (Right err :: Either [AstStmt] AbstractionErr)
-                               (toAst [cdecStmt, stmt]))
+                               (toAst libhdr [cdecStmt, stmt]))
     where stmt = QasmAssignStmt (CVar "cvar") $ Call "CTerm0" [QasmId "qvar"]
           err  = RValueAbstractionErr 2 $ CallArityMismatch "CTerm0" 1 0
 
 test18 = TestCase (assertEqual "toAst strips outer brackets from expressions.."
                                (Left ast :: Either [AstStmt] AbstractionErr)
-                               (toAst [cdecStmt, stmt]))
+                               (toAst libhdr [cdecStmt, stmt]))
     where stmt = QasmExprStmt $ Brack $ Call "QTerm0" [QasmId "qvar"]
           ast  = [cdecAst,  qterm0Ast]
 
@@ -211,27 +219,58 @@ measure2Ast = AstCall $ VoidMeasure $ QRef "qvar"
 
 test19 = TestCase (assertEqual "toAst supports reset/measure."
                               (Left ast)
-                              (toAst prog))
+                              (toAst libhdr prog))
     where prog = [cdecStmt, qdecStmt, measure1Stmt, measure2Stmt, resetStmt]
           ast  = [cdecAst,  qdecAst,  measure1Ast,  measure2Ast,  resetAst]
 
 test20 = TestCase (assertEqual "toAst rejects invalid reset operands."
                                (Right err :: Either [AstStmt] AbstractionErr)
-                               (toAst [cdecStmt, qdecStmt, stmt]))
+                               (toAst libhdr [cdecStmt, qdecStmt, stmt]))
     where stmt = QasmResetStmt $ QReg "qvar" $ DecInt "-5"
           err  = MeasureCallAbstractionErr 3 $ NegArrIdx (-5)
 
 test21 = TestCase (assertEqual "toAst rejects invalid measure in assignment."
                                (Right err :: Either [AstStmt] AbstractionErr)
-                               (toAst [cdecStmt, qdecStmt, stmt]))
+                               (toAst libhdr [cdecStmt, qdecStmt, stmt]))
     where stmt = QasmAssignStmt (CVar "cvar") $ QasmMeasure $ QReg "qvar" $ DecInt "-5"
           err  = RValueAbstractionErr 3 $ NegArrIdx (-5)
 
 test22 = TestCase (assertEqual "toAst rejects invalid measure in QasmExprStmt."
                                (Right err :: Either [AstStmt] AbstractionErr)
-                               (toAst [cdecStmt, qdecStmt, stmt]))
+                               (toAst libhdr [cdecStmt, qdecStmt, stmt]))
     where stmt = QasmExprStmt $ QasmMeasure $ QReg "qvar" $ DecInt "-5"
           err  = MeasureCallAbstractionErr 3 $ NegArrIdx (-5)
+
+-----------------------------------------------------------------------------------------
+-- Legacy statement checks.
+
+(Just tmp3)   = toQasmHeader "2.0"
+(Left tmp4)   = addLib "qelib1.inc" tmp3
+(Left legacy) = addLib "quipgates.inc" tmp4
+
+qldecStmt = QasmLDeclStmt QubitT "qvar"
+cldecStmt = QasmLDeclStmt BitT   "cvar"
+
+test23 = TestCase (assertEqual "toAst rejects new declarations in legacy code (1/2)."
+                               (Right err :: Either [AstStmt] AbstractionErr)
+                               (toAst legacy [cdecStmt]))
+    where err = NonLegacyStmt 1
+
+test24 = TestCase (assertEqual "toAst rejects new declarations in legacy code (2/2)."
+                               (Left [cdecAst] :: Either [AstStmt] AbstractionErr)
+                               (toAst legacy [cldecStmt]))
+
+test25 = TestCase (assertEqual "toAst rejects new assignments in legacy code (1/2)."
+                               (Right err :: Either [AstStmt] AbstractionErr)
+                               (toAst legacy [cldecStmt, qldecStmt, asgnStmt]))
+    where asgnStmt = QasmAssignStmt (CVar "cvar") $ Call "QMeas" [QasmId "qvar"]
+          err      = NonLegacyStmt 3
+
+test26 = TestCase (assertEqual "toAst rejects new assignments in legacy code (1/2)."
+                               (Left res :: Either [AstStmt] AbstractionErr)
+                               (toAst legacy [cldecStmt, qldecStmt, asgnStmt]))
+    where asgnStmt = QasmLAssignStmt (CVar "cvar") $ Call "QMeas" [QasmId "qvar"]
+          res      = [cdecAst, qdecAst, asgnAst]
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
@@ -257,6 +296,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "toAst_EmptyFile" test1,
                                      TestLabel "toAst_MeasurementReset" test19,
                                      TestLabel "toAst_BadReset" test20,
                                      TestLabel "toAst_BadMeasureAssign" test21,
-                                     TestLabel "toAst_BadMeasureExpr" test22]
+                                     TestLabel "toAst_BadMeasureExpr" test22,
+                                     TestLabel "toAst_LegacyDecl_1" test23,
+                                     TestLabel "toAst_LegacyDecl_2" test24,
+                                     TestLabel "toAst_LegacyAssign_1" test25,
+                                     TestLabel "toAst_LegacyAssign_2" test26]
 
 main = defaultMain tests

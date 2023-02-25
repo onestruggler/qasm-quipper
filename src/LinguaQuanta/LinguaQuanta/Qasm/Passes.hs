@@ -22,12 +22,20 @@ import LinguaQuanta.Qasm.Expression
   )
 import LinguaQuanta.Qasm.Inversion (invertGate)
 import LinguaQuanta.Qasm.Gate
-  ( Gate(NamedGate)
+  ( Gate(..)
   , GateSummaryErr
   , exprToGate
   , validateGate
   )
 import LinguaQuanta.Qasm.GateName (GateName(UserDefined))
+import LinguaQuanta.Qasm.Header
+  ( QasmHeader
+  , isLegacy
+  , usingBkp
+  , usingQfn
+  , usingQpr
+  , usingStd
+  )
 import LinguaQuanta.Qasm.Language
   ( Expr(..)
   , GateExpr
@@ -72,6 +80,7 @@ data AbstractionErr = GateAbstractionErr Int GateSummaryErr
                     | MeasureCallAbstractionErr Int ExprErr
                     | UnknownExprStmt Int
                     | NonPosArrayLen Int
+                    | NonLegacyStmt Int
                     deriving (Show, Eq)
 
 type AbstractionRes = Either [AstStmt] AbstractionErr
@@ -79,8 +88,8 @@ type AbstractionRes = Either [AstStmt] AbstractionErr
 -- | Consumes a line number (ln) and an expression (expr). If expr evaluates to
 -- a valid gate (g) that is supported by the translator, then g is returned.
 -- Otherwise, an error is returned with line number set to ln.
-abstractQasmGate :: Int -> GateExpr -> AbstractionRes
-abstractQasmGate ln expr =
+abstractGate :: QasmHeader -> Int -> GateExpr -> AbstractionRes
+abstractGate header ln expr =
     case exprToGate expr of
         Left (n, gate) -> case validateGate gate of
             Nothing  -> Left [AstGateStmt n gate]
@@ -104,21 +113,21 @@ getDeclLen ln expr =
 -- for a variable with name decl is returned. The constructor of the abstract
 -- declaration is determined by the type. If the type is invalid, then an error
 -- is returned with line number set to ln.
-abstractQasmDecl :: Int -> Type -> String -> AbstractionRes
-abstractQasmDecl _  QubitT           decl = Left [AstQubitDecl Nothing decl]
-abstractQasmDecl ln (QubitArrT expr) decl =
+abstractDecl :: Int -> Type -> String -> AbstractionRes
+abstractDecl _  QubitT           decl = Left [AstQubitDecl Nothing decl]
+abstractDecl ln (QubitArrT expr) decl =
     case getDeclLen ln expr of
         Left n    -> Left [AstQubitDecl (Just n) decl]
         Right err -> Right err
-abstractQasmDecl _  BitT decl = Left [AstBitDecl Nothing decl]
-abstractQasmDecl ln (BitArrT expr) decl =
+abstractDecl _  BitT decl = Left [AstBitDecl Nothing decl]
+abstractDecl ln (BitArrT expr) decl =
     case getDeclLen ln expr of
         Left n    -> Left [AstBitDecl (Just n) decl]
         Right err -> Right err
 
--- | Implementation details for abstractQasmAssign.
-abstractQasmAssignImpl :: Int -> String -> Maybe Int -> Expr -> AbstractionRes
-abstractQasmAssignImpl ln id idx expr = 
+-- | Implementation details for abstractAssign.
+assignImpl :: QasmHeader -> Int -> String -> Maybe Int -> Expr -> AbstractionRes
+assignImpl header ln id idx expr = 
     case toRValue expr of
         Left rval -> Left [AstAssign id idx rval]
         Right err -> Right $ RValueAbstractionErr ln err
@@ -127,12 +136,12 @@ abstractQasmAssignImpl ln id idx expr =
 -- to the variable (rval). If the lvalue and rvalue are valid, then an abstract
 -- assignment statement for rval into lval is returned. Otherwise, an error for
 -- the first failure is returned. is returned.
-abstractQasmAssign :: Int -> LValue -> Expr -> AbstractionRes
-abstractQasmAssign ln (CVar id) expr = stmt
-    where stmt = abstractQasmAssignImpl ln id Nothing expr
-abstractQasmAssign ln (CReg id idx) expr =
+abstractAssign :: QasmHeader -> Int -> LValue -> Expr -> AbstractionRes
+abstractAssign header ln (CVar id) expr = stmt
+    where stmt = assignImpl header ln id Nothing expr
+abstractAssign header ln (CReg id idx) expr =
     case toArrayIndex idx of
-        Left n    -> abstractQasmAssignImpl ln id (Just n) expr
+        Left n    -> assignImpl header ln id (Just n) expr
         Right err -> Right $ ArrayLenAbstractionErr ln err
 
 -- | Consumes a line number (ln), a variable type, the name of a newly declared
@@ -141,10 +150,10 @@ abstractQasmAssign ln (CReg id idx) expr =
 -- statement for a variable of the name decl, an an abstract initialization
 -- statement setting decl to expr, are returned. Otherwise, an error for the
 -- first failure is returned. is returned.
-abstractQasmInitDecl :: Int -> Type -> String -> Expr -> AbstractionRes
-abstractQasmInitDecl ln ty decl rval =
-    case abstractQasmDecl ln ty decl of
-        Left dstmt -> case abstractQasmAssign ln (CVar decl) rval of
+abstractInitDecl :: QasmHeader -> Int -> Type -> String -> Expr -> AbstractionRes
+abstractInitDecl header ln ty decl rval =
+    case abstractDecl ln ty decl of
+        Left dstmt -> case abstractAssign header ln (CVar decl) rval of
             Left istmt -> Left $ dstmt ++ istmt
             Right err  -> Right err
         Right err -> Right err
@@ -153,52 +162,56 @@ abstractQasmInitDecl ln ty decl rval =
 -- statement. If expr evaluates to a valid expression statement, then the
 -- corresponding abstract statement is returned. Otherwise, an error for the
 -- first failure is returned.
-abstractQasmExprStmt :: Int -> Expr -> AbstractionRes
-abstractQasmExprStmt ln (Brack expr) = astmts
-    where astmts = abstractQasmExprStmt ln expr
-abstractQasmExprStmt ln (Call name args) =
+abstractExprStmt :: QasmHeader -> Int -> Expr -> AbstractionRes
+abstractExprStmt header ln (Brack expr) = astmts
+    where astmts = abstractExprStmt header ln expr
+abstractExprStmt header ln (Call name args) =
     case toVoidCall name args of
         Left call -> Left [AstCall call]
         Right err -> Right $ VoidCallAbstractionErr ln err
-abstractQasmExprStmt ln (QasmMeasure gop) =
+abstractExprStmt _ ln (QasmMeasure gop) =
     case parseGateOperand gop of
         Left op   -> Left [AstCall $ VoidMeasure op]
         Right err -> Right $ MeasureCallAbstractionErr ln err
-abstractQasmExprStmt ln _ = Right $ UnknownExprStmt ln
+abstractExprStmt _ ln _ = Right $ UnknownExprStmt ln
 
 -- | Consume a line number (ln) and the argument to a reset statement (expr).
 -- If expr evaluates to a valid operand, then a VoidReset parameterized by the
 -- operand is returned. Otherwise, an error for the first failure is returned.
-abstractQasmResetStmt :: Int -> GateOperand -> AbstractionRes
-abstractQasmResetStmt ln gop =
+abstractResetStmt :: Int -> GateOperand -> AbstractionRes
+abstractResetStmt ln gop =
     case parseGateOperand gop of
         Left op   -> Left [AstCall $ VoidReset op]
         Right err -> Right $ MeasureCallAbstractionErr ln err
 
 -- | Converts a single statement into a sequence of equivalent AST statements.
 -- If then conversion fails, then an appropriate abstraction error is returned.
-abstractStmt :: Int -> Stmt -> AbstractionRes
-abstractStmt ln (QasmGateStmt expr) = astmts
-    where astmts = abstractQasmGate ln expr
-abstractStmt ln (QasmDeclStmt ty decl) = astmts
-    where astmts = abstractQasmDecl ln ty decl
-abstractStmt ln (QasmLDeclStmt ty decl) = astmts
-    where astmts = abstractStmt ln (QasmDeclStmt ty decl)
-abstractStmt ln (QasmAssignStmt lval rval) = astmts
-    where astmts = abstractQasmAssign ln lval rval
-abstractStmt ln (QasmLAssignStmt lval rval) = astmts
-    where astmts = abstractStmt ln (QasmAssignStmt lval rval)
-abstractStmt ln (QasmInitDeclStmt ty decl rval) = astmts
-    where astmts = abstractQasmInitDecl ln ty decl rval
-abstractStmt ln (QasmExprStmt expr) = astmts
-    where astmts = abstractQasmExprStmt ln expr
-abstractStmt ln (QasmResetStmt expr) = astmts
-    where astmts = abstractQasmResetStmt ln expr
+abstractStmt :: QasmHeader -> Int -> Stmt -> AbstractionRes
+abstractStmt header ln (QasmGateStmt expr) = astmts
+    where astmts = abstractGate header ln expr
+abstractStmt header ln (QasmDeclStmt ty decl)
+    | isLegacy header = Right $ NonLegacyStmt ln
+    | otherwise       = abstractDecl ln ty decl
+abstractStmt _ ln (QasmLDeclStmt ty decl) = astmts
+    where astmts = abstractDecl ln ty decl
+abstractStmt header ln (QasmAssignStmt lval rval)
+    | isLegacy header = Right $ NonLegacyStmt ln
+    | otherwise       = abstractAssign header ln lval rval
+abstractStmt header ln (QasmLAssignStmt lval rval) = astmts
+    where astmts = abstractAssign header ln lval rval
+abstractStmt header ln (QasmInitDeclStmt ty decl rval)
+    | isLegacy header = Right $ NonLegacyStmt ln
+    | otherwise       = abstractInitDecl header ln ty decl rval
+abstractStmt header ln (QasmExprStmt expr) = astmts
+    where astmts = abstractExprStmt header ln expr
+abstractStmt _ ln (QasmResetStmt expr) = astmts
+    where astmts = abstractResetStmt ln expr
 
 -- | Converts a list of statements into an AST. If the conversion fails, then
 -- an appropriate abstraction error is returned.
-toAst :: [Stmt] -> AbstractionRes
-toAst = applyPerLinePass abstractStmt 1
+toAst :: QasmHeader -> [Stmt] -> AbstractionRes
+toAst header = applyPerLinePass f 1
+    where f = abstractStmt header
 
 -------------------------------------------------------------------------------
 -- * Secondary Pass: Inverse Elimination
