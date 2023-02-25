@@ -166,45 +166,44 @@ printMods True (GateMod False _) = toolError _CTRLS_TOOL line
 -- | Takes as input a gate name and a legacy flag. Returns the string
 -- representation of the name. If the legacy flag is set, then an OpenQASM 2.0
 -- compatible name is returned (often these names are the same).
-printName :: Bool -> GateName -> String
-printName _     (UserDefined str) = str
-printName _     GateX             = "x"
-printName True  GateCX            = "CX"
-printName False GateCX            = "cx"
-printName _     GateCCX           = "ccx"
-printName _     GateY             = "y"
-printName _     GateCY            = "cy"
-printName _     GateZ             = "z"
-printName _     GateCZ            = "cz"
-printName _     GateH             = "h"
-printName _     GateCH            = "ch"
-printName _     GateSwap          = "swap"
-printName _     GateCSwap         = "cswap"
-printName _     GateS             = "s"
-printName _     GateSdg           = "sdg"
-printName _     GateSX            = "sx"
-printName _     GateT             = "t"
-printName _     GateTdg           = "tdg"
-printName _     GateID            = "id"
-printName _     GateQuipIX        = "quip_ix"
-printName _     GateQuipOmega     = "quip_omega"
-printName _     GateQuipE         = "quip_e"
-printName _     GateQuipW         = "quip_w"
-printName _     GateRX            = "rx"
-printName _     GateCRX           = "crx"
-printName _     GateRY            = "ry"
-printName _     GateCRY           = "cry"
-printName _     GateRZ            = "rz"
-printName _     GateCRZ           = "crz"
-printName _     GateP             = "p"
-printName _     GateCP            = "cp"
-printName _     GatePhase         = "phase"
-printName _     GateCPhase        = "cphase"
-printName _     GateU             = "u"
-printName _     GateCU            = "cu"
-printName _     GateU1            = "u1"
-printName _     GateU2            = "u2"
-printName _     GateU3            = "u3"
+printName :: GateName -> String
+printName (UserDefined str) = str
+printName GateX             = "x"
+printName GateCX            = "cx"
+printName GateCCX           = "ccx"
+printName GateY             = "y"
+printName GateCY            = "cy"
+printName GateZ             = "z"
+printName GateCZ            = "cz"
+printName GateH             = "h"
+printName GateCH            = "ch"
+printName GateSwap          = "swap"
+printName GateCSwap         = "cswap"
+printName GateS             = "s"
+printName GateSdg           = "sdg"
+printName GateSX            = "sx"
+printName GateT             = "t"
+printName GateTdg           = "tdg"
+printName GateID            = "id"
+printName GateQuipIX        = "quip_ix"
+printName GateQuipOmega     = "quip_omega"
+printName GateQuipE         = "quip_e"
+printName GateQuipW         = "quip_w"
+printName GateRX            = "rx"
+printName GateCRX           = "crx"
+printName GateRY            = "ry"
+printName GateCRY           = "cry"
+printName GateRZ            = "rz"
+printName GateCRZ           = "crz"
+printName GateP             = "p"
+printName GateCP            = "cp"
+printName GatePhase         = "phase"
+printName GateCPhase        = "cphase"
+printName GateU             = "u"
+printName GateCU            = "cu"
+printName GateU1            = "u1"
+printName GateU2            = "u2"
+printName GateU3            = "u3"
 
 -- | Takes as input a legacy flag and a gate. The gate is converted to its
 -- syntactic representation. If the legacy flag is false, then modifiers are
@@ -212,7 +211,7 @@ printName _     GateU3            = "u3"
 printGate :: Bool -> Gate -> String
 printGate legacy (NamedGate name params operands mods) = mstr ++ body
     where mstr = printMods legacy mods 
-          nstr = printName legacy name
+          nstr = printName name
           pstr = printParams legacy "" params
           ostr = printOperands operands
           body = nstr ++ pstr ++ " " ++ ostr
