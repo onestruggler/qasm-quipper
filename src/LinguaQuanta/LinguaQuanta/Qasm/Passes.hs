@@ -44,7 +44,10 @@ import LinguaQuanta.Qasm.Language
   , Stmt(..)
   , Type(..)
   )
-import LinguaQuanta.Qasm.Operand (VoidCall(..))
+import LinguaQuanta.Qasm.Operand
+  ( RValue(..)
+  , VoidCall(..)
+  )
 
 -------------------------------------------------------------------------------
 -- * Pass Template.
@@ -86,15 +89,29 @@ data AbstractionErr = GateAbstractionErr Int GateSummaryErr
                     deriving (Show, Eq)
 
 -- | Consumes a line number and OpenQASM header. Returns an error if any
--- quipfuncs.inc call would be invalid relative to the header.
+-- quipfuncs.inc call would be invalid relative to the header. Otherwise,
+-- nothing is returned.
 checkQuipFuncsScope :: QasmHeader -> Int -> Maybe AbstractionErr
 checkQuipFuncsScope header ln
     | isLegacy header       = Just $ NonLegacyStmt ln
     | not $ usingQfn header = Just $ MissingLib ln "quipfuncs.inc"
     | otherwise             = Nothing
 
+-- | Consumes a line number, an OpenQASM header, and an rvalue. Returns an
+-- error if the rvalue would be invalid relative to the header. Otherwise,
+-- nothing is returned.
+checkRValueScope :: QasmHeader -> Int -> RValue -> Maybe AbstractionErr
+checkRValueScope header ln (QuipMeasure _) = checkQuipFuncsScope header ln
+checkRValueScope header ln QuipCInit0      = checkQuipFuncsScope header ln
+checkRValueScope header ln QuipCInit1      = checkQuipFuncsScope header ln
+checkRValueScope header ln QuipCTerm0      = checkQuipFuncsScope header ln
+checkRValueScope header ln QuipCTerm1      = checkQuipFuncsScope header ln
+checkRValueScope header ln QuipCDiscard    = checkQuipFuncsScope header ln
+checkRValueScope header ln (Measure _)     = Nothing
+
 -- | Consumes a line number, an OpenQASM header, and a void call. Returns an
--- error if the call is invalid relative to the header.
+-- error if the call is invalid relative to the header. Otherwise, nothing is
+-- returned.
 checkVoidCallScope :: QasmHeader -> Int -> VoidCall -> Maybe AbstractionErr
 checkVoidCallScope header ln (QuipQInit0 _)   = checkQuipFuncsScope header ln
 checkVoidCallScope header ln (QuipQInit1 _)   = checkQuipFuncsScope header ln
@@ -153,7 +170,9 @@ abstractDecl ln (BitArrT expr) decl =
 assignImpl :: QasmHeader -> Int -> String -> Maybe Int -> Expr -> AbstractionRes
 assignImpl header ln id idx expr = 
     case toRValue expr of
-        Left rval -> Left [AstAssign id idx rval]
+        Left rval -> case checkRValueScope header ln rval of
+            Just err -> Right err
+            Nothing  -> Left [AstAssign id idx rval]
         Right err -> Right $ RValueAbstractionErr ln err
 
 -- | Consumes a line number (ln), a variable to update, and a value to assign

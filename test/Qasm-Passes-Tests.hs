@@ -250,6 +250,7 @@ test22 = TestCase (assertEqual "toAst rejects invalid measure in QasmExprStmt."
 
 qldecStmt = QasmLDeclStmt QubitT "qvar"
 cldecStmt = QasmLDeclStmt BitT   "cvar"
+lmeasStmt = QasmLAssignStmt (CVar "cvar") $ QasmMeasure $ QVar "qvar"
 
 test23 = TestCase (assertEqual "toAst rejects new declarations in legacy code (1/2)."
                                (Right err :: Either [AstStmt] AbstractionErr)
@@ -268,25 +269,24 @@ test25 = TestCase (assertEqual "toAst rejects new assignments in legacy code (1/
 
 test26 = TestCase (assertEqual "toAst rejects new assignments in legacy code (2/2)."
                                (Left res :: Either [AstStmt] AbstractionErr)
-                               (toAst legacy [cldecStmt, qldecStmt, asgnStmt]))
-    where asgnStmt = QasmLAssignStmt (CVar "cvar") $ Call "QMeas" [QasmId "qvar"]
-          res      = [cdecAst, qdecAst, asgnAst]
+                               (toAst legacy [cldecStmt, qldecStmt, lmeasStmt]))
+    where res = [cdecAst, qdecAst, measure1Ast]
 
 -----------------------------------------------------------------------------------------
 -- Legacy void call checks.
 
-quipfuncsInLegacyTest :: String -> Test.HUnit.Test
-quipfuncsInLegacyTest name = TestCase (assertEqual msg expt act)
+quipfuncsCallInLegacyTest :: String -> Test.HUnit.Test
+quipfuncsCallInLegacyTest name = TestCase (assertEqual msg expt act)
     where msg  = "toAst rejects " ++ name ++ " in legacy mode."
           expt = Right $ NonLegacyStmt 2 :: Either [AstStmt] AbstractionErr
           stmt = QasmExprStmt $ Call name [QasmId "qvar"]
           act  = toAst legacy [qldecStmt, stmt]
 
-test27 = quipfuncsInLegacyTest "QInit0"
-test28 = quipfuncsInLegacyTest "QInit1"
-test29 = quipfuncsInLegacyTest "QTerm0"
-test30 = quipfuncsInLegacyTest "QTerm1"
-test31 = quipfuncsInLegacyTest "QDiscard"
+test27 = quipfuncsCallInLegacyTest "QInit0"
+test28 = quipfuncsCallInLegacyTest "QInit1"
+test29 = quipfuncsCallInLegacyTest "QTerm0"
+test30 = quipfuncsCallInLegacyTest "QTerm1"
+test31 = quipfuncsCallInLegacyTest "QDiscard"
 
 test32 = TestCase (assertEqual "toAst rejects void measure in legacy code."
                                (Right err :: Either [AstStmt] AbstractionErr)
@@ -298,18 +298,18 @@ test33 = TestCase (assertEqual "toAst accepts reset in legacy code."
                                (toAst legacy [qldecStmt, resetStmt]))
     where res = [qdecAst, resetAst]
 
-quipfuncsInDefaultTest :: String -> Test.HUnit.Test
-quipfuncsInDefaultTest name = TestCase (assertEqual msg expt act)
+quipfuncsCallInDefaultTest :: String -> Test.HUnit.Test
+quipfuncsCallInDefaultTest name = TestCase (assertEqual msg expt act)
     where msg  = "toAst rejects " ++ name ++ " without quipfuncs.inc lib."
           expt = Right $ MissingLib 2 "quipfuncs.inc" :: Either [AstStmt] AbstractionErr
           stmt = QasmExprStmt $ Call name [QasmId "qvar"]
           act  = toAst stdhdr [qldecStmt, stmt]
 
-test34 = quipfuncsInDefaultTest "QInit0"
-test35 = quipfuncsInDefaultTest "QInit1"
-test36 = quipfuncsInDefaultTest "QTerm0"
-test37 = quipfuncsInDefaultTest "QTerm1"
-test38 = quipfuncsInDefaultTest "QDiscard"
+test34 = quipfuncsCallInDefaultTest "QInit0"
+test35 = quipfuncsCallInDefaultTest "QInit1"
+test36 = quipfuncsCallInDefaultTest "QTerm0"
+test37 = quipfuncsCallInDefaultTest "QTerm1"
+test38 = quipfuncsCallInDefaultTest "QDiscard"
 
 test39 = TestCase (assertEqual "toAst accepts void measure without quipfuncs.inc lib."
                                (Left res :: Either [AstStmt] AbstractionErr)
@@ -320,6 +320,57 @@ test40 = TestCase (assertEqual "toAst accepts reset without quipfuncs.inc lib."
                                (Left res :: Either [AstStmt] AbstractionErr)
                                (toAst stdhdr [qldecStmt, resetStmt]))
     where res = [qdecAst, resetAst]
+
+-----------------------------------------------------------------------------------------
+-- Legacy rvalue checks.
+
+quipfuncsRValueInLegacyTest :: String -> Test.HUnit.Test
+quipfuncsRValueInLegacyTest name = TestCase (assertEqual msg expt act)
+    where msg  = "toAst rejects " ++ name ++ " in legacy mode."
+          expt = Right $ NonLegacyStmt 3 :: Either [AstStmt] AbstractionErr
+          stmt = QasmLAssignStmt (CVar "cvar") $ Call name []
+          act  = toAst legacy [cldecStmt, qldecStmt, stmt]
+
+test41 = quipfuncsRValueInLegacyTest "CInit0"
+test42 = quipfuncsRValueInLegacyTest "CInit1"
+test43 = quipfuncsRValueInLegacyTest "CTerm0"
+test44 = quipfuncsRValueInLegacyTest "CTerm1"
+test45 = quipfuncsRValueInLegacyTest "CDiscard"
+
+test46 = TestCase (assertEqual "toAst rejects QMeas in legacy code."
+                               (Right err :: Either [AstStmt] AbstractionErr)
+                               (toAst legacy [cldecStmt, qldecStmt, stmt]))
+    where stmt = QasmLAssignStmt (CVar "cvar") $ Call "QMeas" [QasmId "qvar"]
+          err  = NonLegacyStmt 3
+
+test47 = TestCase (assertEqual "toAst accepts measure assignment in legacy mode."
+                               (Left res :: Either [AstStmt] AbstractionErr)
+                               (toAst legacy [cldecStmt, qldecStmt, lmeasStmt]))
+    where res = [cdecAst, qdecAst, measure1Ast]
+
+quipfuncsRValueInDefaultTest :: String -> Test.HUnit.Test
+quipfuncsRValueInDefaultTest name = TestCase (assertEqual msg expt act)
+    where msg  = "toAst rejects " ++ name ++ " without quipfuncs.inc lib."
+          expt = Right $ MissingLib 3 "quipfuncs.inc" :: Either [AstStmt] AbstractionErr
+          stmt = QasmAssignStmt (CVar "cvar") $ Call name []
+          act  = toAst stdhdr [cldecStmt, qldecStmt, stmt]
+
+test48 = quipfuncsRValueInDefaultTest "CInit0"
+test49 = quipfuncsRValueInDefaultTest "CInit1"
+test50 = quipfuncsRValueInDefaultTest "CTerm0"
+test51 = quipfuncsRValueInDefaultTest "CTerm1"
+test52 = quipfuncsRValueInDefaultTest "CDiscard"
+
+test53 = TestCase (assertEqual "toAst rejects QMeas without quipfuncs.inc lib."
+                               (Right err :: Either [AstStmt] AbstractionErr)
+                               (toAst stdhdr [cldecStmt, qldecStmt, stmt]))
+    where stmt = QasmAssignStmt (CVar "cvar") $ Call "QMeas" [QasmId "qvar"]
+          err  = MissingLib 3 "quipfuncs.inc"
+
+test54 = TestCase (assertEqual "toAst accepts measure assignment in legacy mode."
+                               (Left res :: Either [AstStmt] AbstractionErr)
+                               (toAst stdhdr [cldecStmt, qldecStmt, lmeasStmt]))
+    where res = [cdecAst, qdecAst, measure1Ast]
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
@@ -357,12 +408,26 @@ tests = hUnitTestToTests $ TestList [TestLabel "toAst_EmptyFile" test1,
                                      TestLabel "toAst_LegacyCall_5" test31,
                                      TestLabel "toAst_LegacyCall_6" test32,
                                      TestLabel "toAst_LegacyCall_7" test33,
-                                     TestLabel "toAst_StdCall_1" test33,
-                                     TestLabel "toAst_StdCall_2" test34,
-                                     TestLabel "toAst_StdCall_3" test35,
-                                     TestLabel "toAst_StdCall_4" test36,
-                                     TestLabel "toAst_StdCall_5" test37,
-                                     TestLabel "toAst_StdCall_6" test38,
-                                     TestLabel "toAst_StdCall_7" test39]
+                                     TestLabel "toAst_StdCall_1" test34,
+                                     TestLabel "toAst_StdCall_2" test35,
+                                     TestLabel "toAst_StdCall_3" test36,
+                                     TestLabel "toAst_StdCall_4" test37,
+                                     TestLabel "toAst_StdCall_5" test38,
+                                     TestLabel "toAst_StdCall_6" test39,
+                                     TestLabel "toAst_StdCall_7" test40,
+                                     TestLabel "toAst_LegacyRV_1" test41,
+                                     TestLabel "toAst_LegacyRV_2" test42,
+                                     TestLabel "toAst_LegacyRV_3" test43,
+                                     TestLabel "toAst_LegacyRV_4" test44,
+                                     TestLabel "toAst_LegacyRV_5" test45,
+                                     TestLabel "toAst_LegacyRV_6" test46,
+                                     TestLabel "toAst_LegacyRV_7" test47,
+                                     TestLabel "toAst_StdRV_1" test48,
+                                     TestLabel "toAst_StdRV_2" test49,
+                                     TestLabel "toAst_StdRV_3" test50,
+                                     TestLabel "toAst_StdRV_4" test51,
+                                     TestLabel "toAst_StdRV_5" test52,
+                                     TestLabel "toAst_StdRV_6" test53,
+                                     TestLabel "toAst_StdRV_7" test54]
 
 main = defaultMain tests
