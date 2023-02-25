@@ -71,7 +71,7 @@ applySafePerLinePass _ []           = []
 applySafePerLinePass f (line:lines) = f line ++ applySafePerLinePass f lines
 
 -------------------------------------------------------------------------------
--- * Primary Pass: Abstraction Pass.
+-- * Primary Pass: Utilities.
 
 data AbstractionErr = GateAbstractionErr Int GateSummaryErr
                     | ArrayLenAbstractionErr Int ExprErr
@@ -81,7 +81,31 @@ data AbstractionErr = GateAbstractionErr Int GateSummaryErr
                     | UnknownExprStmt Int
                     | NonPosArrayLen Int
                     | NonLegacyStmt Int
+                    | MissingLib Int String
+                    | UnexpectedMeasureExpr Int
                     deriving (Show, Eq)
+
+-- | Consumes a line number and OpenQASM header. Returns an error if any
+-- quipfuncs.inc call would be invalid relative to the header.
+checkQuipFuncsScope :: QasmHeader -> Int -> Maybe AbstractionErr
+checkQuipFuncsScope header ln
+    | isLegacy header       = Just $ NonLegacyStmt ln
+    | not $ usingQfn header = Just $ MissingLib ln "quipfuncs.inc"
+    | otherwise             = Nothing
+
+-- | Consumes a line number, an OpenQASM header, and a void call. Returns an
+-- error if the call is invalid relative to the header.
+checkVoidCallScope :: QasmHeader -> Int -> VoidCall -> Maybe AbstractionErr
+checkVoidCallScope header ln (QuipQInit0 _)   = checkQuipFuncsScope header ln
+checkVoidCallScope header ln (QuipQInit1 _)   = checkQuipFuncsScope header ln
+checkVoidCallScope header ln (QuipQTerm0 _)   = checkQuipFuncsScope header ln
+checkVoidCallScope header ln (QuipQTerm1 _)   = checkQuipFuncsScope header ln
+checkVoidCallScope header ln (QuipQDiscard _) = checkQuipFuncsScope header ln
+checkVoidCallScope header ln (VoidReset _)    = Nothing
+checkVoidCallScope _      ln (VoidMeasure _)  = Just $ UnexpectedMeasureExpr ln
+
+-------------------------------------------------------------------------------
+-- * Primary Pass: Abstraction Pass.
 
 type AbstractionRes = Either [AstStmt] AbstractionErr
 
@@ -167,11 +191,15 @@ abstractExprStmt header ln (Brack expr) = astmts
     where astmts = abstractExprStmt header ln expr
 abstractExprStmt header ln (Call name args) =
     case toVoidCall name args of
-        Left call -> Left [AstCall call]
+        Left call -> case checkVoidCallScope header ln call of
+            Just err -> Right err
+            Nothing  -> Left [AstCall call]
         Right err -> Right $ VoidCallAbstractionErr ln err
-abstractExprStmt _ ln (QasmMeasure gop) =
+abstractExprStmt header ln (QasmMeasure gop) =
     case parseGateOperand gop of
-        Left op   -> Left [AstCall $ VoidMeasure op]
+        Left op -> if isLegacy header
+                   then Right $ NonLegacyStmt ln
+                   else Left [AstCall $ VoidMeasure op]
         Right err -> Right $ MeasureCallAbstractionErr ln err
 abstractExprStmt _ ln _ = Right $ UnknownExprStmt ln
 
