@@ -21,6 +21,7 @@ library
                        LinguaQuanta.Maybe
                        LinguaQuanta.List
                        LinguaQuanta.Qasm.AST
+                       LinguaQuanta.Qasm.Call
                        LinguaQuanta.Qasm.Expression
                        LinguaQuanta.Qasm.Gate
                        LinguaQuanta.Qasm.GateName

@@ -7,6 +7,7 @@ module LinguaQuanta.Qasm.Printer (printAst) where
 
 import Data.List (intercalate)
 import LinguaQuanta.Qasm.AST (AstStmt(..))
+import LinguaQuanta.Qasm.Call (isLegacyCall)
 import LinguaQuanta.Qasm.Expression
   ( euler
   , toArrayIndex
@@ -106,16 +107,6 @@ printBinaryOp :: Bool -> String -> Expr -> Expr -> String
 printBinaryOp legacy op lhs rhs = lstr ++ " " ++ op ++ " " ++ rstr
     where lstr = printExpr legacy lhs
           rstr = printExpr legacy rhs
-
--- | Returns true if a call name is built into OpenQASM 2.0.
-isLegacyCall :: String -> Bool
-isLegacyCall "sin"  = True
-isLegacyCall "cos"  = True
-isLegacyCall "tan"  = True
-isLegacyCall "exp"  = True
-isLegacyCall "ln"   = True
-isLegacyCall "sqrt" = True
-isLegacyCall _      = False
 
 -- | Takes as input a legacy flag, the name of a function, and a list of
 -- arguments to the expression. If the legacy flag is false, or the call is
