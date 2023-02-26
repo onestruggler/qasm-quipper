@@ -27,7 +27,12 @@ import LinguaQuanta.Qasm.Gate
   , exprToGate
   , validateGate
   )
-import LinguaQuanta.Qasm.GateName (GateName(UserDefined))
+import LinguaQuanta.Qasm.GateName
+  ( GateName(UserDefined)
+  , isBackportGate
+  , isQelib1Gate
+  , isQuipperGate
+  )
 import LinguaQuanta.Qasm.Header
   ( QasmHeader
   , isLegacy
@@ -97,6 +102,28 @@ checkQuipFuncsScope header ln
     | not $ usingQfn header = Just $ MissingLib ln "quipfuncs.inc"
     | otherwise             = Nothing
 
+-- | Consumes a line number, an OpenQASM header, and an OpenQASM gate. If the
+-- gate is not accessible with respect to header, then an error is returned.
+-- Otherwise, nothing is returned.
+checkGateScope :: QasmHeader -> Int -> Gate -> Maybe AbstractionErr
+checkGateScope header ln (NamedGate name _ _ _)
+    | fromQe1 && noStd && legacy     = Just $ MissingLib ln "qelib1.inc"
+    | fromQe1 && noStd && not legacy = Just $ MissingLib ln "stdgates.inc"
+    | fromBkp && noBkp && legacy     = Just $ MissingLib ln "bkpgates.inc"
+    | fromBkp && noStd && not legacy = Just $ MissingLib ln "stdgates.inc"
+    | fromQpr && noQpr               = Just $ MissingLib ln "quipgates.inc"
+    | otherwise                      = Nothing
+    where legacy  = isLegacy header
+          fromQe1 = isQelib1Gate name
+          fromBkp = isBackportGate name
+          fromQpr = isQuipperGate name
+          noStd   = not $ usingStd header
+          noBkp   = not $ usingBkp header
+          noQpr   = not $ usingQpr header
+checkGateScope header ln (GPhaseGate _ _ _)
+    | isLegacy header = Just $ NonLegacyStmt ln
+    | otherwise       = Nothing 
+
 -- | Consumes a line number, an OpenQASM header, and an rvalue. Returns an
 -- error if the rvalue would be invalid relative to the header. Otherwise,
 -- nothing is returned.
@@ -133,7 +160,9 @@ abstractGate :: QasmHeader -> Int -> GateExpr -> AbstractionRes
 abstractGate header ln expr =
     case exprToGate expr of
         Left (n, gate) -> case validateGate gate of
-            Nothing  -> Left [AstGateStmt n gate]
+            Nothing -> case checkGateScope header ln gate of
+                Just err -> Right err
+                Nothing  -> Left [AstGateStmt n gate]
             Just err -> Right (GateAbstractionErr ln err)
         Right err -> Right (GateAbstractionErr ln err)
 

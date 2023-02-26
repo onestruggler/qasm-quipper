@@ -4,6 +4,7 @@
 
 module Main where
 
+import Data.Either
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit
@@ -19,8 +20,8 @@ import LinguaQuanta.Qasm.Passes
 -----------------------------------------------------------------------------------------
 -- Computes the most permissive header.
 
-(Just tmp0)   = toQasmHeader "3"
-(Left stdhdr) = addLib "stdgates.inc" tmp0
+(Just defhdr) = toQasmHeader "3"
+(Left stdhdr) = addLib "stdgates.inc" defhdr
 (Left tmp2)   = addLib "quipgates.inc" stdhdr
 (Left libhdr) = addLib "quipfuncs.inc" tmp2
 
@@ -244,9 +245,10 @@ test22 = TestCase (assertEqual "toAst rejects invalid measure in QasmExprStmt."
 -----------------------------------------------------------------------------------------
 -- Legacy statement checks.
 
-(Just tmp3)   = toQasmHeader "2.0"
-(Left tmp4)   = addLib "qelib1.inc" tmp3
-(Left legacy) = addLib "quipgates.inc" tmp4
+(Just defLegacy) = toQasmHeader "2.0"
+(Left tmp4)      = addLib "qelib1.inc" defLegacy
+(Left legacy)    = addLib "quipgates.inc" tmp4
+(Left legacyAll) = addLib "bkpgates.inc" legacy
 
 qldecStmt = QasmLDeclStmt QubitT "qvar"
 cldecStmt = QasmLDeclStmt BitT   "cvar"
@@ -373,6 +375,95 @@ test54 = TestCase (assertEqual "toAst accepts measure assignment in legacy mode.
     where res = [cdecAst, qdecAst, measure1Ast]
 
 -----------------------------------------------------------------------------------------
+-- Gate import checks.
+
+missingQe1libTest :: String -> Test.HUnit.Test
+missingQe1libTest name = TestCase (assertEqual msg expt act)
+    where msg  = "toAst rejects gate " ++ name ++ " without qelib1.inc included."
+          expt = Right $ MissingLib 2 "qelib1.inc"
+          gate = QasmGateStmt $ NamedGateOp name [] [QVar "qvar"]
+          act  = toAst defLegacy [qldecStmt, gate]
+
+test55 = missingQe1libTest "x"
+test56 = missingQe1libTest "y"
+test57 = missingQe1libTest "z"
+
+missingBkpgatesTest :: String -> [Expr] -> Test.HUnit.Test
+missingBkpgatesTest name args = TestCase (assertEqual msg expt act)
+    where msg  = "toAst rejects gate " ++ name ++ " without bkpgates.inc included."
+          expt = Right $ MissingLib 2 "bkpgates.inc"
+          gate = QasmGateStmt $ NamedGateOp name args [QVar "qvar"]
+          act  = toAst defLegacy [qldecStmt, gate]
+
+test58 = missingBkpgatesTest "sx" []
+test59 = missingBkpgatesTest "p" [Pi]
+
+missingStdgatesTest :: String -> [Expr] -> Test.HUnit.Test
+missingStdgatesTest name args = TestCase (assertEqual msg expt act)
+    where msg  = "toAst rejects gate " ++ name ++ " without stdgates.inc included."
+          expt = Right $ MissingLib 2 "stdgates.inc"
+          gate = QasmGateStmt $ NamedGateOp name args [QVar "qvar"]
+          act  = toAst defhdr [qldecStmt, gate]
+
+test60 = missingStdgatesTest "x" []
+test61 = missingStdgatesTest "y" []
+test62 = missingStdgatesTest "z" []
+test63 = missingStdgatesTest "sx" []
+test64 = missingStdgatesTest "p" [Pi]
+
+missingQuipgatesIn2Test :: String -> Test.HUnit.Test
+missingQuipgatesIn2Test name = TestCase (assertEqual msg expt act)
+    where msg  = "toAst rejects gate " ++ name ++ " without quipgates.inc in version 2."
+          expt = Right $ MissingLib 2 "quipgates.inc"
+          gate = QasmGateStmt $ NamedGateOp name [] [QVar "qvar"]
+          act  = toAst defLegacy [qldecStmt, gate]
+
+test65 = missingQuipgatesIn2Test "quip_ix"
+test66 = missingQuipgatesIn2Test "quip_e"
+test67 = missingQuipgatesIn2Test "quip_omega"
+
+missingQuipgatesIn3Test :: String -> Test.HUnit.Test
+missingQuipgatesIn3Test name = TestCase (assertEqual msg expt act)
+    where msg  = "toAst rejects gate " ++ name ++ " without quipgates.inc in version 2."
+          expt = Right $ MissingLib 2 "quipgates.inc"
+          gate = QasmGateStmt $ NamedGateOp name [] [QVar "qvar"]
+          act  = toAst defhdr [qldecStmt, gate]
+
+test68 = missingQuipgatesIn3Test "quip_ix"
+test69 = missingQuipgatesIn3Test "quip_e"
+test70 = missingQuipgatesIn3Test "quip_omega"
+
+allIncludesIn2Test :: String -> [Expr] -> Test.HUnit.Test
+allIncludesIn2Test name args = TestCase (assertBool msg res)
+    where msg  = "toAst accepts gate " ++ name ++ " in version 2.0 with all includes."
+          gate = QasmGateStmt $ NamedGateOp name args [QVar "qvar"]
+          res  = isLeft $ toAst legacyAll [qldecStmt, gate]
+
+test71 = allIncludesIn2Test "x" []
+test72 = allIncludesIn2Test "y" []
+test73 = allIncludesIn2Test "z" []
+test74 = allIncludesIn2Test "sx" []
+test75 = allIncludesIn2Test "p" [Pi]
+test76 = allIncludesIn2Test "quip_ix" []
+test77 = allIncludesIn2Test "quip_e" []
+test78 = allIncludesIn2Test "quip_omega" []
+
+allIncludesIn3Test :: String -> [Expr] -> Test.HUnit.Test
+allIncludesIn3Test name args = TestCase (assertBool msg res)
+    where msg  = "toAst accepts gate " ++ name ++ " in version 3 with all includes."
+          gate = QasmGateStmt $ NamedGateOp name args [QVar "qvar"]
+          res  = isLeft $ toAst libhdr [qldecStmt, gate]
+
+test79 = allIncludesIn3Test "x" []
+test80 = allIncludesIn3Test "y" []
+test81 = allIncludesIn3Test "z" []
+test82 = allIncludesIn3Test "sx" []
+test83 = allIncludesIn3Test "p" [Pi]
+test84 = allIncludesIn3Test "quip_ix" []
+test85 = allIncludesIn3Test "quip_e" []
+test86 = allIncludesIn3Test "quip_omega" []
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "toAst_EmptyFile" test1,
@@ -428,6 +519,38 @@ tests = hUnitTestToTests $ TestList [TestLabel "toAst_EmptyFile" test1,
                                      TestLabel "toAst_StdRV_4" test51,
                                      TestLabel "toAst_StdRV_5" test52,
                                      TestLabel "toAst_StdRV_6" test53,
-                                     TestLabel "toAst_StdRV_7" test54]
+                                     TestLabel "toAst_StdRV_7" test54,
+                                     TestLabel "toAst_MissingQelib1_x" test55,
+                                     TestLabel "toAst_MissingQelib1_y" test56,
+                                     TestLabel "toAst_MissingQelib1_z" test57,
+                                     TestLabel "toAst_MissingBkpgates_sx" test58,
+                                     TestLabel "toAst_MissingBkpgates_p" test59,
+                                     TestLabel "toAst_MissingStdgates_x" test60,
+                                     TestLabel "toAst_MissingStdgates_y" test61,
+                                     TestLabel "toAst_MissingStdgates_z" test62,
+                                     TestLabel "toAst_MissingStdgates_sx" test63,
+                                     TestLabel "toAst_MissingStdgates_p" test64,
+                                     TestLabel "toAst_MissingQuipgates2_ix" test65,
+                                     TestLabel "toAst_MissingQuipgates2_e" test66,
+                                     TestLabel "toAst_MissingQuipgates2_omega" test67,
+                                     TestLabel "toAst_MissingQuipgates3_ix" test68,
+                                     TestLabel "toAst_MissingQuipgates3_e" test69,
+                                     TestLabel "toAst_MissingQuipgates3_omega" test70,
+                                     TestLabel "toAst_ValidIn2_x" test71,
+                                     TestLabel "toAst_ValidIn2_y" test72,
+                                     TestLabel "toAst_ValidIn2_z" test73,
+                                     TestLabel "toAst_ValidIn2_sx" test74,
+                                     TestLabel "toAst_ValidIn2_p" test75,
+                                     TestLabel "toAst_ValidIn2_ix" test76,
+                                     TestLabel "toAst_ValidIn2_e" test77,
+                                     TestLabel "toAst_ValidIn2_omega" test78,
+                                     TestLabel "toAst_ValidIn3_x" test79,
+                                     TestLabel "toAst_ValidIn3_y" test80,
+                                     TestLabel "toAst_ValidIn3_z" test81,
+                                     TestLabel "toAst_ValidIn3_sx" test82,
+                                     TestLabel "toAst_ValidIn3_p" test83,
+                                     TestLabel "toAst_ValidIn3_ix" test84,
+                                     TestLabel "toAst_ValidIn3_e" test85,
+                                     TestLabel "toAst_ValidIn3_omega" test86]
 
 main = defaultMain tests
