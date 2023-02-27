@@ -4,6 +4,7 @@ module LinguaQuanta.QasmToQuip.Gate
   ( d1RotTransl
   , d2RotTransl
   , d3RotTransl
+  , d4RotTransl
   , namedGateTransl
   , translGPhase
   ) where
@@ -44,11 +45,16 @@ type Dim2Rot = (Expr, Expr)
 -- | Helper to describe the parameters to a 3-dimensional OpenQASM rotation.
 type Dim3Rot = (Expr, Expr, Expr)
 
--- | Function to a generate a sequence of Quipper, using the given operands and
--- modifiers. This is a utility to improve function type readability.
+-- | Helper to describe the parameters to a 4-dimensional OpenQASM rotation.
+type Dim4Rot = (Expr, Expr, Expr, Expr)
+
+-- | Function to a generate a sequence of Quipper gates, using the given
+-- operands and modifiers. This is a utility to improve function type
+-- readability.
 type GateGenerator = [Operand] -> GateMod -> [Gate]
 
--- |
+-- | Function to generate a sequence of Quipper gates, using the given input
+-- wires and controls. This is a utility to improve function type readability.
 type QuipCircFn = [Wire] -> [Control] -> [Gate]
 
 -- | Takes as input a wire allocation map (wmap) and an operand (op). If the
@@ -124,6 +130,30 @@ translGPhase wmap param ops mod = [toGPhase param inv ctrls]
           ctrls = snd $ extractCtrls wires mod
 
 -------------------------------------------------------------------------------
+-- * 4D-Rotation Translation.
+
+-- | Same as toRotGate, but for d4RotTransl.
+from4DRot :: Qasm.GateName -> Dim4Rot -> Bool -> QuipCircFn
+-- Supported 3D-rotations.
+from4DRot Qasm.GateCU (a, b, c, d) inv ins ctrls = expandCtrl "U3" ins ctrls f
+    where toPhase = toGPhase d inv
+          toUGate = from3DRot Qasm.GateU (a, b, c) inv
+          f ws cs = toPhase cs : toUGate ws cs
+-- Named 3D-rotations are not supported.
+from4DRot (Qasm.UserDefined _) _ _ _ _ = error msg
+    where msg = "User-defined rotations must be one-dimensional (not 4D)."
+-- Error case.
+from4DRot _ name _ _ _ = error msg
+    where msg = "Unexpected 4D RotGate in OpenQASM: " ++ show name
+
+-- | Same as d1RotTransl, but for Dim4Rot parameters.
+d4RotTransl :: WireAllocMap -> Qasm.GateName -> Dim4Rot -> GateGenerator
+d4RotTransl wmap name param ops mod = from4DRot name param inv ins ctrls
+    where wires        = opsToWires wmap ops
+          inv          = hasInversionMod mod
+          (ins, ctrls) = extractCtrls wires mod
+
+-------------------------------------------------------------------------------
 -- * 3D-Rotation Translation.
 
 -- | Translation details for the U3 gate.
@@ -160,21 +190,19 @@ toUGate params@(_, p2, p3) inv ins ctrls = phase : gates
           -- Result
           gates = toU3Gate params inv ins ctrls
 
--- | Same as toRotGate, but for d2RotTransl.
+-- | Same as toRotGate, but for d3RotTransl.
 from3DRot :: Qasm.GateName -> Dim3Rot -> Bool -> QuipCircFn
 -- Supported 3D-rotations.
 from3DRot Qasm.GateU params inv ins ctrls = gates
     where gates = toUGate params inv ins ctrls
 from3DRot Qasm.GateU3 params inv ins ctrls = gates
     where gates = toU3Gate params inv ins ctrls
-from3DRot Qasm.GateCU param inv ins ctrls = expandCtrl "U3" ins ctrls f
-    where f = from3DRot Qasm.GateU param inv
 -- Named 3D-rotations are not supported.
 from3DRot (Qasm.UserDefined _) _ _ _ _ = error msg
     where msg = "User-defined rotations must be one-dimensional (not 3D)."
 -- Error case.
 from3DRot _ name _ _ _ = error msg
-    where msg = "Unexpected RotGate in OpenQASM: " ++ show name
+    where msg = "Unexpected 3D RotGate in OpenQASM: " ++ show name
 
 -- | Same as d1RotTransl, but for Dim3Rot parameters.
 d3RotTransl :: WireAllocMap -> Qasm.GateName -> Dim3Rot -> GateGenerator
@@ -216,7 +244,7 @@ d2RotTransl _ (Qasm.UserDefined _) _ _ _ = error msg
     where msg = "User-defined rotations must be one-dimensional (not 2D)."
 -- Error case.
 d2RotTransl _ name _ _ _ = error msg
-    where msg = "Unexpected RotGate in OpenQASM: " ++ show name
+    where msg = "Unexpected 2D RotGate in OpenQASM: " ++ show name
 
 -------------------------------------------------------------------------------
 -- * 1D-Rotation Translation.
@@ -318,7 +346,7 @@ toRotGate (Qasm.UserDefined name) _ _ _ _ = error msg
     where msg = "User-defined gate " ++ name ++ " not implemented."
 -- Error case.
 toRotGate name _ _ _ _ = error msg
-    where msg = "Unexpected RotGate in OpenQASM: " ++ show name
+    where msg = "Unexpected 1D RotGate in OpenQASM: " ++ show name
 
 -- | Takes as input a wire allocation map (wmap), the name of a 1D-rotation
 -- gate, an OpenQASM expression for a compile-time angle (param), a list of
