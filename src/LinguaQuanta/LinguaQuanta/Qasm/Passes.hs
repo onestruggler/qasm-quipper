@@ -2,7 +2,9 @@
 
 module LinguaQuanta.Qasm.Passes
   ( AbstractionErr(..)
+  , InlineError(..)
   , InversionErr(..)
+  , elimFun
   , elimInv
   , elimPow
   , toAst
@@ -12,6 +14,10 @@ module LinguaQuanta.Qasm.Passes
 -- * Import Section.
 
 import LinguaQuanta.Qasm.AST (AstStmt(..))
+import LinguaQuanta.Qasm.Call
+  ( elimCallsInArglist
+  , elimCallsInExpr
+  )
 import LinguaQuanta.Qasm.Expression
   ( ExprErr
   , parseGateOperand
@@ -25,10 +31,11 @@ import LinguaQuanta.Qasm.Gate
   ( Gate(..)
   , GateSummaryErr
   , exprToGate
+  , nullGateMod
   , validateGate
   )
 import LinguaQuanta.Qasm.GateName
-  ( GateName(UserDefined)
+  ( GateName(..)
   , isBackportGate
   , isQelib1Gate
   , isQuipperGate
@@ -346,3 +353,61 @@ elimPowImpl stmt                 = [stmt]
 -- | Inlines all power modifers in a list of AST statements.
 elimPow :: [AstStmt] -> [AstStmt]
 elimPow = applySafePerLinePass elimPowImpl
+
+-------------------------------------------------------------------------------
+-- * Secondary Pass: Call Elimination
+
+data InlineError = FailedToEval Int String deriving (Show, Eq)
+
+type InlineRes = Either [AstStmt] InlineError
+
+-- | Takes as input a line number and a gate. Implements elimFunImpl for all
+-- parameters in (AstGateStmt _ gate).
+elimInGate :: Int -> Gate -> Either Gate InlineError
+elimInGate ln (NamedGate name args ops mods) =
+    case elimCallsInArglist args of
+        Left args' -> Left $ NamedGate name args' ops mods
+        Right name -> Right $ FailedToEval ln name
+elimInGate ln (GPhaseGate arg ops mods) =
+    case elimCallsInExpr arg of
+        Left arg'  -> Left $ GPhaseGate arg' ops mods
+        Right name -> Right $ FailedToEval ln name
+
+-- | Takes as input a line number and a void call. Implements elimFunImpl for
+-- the statement (AstCall call).
+elimVoidCall :: Int -> VoidCall -> InlineRes
+elimVoidCall _ (QuipQInit1 op) = Left [setTo0, setTo1]
+    where setTo0 = AstCall $ VoidReset op
+          setTo1 = AstGateStmt 0 $ NamedGate GateX [] [op] nullGateMod
+elimVoidCall _  (QuipQInit0 op)      = Left [AstCall $ VoidReset op]
+elimVoidCall _  (QuipQTerm0 _)       = Left []
+elimVoidCall _  (QuipQTerm1 _)       = Left []
+elimVoidCall _  (QuipQDiscard _)     = Left []
+elimVoidCall _  call@(VoidReset _)   = Left [AstCall call]
+elimVoidCall _  call@(VoidMeasure _) = Left [AstCall call]
+
+-- | Takes as input a line number, the name and index of an lvalue, and an
+-- rvalue. Implements elimFunImpl for the statement (AstAssign id idx rval).
+elimInAssign :: Int -> String -> Maybe Int -> RValue -> InlineRes
+elimInAssign _  id idx (QuipMeasure op) = Left [AstAssign id idx $ Measure op]
+elimInAssign _  id idx QuipCInit0       = error "Classical computation."
+elimInAssign _  id idx QuipCInit1       = error "Classical computation."
+elimInAssign _  id idx QuipCTerm0       = Left []
+elimInAssign _  id idx QuipCTerm1       = Left []
+elimInAssign _  id idx QuipCDiscard     = Left []
+elimInAssign _  id idx rval@(Measure _) = Left [AstAssign id idx rval]
+
+-- | Inlines function calls that are not built into version 2.0 of OpenQASM,
+-- for a single AST statement.
+elimFunImpl :: Int -> AstStmt -> InlineRes
+elimFunImpl ln (AstGateStmt n gate) = 
+    case elimInGate ln gate of
+        Left gate' -> Left [AstGateStmt n gate']
+        Right err  -> Right err
+elimFunImpl ln (AstAssign id idx rval) = elimInAssign ln id idx rval
+elimFunImpl ln (AstCall call)          = elimVoidCall ln call
+elimFunImpl _  stmt                    = Left [stmt] 
+
+-- | Inlines function calls that are not built into version 2.0 of OpenQASM.
+elimFun :: [AstStmt] -> InlineRes
+elimFun = applyPerLinePass elimFunImpl 1

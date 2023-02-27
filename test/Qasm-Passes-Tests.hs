@@ -464,6 +464,85 @@ test85 = allIncludesIn3Test "quip_e" []
 test86 = allIncludesIn3Test "quip_omega" []
 
 -----------------------------------------------------------------------------------------
+-- elimFun.
+
+test87 = TestCase (assertEqual "elimFun supports empty files."
+                               (Left [] :: Either [AstStmt] InlineError)
+                               (elimFun []))
+
+test88 = TestCase (assertEqual "elimFun for void calls."
+                               (Left elims :: Either [AstStmt] InlineError)
+                               (elimFun input))
+    where decl1 = AstQubitDecl Nothing "q1"
+          decl2 = AstQubitDecl (Just 5) "q2"
+          call1 = AstCall $ QuipQInit0 $ QRef "q1"
+          call2 = AstCall $ QuipQInit1 $ Cell "q2" 2
+          call3 = AstCall $ QuipQTerm0 $ QRef "q1"
+          call4 = AstCall $ QuipQTerm1 $ Cell "q2" 2
+          call5 = AstCall $ QuipQDiscard $ Cell "q2" 4
+          call6 = AstCall $ VoidMeasure $ Cell "q2" 0
+          call7 = AstCall $ VoidReset $ Cell "q2" 0
+          decl3 = AstBitDecl Nothing "q3"
+          input = [decl1, decl2, call1, call2, call3, call4, call5, call6, call7, decl3]
+          out1a = AstCall $ VoidReset $ QRef "q1"
+          out2a = AstCall $ VoidReset $ Cell "q2" 2
+          out2b = AstGateStmt 0 $ NamedGate GateX [] [Cell "q2" 2] nullGateMod
+          elims = [decl1, decl2, out1a, out2a, out2b, call6, call7, decl3]
+
+test89 = TestCase (assertEqual "elimFun for assignment (no classical initialization)."
+                               (Left elims :: Either [AstStmt] InlineError)
+                               (elimFun input))
+    where decl1 = AstQubitDecl Nothing "q1"
+          decl2 = AstQubitDecl (Just 5) "q2"
+          decl3 = AstBitDecl Nothing "c1"
+          asgn1 = AstAssign "c1" Nothing $ QuipMeasure $ QRef "q1"
+          asgn2 = AstAssign "c1" Nothing $ Measure $ Cell "q2" 3
+          decl4 = AstBitDecl (Just 5) "c2"
+          asgn3 = AstAssign "c2" (Just 1) QuipCTerm0
+          asgn4 = AstAssign "c2" (Just 3) QuipCTerm1
+          asgn5 = AstAssign "c2" (Just 0) QuipCDiscard
+          gate1 = AstGateStmt 0 $ NamedGate GateX [] [Cell "q2" 2] nullGateMod
+          input = [decl1, decl2, decl3, asgn1, asgn2, decl4, asgn3, asgn4, asgn5, gate1]
+          out1a = AstAssign "c1" Nothing $ Measure $ QRef "q1"
+          elims = [decl1, decl2, decl3, out1a, asgn2, decl4, gate1]
+
+mk_gate_1 :: Expr -> AstStmt
+mk_gate_1 arg = AstGateStmt 1 $ NamedGate GateCY [arg] [Cell "q1" 3] nullGateMod
+
+mk_gate_2 :: Expr -> AstStmt
+mk_gate_2 arg = AstGateStmt 2 $ NamedGate GateU2 args [Cell "q1" 3, Cell "q1" 0] mods
+    where mods = addCtrlsToMod 1 $ negateMod nullGateMod
+          args = [arg, Call "cos" [Div Pi $ DecInt "2"]]
+
+eval_as_float :: Expr -> Expr
+eval_as_float = DecFloat . show . fromLeft 0 . toConstFloat
+
+test90 = TestCase (assertEqual "elimFun for gates."
+                               (Left elims :: Either [AstStmt] InlineError)
+                               (elimFun input))
+    where expr1 = Call "arcsin" [DecInt "1"]
+          expr2 = Call "arccos" [DecFloat "0.5"]
+          mods1 = addCtrlsToMod 1 nullGateMod
+          mods2 = negateMod nullGateMod
+          decls = AstQubitDecl (Just 5) "q1"
+          gate1 = AstGateStmt 0 $ NamedGate GateP [Pi] [Cell "q1" 1, Cell "q1" 0] mods1
+          gate2 = mk_gate_1 expr1
+          gate3 = mk_gate_2 $ Plus Euler $ expr2
+          gate4 = AstGateStmt 3 $ NamedGate GateCX [] [Cell "q1" 1, Cell "q1" 2] mods2
+          input = [decls, gate1, gate2, gate3, gate4]
+          out2a = mk_gate_1 $ eval_as_float expr1
+          out3a = mk_gate_2 $ Plus Euler $ eval_as_float expr2
+          elims = [decls, gate1, out2a, out3a, gate4]
+
+test91 = TestCase (assertEqual "elimFun handles inline failures for gata parameters."
+                               (Right errs :: Either [AstStmt] InlineError)
+                               (elimFun [decl, gate]))
+    where mods = nullGateMod
+          decl = AstQubitDecl (Just 5) "q1"
+          gate = AstGateStmt 0 $ NamedGate GateP [Call "f" []] [Cell "q1" 1] mods
+          errs = FailedToEval 2 "f"
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "toAst_EmptyFile" test1,
@@ -551,6 +630,11 @@ tests = hUnitTestToTests $ TestList [TestLabel "toAst_EmptyFile" test1,
                                      TestLabel "toAst_ValidIn3_p" test83,
                                      TestLabel "toAst_ValidIn3_ix" test84,
                                      TestLabel "toAst_ValidIn3_e" test85,
-                                     TestLabel "toAst_ValidIn3_omega" test86]
+                                     TestLabel "toAst_ValidIn3_omega" test86,
+                                     TestLabel "elimFun_EmptyFile" test87,
+                                     TestLabel "elimFun_VoidCall" test88,
+                                     TestLabel "elimFun_Assign" test89,
+                                     TestLabel "elimFun_Gate" test90,
+                                     TestLabel "elimFun_GateFail" test91]
 
 main = defaultMain tests

@@ -48,6 +48,5 @@ def QDiscard(qubit q) {}
 def QMeas(qubit q) -> bit {
     bit c;
     c = measure q;
-    reset q;
     return c;
 }
