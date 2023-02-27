@@ -89,6 +89,15 @@ executable elim_ctrls
   hs-source-dirs:      exe
   default-language:    Haskell2010
 
+executable elim_funs
+  main-is:             ElimFuns/Main.hs
+  other-modules:       ElimFuns.CmdLn
+  build-depends:       base,
+                       LinguaQuanta,
+                       LinguaQuantaExe
+  hs-source-dirs:      exe
+  default-language:    Haskell2010
+
 executable elim_invs
   main-is:             ElimInvs/Main.hs
   other-modules:       ElimInvs.CmdLn
