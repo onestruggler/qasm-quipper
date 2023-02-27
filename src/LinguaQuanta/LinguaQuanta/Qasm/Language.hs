@@ -45,12 +45,20 @@ data Type = BitT
           deriving (Show, Eq)
 
 -------------------------------------------------------------------------------
--- * Statements.
+-- * Program.
+
+type Version = String
 
 data Stmt = QasmGateStmt GateExpr
           | QasmDeclStmt Type String
+          | QasmLDeclStmt Type String
           | QasmAssignStmt LValue Expr
+          | QasmLAssignStmt LValue Expr
           | QasmInitDeclStmt Type String Expr
           | QasmExprStmt Expr
           | QasmResetStmt GateOperand
           deriving (Show, Eq)
+
+data QasmInclude = QasmInclude String deriving (Show, Eq)
+
+data Program = Program Version [QasmInclude] [Stmt] deriving (Show, Eq)

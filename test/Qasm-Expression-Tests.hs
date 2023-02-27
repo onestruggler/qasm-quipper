@@ -624,13 +624,20 @@ test109 = TestCase (assertEqual "parseGateOperand supports QVar."
                                 (Left $ QRef "x" :: Either Operand ExprErr)
                                 (parseGateOperand $ QVar "x"))
 
-test110 = TestCase (assertEqual "parseGateOperand supports QVar."
+test110 = TestCase (assertEqual "parseGateOperand supports QReg."
                                 (Left $ Cell "x" 5 :: Either Operand ExprErr)
                                 (parseGateOperand $ QReg "x" $ DecInt "5"))
 
 test111 = TestCase (assertEqual "parseGateOperand rejects bad indices."
                                 (Right $ NegArrIdx (-5) :: Either Operand ExprErr)
                                 (parseGateOperand $ QReg "x" $ DecInt "-5"))
+
+-----------------------------------------------------------------------------------------
+-- euler.
+
+test112 = TestCase (assertBool "Euler literal is correct."
+                               ((abs (2.71 - v)) < 0.01))
+    where Left v = toConstFloat euler
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
@@ -742,6 +749,10 @@ tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores
                                      TestLabel "toConstInt_QasmMeasure" test105,
                                      TestLabel "toConstFloat_QasmMeasure" test106,
                                      TestLabel "toRValue_QasmMeasure" test107,
-                                     TestLabel "toRValue_QasmMeasure_NonOp" test108]
+                                     TestLabel "toRValue_QasmMeasure_NonOp" test108,
+                                     TestLabel "toGateOperand_QVar" test109,
+                                     TestLabel "toGateOperand_QReg" test110,
+                                     TestLabel "toGateOperand_BadIndex" test111,
+                                     TestLabel "euler_literal" test112]
 
 main = defaultMain tests

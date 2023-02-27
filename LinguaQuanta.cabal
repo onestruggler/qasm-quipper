@@ -21,9 +21,11 @@ library
                        LinguaQuanta.Maybe
                        LinguaQuanta.List
                        LinguaQuanta.Qasm.AST
+                       LinguaQuanta.Qasm.Call
                        LinguaQuanta.Qasm.Expression
                        LinguaQuanta.Qasm.Gate
                        LinguaQuanta.Qasm.GateName
+                       LinguaQuanta.Qasm.Header
                        LinguaQuanta.Qasm.Inversion
                        LinguaQuanta.Qasm.Language
                        LinguaQuanta.Qasm.Operand
@@ -81,6 +83,15 @@ library LinguaQuantaExe
 executable elim_ctrls
   main-is:             ElimCtrls/Main.hs
   other-modules:       ElimCtrls.CmdLn
+  build-depends:       base,
+                       LinguaQuanta,
+                       LinguaQuantaExe
+  hs-source-dirs:      exe
+  default-language:    Haskell2010
+
+executable elim_funs
+  main-is:             ElimFuns/Main.hs
+  other-modules:       ElimFuns.CmdLn
   build-depends:       base,
                        LinguaQuanta,
                        LinguaQuantaExe
@@ -194,6 +205,11 @@ test-suite qasm-ast-tests
   main-is:             Qasm-AST-Tests.hs
   type:                exitcode-stdio-1.0
 
+test-suite qasm-call-tests
+  import:              basic-unit-test-props
+  main-is:             Qasm-Call-Tests.hs
+  type:                exitcode-stdio-1.0
+
 test-suite qasm-expression-tests
   import:              basic-unit-test-props
   main-is:             Qasm-Expression-Tests.hs
@@ -202,6 +218,11 @@ test-suite qasm-expression-tests
 test-suite qasm-gate-tests
   import:              basic-unit-test-props
   main-is:             Qasm-Gate-Tests.hs
+  type:                exitcode-stdio-1.0
+
+test-suite qasm-header-tests
+  import:              basic-unit-test-props
+  main-is:             Qasm-Header-Tests.hs
   type:                exitcode-stdio-1.0
 
 test-suite qasm-inversion-tests

@@ -3,6 +3,7 @@
 module LinguaQuanta.Qasm.Expression
   ( ExprErr(..)
   , avgExpr
+  , euler
   , negateExpr
   , parseGateOperand
   , readDecInt
@@ -55,8 +56,14 @@ type ExprEvalFn a = Expr -> ExprEval a
 -------------------------------------------------------------------------------
 -- * Useful Expressions.
 
+-- | The literal zero.
 zero :: Expr
 zero = Qasm.DecInt "0"
+
+-- | An approximation of the literal e.
+euler :: Expr
+euler = DecFloat $ show v
+    where v = to_real SR.Euler :: Double
 
 -------------------------------------------------------------------------------
 -- * Evaluation Helper Methods.

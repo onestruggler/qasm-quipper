@@ -2,7 +2,9 @@
 
 module LinguaQuanta.Qasm.Passes
   ( AbstractionErr(..)
+  , InlineError(..)
   , InversionErr(..)
+  , elimFun
   , elimInv
   , elimPow
   , toAst
@@ -12,6 +14,10 @@ module LinguaQuanta.Qasm.Passes
 -- * Import Section.
 
 import LinguaQuanta.Qasm.AST (AstStmt(..))
+import LinguaQuanta.Qasm.Call
+  ( elimCallsInArglist
+  , elimCallsInExpr
+  )
 import LinguaQuanta.Qasm.Expression
   ( ExprErr
   , parseGateOperand
@@ -22,12 +28,26 @@ import LinguaQuanta.Qasm.Expression
   )
 import LinguaQuanta.Qasm.Inversion (invertGate)
 import LinguaQuanta.Qasm.Gate
-  ( Gate(NamedGate)
+  ( Gate(..)
   , GateSummaryErr
   , exprToGate
+  , nullGateMod
   , validateGate
   )
-import LinguaQuanta.Qasm.GateName (GateName(UserDefined))
+import LinguaQuanta.Qasm.GateName
+  ( GateName(..)
+  , isBackportGate
+  , isQelib1Gate
+  , isQuipperGate
+  )
+import LinguaQuanta.Qasm.Header
+  ( QasmHeader
+  , isLegacy
+  , usingBkp
+  , usingQfn
+  , usingQpr
+  , usingStd
+  )
 import LinguaQuanta.Qasm.Language
   ( Expr(..)
   , GateExpr
@@ -36,7 +56,10 @@ import LinguaQuanta.Qasm.Language
   , Stmt(..)
   , Type(..)
   )
-import LinguaQuanta.Qasm.Operand (VoidCall(..))
+import LinguaQuanta.Qasm.Operand
+  ( RValue(..)
+  , VoidCall(..)
+  )
 
 -------------------------------------------------------------------------------
 -- * Pass Template.
@@ -63,7 +86,7 @@ applySafePerLinePass _ []           = []
 applySafePerLinePass f (line:lines) = f line ++ applySafePerLinePass f lines
 
 -------------------------------------------------------------------------------
--- * Primary Pass: Abstraction Pass.
+-- * Primary Pass: Utilities.
 
 data AbstractionErr = GateAbstractionErr Int GateSummaryErr
                     | ArrayLenAbstractionErr Int ExprErr
@@ -72,18 +95,81 @@ data AbstractionErr = GateAbstractionErr Int GateSummaryErr
                     | MeasureCallAbstractionErr Int ExprErr
                     | UnknownExprStmt Int
                     | NonPosArrayLen Int
+                    | NonLegacyStmt Int
+                    | MissingLib Int String
+                    | UnexpectedMeasureExpr Int
                     deriving (Show, Eq)
+
+-- | Consumes a line number and OpenQASM header. Returns an error if any
+-- quipfuncs.inc call would be invalid relative to the header. Otherwise,
+-- nothing is returned.
+checkQuipFuncsScope :: QasmHeader -> Int -> Maybe AbstractionErr
+checkQuipFuncsScope header ln
+    | isLegacy header       = Just $ NonLegacyStmt ln
+    | not $ usingQfn header = Just $ MissingLib ln "quipfuncs.inc"
+    | otherwise             = Nothing
+
+-- | Consumes a line number, an OpenQASM header, and an OpenQASM gate. If the
+-- gate is not accessible with respect to header, then an error is returned.
+-- Otherwise, nothing is returned.
+checkGateScope :: QasmHeader -> Int -> Gate -> Maybe AbstractionErr
+checkGateScope header ln (NamedGate name _ _ _)
+    | fromQe1 && noStd && legacy     = Just $ MissingLib ln "qelib1.inc"
+    | fromQe1 && noStd && not legacy = Just $ MissingLib ln "stdgates.inc"
+    | fromBkp && noBkp && legacy     = Just $ MissingLib ln "bkpgates.inc"
+    | fromBkp && noStd && not legacy = Just $ MissingLib ln "stdgates.inc"
+    | fromQpr && noQpr               = Just $ MissingLib ln "quipgates.inc"
+    | otherwise                      = Nothing
+    where legacy  = isLegacy header
+          fromQe1 = isQelib1Gate name
+          fromBkp = isBackportGate name
+          fromQpr = isQuipperGate name
+          noStd   = not $ usingStd header
+          noBkp   = not $ usingBkp header
+          noQpr   = not $ usingQpr header
+checkGateScope header ln (GPhaseGate _ _ _)
+    | isLegacy header = Just $ NonLegacyStmt ln
+    | otherwise       = Nothing 
+
+-- | Consumes a line number, an OpenQASM header, and an rvalue. Returns an
+-- error if the rvalue would be invalid relative to the header. Otherwise,
+-- nothing is returned.
+checkRValueScope :: QasmHeader -> Int -> RValue -> Maybe AbstractionErr
+checkRValueScope header ln (QuipMeasure _) = checkQuipFuncsScope header ln
+checkRValueScope header ln QuipCInit0      = checkQuipFuncsScope header ln
+checkRValueScope header ln QuipCInit1      = checkQuipFuncsScope header ln
+checkRValueScope header ln QuipCTerm0      = checkQuipFuncsScope header ln
+checkRValueScope header ln QuipCTerm1      = checkQuipFuncsScope header ln
+checkRValueScope header ln QuipCDiscard    = checkQuipFuncsScope header ln
+checkRValueScope header ln (Measure _)     = Nothing
+
+-- | Consumes a line number, an OpenQASM header, and a void call. Returns an
+-- error if the call is invalid relative to the header. Otherwise, nothing is
+-- returned.
+checkVoidCallScope :: QasmHeader -> Int -> VoidCall -> Maybe AbstractionErr
+checkVoidCallScope header ln (QuipQInit0 _)   = checkQuipFuncsScope header ln
+checkVoidCallScope header ln (QuipQInit1 _)   = checkQuipFuncsScope header ln
+checkVoidCallScope header ln (QuipQTerm0 _)   = checkQuipFuncsScope header ln
+checkVoidCallScope header ln (QuipQTerm1 _)   = checkQuipFuncsScope header ln
+checkVoidCallScope header ln (QuipQDiscard _) = checkQuipFuncsScope header ln
+checkVoidCallScope header ln (VoidReset _)    = Nothing
+checkVoidCallScope _      ln (VoidMeasure _)  = Just $ UnexpectedMeasureExpr ln
+
+-------------------------------------------------------------------------------
+-- * Primary Pass: Abstraction Pass.
 
 type AbstractionRes = Either [AstStmt] AbstractionErr
 
 -- | Consumes a line number (ln) and an expression (expr). If expr evaluates to
 -- a valid gate (g) that is supported by the translator, then g is returned.
 -- Otherwise, an error is returned with line number set to ln.
-abstractQasmGate :: Int -> GateExpr -> AbstractionRes
-abstractQasmGate ln expr =
+abstractGate :: QasmHeader -> Int -> GateExpr -> AbstractionRes
+abstractGate header ln expr =
     case exprToGate expr of
         Left (n, gate) -> case validateGate gate of
-            Nothing  -> Left [AstGateStmt n gate]
+            Nothing -> case checkGateScope header ln gate of
+                Just err -> Right err
+                Nothing  -> Left [AstGateStmt n gate]
             Just err -> Right (GateAbstractionErr ln err)
         Right err -> Right (GateAbstractionErr ln err)
 
@@ -104,35 +190,37 @@ getDeclLen ln expr =
 -- for a variable with name decl is returned. The constructor of the abstract
 -- declaration is determined by the type. If the type is invalid, then an error
 -- is returned with line number set to ln.
-abstractQasmDecl :: Int -> Type -> String -> AbstractionRes
-abstractQasmDecl _  QubitT           decl = Left [AstQubitDecl Nothing decl]
-abstractQasmDecl ln (QubitArrT expr) decl =
+abstractDecl :: Int -> Type -> String -> AbstractionRes
+abstractDecl _  QubitT           decl = Left [AstQubitDecl Nothing decl]
+abstractDecl ln (QubitArrT expr) decl =
     case getDeclLen ln expr of
         Left n    -> Left [AstQubitDecl (Just n) decl]
         Right err -> Right err
-abstractQasmDecl _  BitT decl = Left [AstBitDecl Nothing decl]
-abstractQasmDecl ln (BitArrT expr) decl =
+abstractDecl _  BitT decl = Left [AstBitDecl Nothing decl]
+abstractDecl ln (BitArrT expr) decl =
     case getDeclLen ln expr of
         Left n    -> Left [AstBitDecl (Just n) decl]
         Right err -> Right err
 
--- | Implementation details for abstractQasmAssign.
-abstractQasmAssignImpl :: Int -> String -> Maybe Int -> Expr -> AbstractionRes
-abstractQasmAssignImpl ln id idx expr = 
+-- | Implementation details for abstractAssign.
+assignImpl :: QasmHeader -> Int -> String -> Maybe Int -> Expr -> AbstractionRes
+assignImpl header ln id idx expr = 
     case toRValue expr of
-        Left rval -> Left [AstAssign id idx rval]
+        Left rval -> case checkRValueScope header ln rval of
+            Just err -> Right err
+            Nothing  -> Left [AstAssign id idx rval]
         Right err -> Right $ RValueAbstractionErr ln err
 
 -- | Consumes a line number (ln), a variable to update, and a value to assign
 -- to the variable (rval). If the lvalue and rvalue are valid, then an abstract
 -- assignment statement for rval into lval is returned. Otherwise, an error for
 -- the first failure is returned. is returned.
-abstractQasmAssign :: Int -> LValue -> Expr -> AbstractionRes
-abstractQasmAssign ln (CVar id) expr = stmt
-    where stmt = abstractQasmAssignImpl ln id Nothing expr
-abstractQasmAssign ln (CReg id idx) expr =
+abstractAssign :: QasmHeader -> Int -> LValue -> Expr -> AbstractionRes
+abstractAssign header ln (CVar id) expr = stmt
+    where stmt = assignImpl header ln id Nothing expr
+abstractAssign header ln (CReg id idx) expr =
     case toArrayIndex idx of
-        Left n    -> abstractQasmAssignImpl ln id (Just n) expr
+        Left n    -> assignImpl header ln id (Just n) expr
         Right err -> Right $ ArrayLenAbstractionErr ln err
 
 -- | Consumes a line number (ln), a variable type, the name of a newly declared
@@ -141,10 +229,10 @@ abstractQasmAssign ln (CReg id idx) expr =
 -- statement for a variable of the name decl, an an abstract initialization
 -- statement setting decl to expr, are returned. Otherwise, an error for the
 -- first failure is returned. is returned.
-abstractQasmInitDecl :: Int -> Type -> String -> Expr -> AbstractionRes
-abstractQasmInitDecl ln ty decl rval =
-    case abstractQasmDecl ln ty decl of
-        Left dstmt -> case abstractQasmAssign ln (CVar decl) rval of
+abstractInitDecl :: QasmHeader -> Int -> Type -> String -> Expr -> AbstractionRes
+abstractInitDecl header ln ty decl rval =
+    case abstractDecl ln ty decl of
+        Left dstmt -> case abstractAssign header ln (CVar decl) rval of
             Left istmt -> Left $ dstmt ++ istmt
             Right err  -> Right err
         Right err -> Right err
@@ -153,48 +241,60 @@ abstractQasmInitDecl ln ty decl rval =
 -- statement. If expr evaluates to a valid expression statement, then the
 -- corresponding abstract statement is returned. Otherwise, an error for the
 -- first failure is returned.
-abstractQasmExprStmt :: Int -> Expr -> AbstractionRes
-abstractQasmExprStmt ln (Brack expr) = astmts
-    where astmts = abstractQasmExprStmt ln expr
-abstractQasmExprStmt ln (Call name args) =
+abstractExprStmt :: QasmHeader -> Int -> Expr -> AbstractionRes
+abstractExprStmt header ln (Brack expr) = astmts
+    where astmts = abstractExprStmt header ln expr
+abstractExprStmt header ln (Call name args) =
     case toVoidCall name args of
-        Left call -> Left [AstCall call]
+        Left call -> case checkVoidCallScope header ln call of
+            Just err -> Right err
+            Nothing  -> Left [AstCall call]
         Right err -> Right $ VoidCallAbstractionErr ln err
-abstractQasmExprStmt ln (QasmMeasure gop) =
+abstractExprStmt header ln (QasmMeasure gop) =
     case parseGateOperand gop of
-        Left op   -> Left [AstCall $ VoidMeasure op]
+        Left op -> if isLegacy header
+                   then Right $ NonLegacyStmt ln
+                   else Left [AstCall $ VoidMeasure op]
         Right err -> Right $ MeasureCallAbstractionErr ln err
-abstractQasmExprStmt ln _ = Right $ UnknownExprStmt ln
+abstractExprStmt _ ln _ = Right $ UnknownExprStmt ln
 
 -- | Consume a line number (ln) and the argument to a reset statement (expr).
 -- If expr evaluates to a valid operand, then a VoidReset parameterized by the
 -- operand is returned. Otherwise, an error for the first failure is returned.
-abstractQasmResetStmt :: Int -> GateOperand -> AbstractionRes
-abstractQasmResetStmt ln gop =
+abstractResetStmt :: Int -> GateOperand -> AbstractionRes
+abstractResetStmt ln gop =
     case parseGateOperand gop of
         Left op   -> Left [AstCall $ VoidReset op]
         Right err -> Right $ MeasureCallAbstractionErr ln err
 
 -- | Converts a single statement into a sequence of equivalent AST statements.
 -- If then conversion fails, then an appropriate abstraction error is returned.
-abstractStmt :: Int -> Stmt -> AbstractionRes
-abstractStmt ln (QasmGateStmt expr) = astmts
-    where astmts = abstractQasmGate ln expr
-abstractStmt ln (QasmDeclStmt ty decl) = astmts
-    where astmts = abstractQasmDecl ln ty decl
-abstractStmt ln (QasmAssignStmt lval rval) = astmts
-    where astmts = abstractQasmAssign ln lval rval
-abstractStmt ln (QasmInitDeclStmt ty decl rval) = astmts
-    where astmts = abstractQasmInitDecl ln ty decl rval
-abstractStmt ln (QasmExprStmt expr) = astmts
-    where astmts = abstractQasmExprStmt ln expr
-abstractStmt ln (QasmResetStmt expr) = astmts
-    where astmts = abstractQasmResetStmt ln expr
+abstractStmt :: QasmHeader -> Int -> Stmt -> AbstractionRes
+abstractStmt header ln (QasmGateStmt expr) = astmts
+    where astmts = abstractGate header ln expr
+abstractStmt header ln (QasmDeclStmt ty decl)
+    | isLegacy header = Right $ NonLegacyStmt ln
+    | otherwise       = abstractDecl ln ty decl
+abstractStmt _ ln (QasmLDeclStmt ty decl) = astmts
+    where astmts = abstractDecl ln ty decl
+abstractStmt header ln (QasmAssignStmt lval rval)
+    | isLegacy header = Right $ NonLegacyStmt ln
+    | otherwise       = abstractAssign header ln lval rval
+abstractStmt header ln (QasmLAssignStmt lval rval) = astmts
+    where astmts = abstractAssign header ln lval rval
+abstractStmt header ln (QasmInitDeclStmt ty decl rval)
+    | isLegacy header = Right $ NonLegacyStmt ln
+    | otherwise       = abstractInitDecl header ln ty decl rval
+abstractStmt header ln (QasmExprStmt expr) = astmts
+    where astmts = abstractExprStmt header ln expr
+abstractStmt _ ln (QasmResetStmt expr) = astmts
+    where astmts = abstractResetStmt ln expr
 
 -- | Converts a list of statements into an AST. If the conversion fails, then
 -- an appropriate abstraction error is returned.
-toAst :: [Stmt] -> AbstractionRes
-toAst = applyPerLinePass abstractStmt 1
+toAst :: QasmHeader -> [Stmt] -> AbstractionRes
+toAst header = applyPerLinePass f 1
+    where f = abstractStmt header
 
 -------------------------------------------------------------------------------
 -- * Secondary Pass: Inverse Elimination
@@ -253,3 +353,61 @@ elimPowImpl stmt                 = [stmt]
 -- | Inlines all power modifers in a list of AST statements.
 elimPow :: [AstStmt] -> [AstStmt]
 elimPow = applySafePerLinePass elimPowImpl
+
+-------------------------------------------------------------------------------
+-- * Secondary Pass: Call Elimination
+
+data InlineError = FailedToEval Int String deriving (Show, Eq)
+
+type InlineRes = Either [AstStmt] InlineError
+
+-- | Takes as input a line number and a gate. Implements elimFunImpl for all
+-- parameters in (AstGateStmt _ gate).
+elimInGate :: Int -> Gate -> Either Gate InlineError
+elimInGate ln (NamedGate name args ops mods) =
+    case elimCallsInArglist args of
+        Left args' -> Left $ NamedGate name args' ops mods
+        Right name -> Right $ FailedToEval ln name
+elimInGate ln (GPhaseGate arg ops mods) =
+    case elimCallsInExpr arg of
+        Left arg'  -> Left $ GPhaseGate arg' ops mods
+        Right name -> Right $ FailedToEval ln name
+
+-- | Takes as input a line number and a void call. Implements elimFunImpl for
+-- the statement (AstCall call).
+elimVoidCall :: Int -> VoidCall -> InlineRes
+elimVoidCall _ (QuipQInit1 op) = Left [setTo0, setTo1]
+    where setTo0 = AstCall $ VoidReset op
+          setTo1 = AstGateStmt 0 $ NamedGate GateX [] [op] nullGateMod
+elimVoidCall _  (QuipQInit0 op)      = Left [AstCall $ VoidReset op]
+elimVoidCall _  (QuipQTerm0 _)       = Left []
+elimVoidCall _  (QuipQTerm1 _)       = Left []
+elimVoidCall _  (QuipQDiscard _)     = Left []
+elimVoidCall _  call@(VoidReset _)   = Left [AstCall call]
+elimVoidCall _  call@(VoidMeasure _) = Left [AstCall call]
+
+-- | Takes as input a line number, the name and index of an lvalue, and an
+-- rvalue. Implements elimFunImpl for the statement (AstAssign id idx rval).
+elimInAssign :: Int -> String -> Maybe Int -> RValue -> InlineRes
+elimInAssign _  id idx (QuipMeasure op) = Left [AstAssign id idx $ Measure op]
+elimInAssign _  id idx QuipCInit0       = error "Classical computation."
+elimInAssign _  id idx QuipCInit1       = error "Classical computation."
+elimInAssign _  id idx QuipCTerm0       = Left []
+elimInAssign _  id idx QuipCTerm1       = Left []
+elimInAssign _  id idx QuipCDiscard     = Left []
+elimInAssign _  id idx rval@(Measure _) = Left [AstAssign id idx rval]
+
+-- | Inlines function calls that are not built into version 2.0 of OpenQASM,
+-- for a single AST statement.
+elimFunImpl :: Int -> AstStmt -> InlineRes
+elimFunImpl ln (AstGateStmt n gate) = 
+    case elimInGate ln gate of
+        Left gate' -> Left [AstGateStmt n gate']
+        Right err  -> Right err
+elimFunImpl ln (AstAssign id idx rval) = elimInAssign ln id idx rval
+elimFunImpl ln (AstCall call)          = elimVoidCall ln call
+elimFunImpl _  stmt                    = Left [stmt] 
+
+-- | Inlines function calls that are not built into version 2.0 of OpenQASM.
+elimFun :: [AstStmt] -> InlineRes
+elimFun = applyPerLinePass elimFunImpl 1

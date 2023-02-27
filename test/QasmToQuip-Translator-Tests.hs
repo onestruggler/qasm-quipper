@@ -306,7 +306,6 @@ test44 = TestCase (assertEqual "translate (size): cbit array and single cbit."
 
 circ12 = translate [dstmt2, dstmt5, dstmt3, dstmt6]
 
-
 circ12_io = IntMap.fromList [(0, QWire), (1, QWire), (2, QWire), (3, QWire),
                              (4, CWire), (5, CWire), (6, CWire), (7, CWire),
                              (8, QWire),
@@ -389,6 +388,86 @@ test56 = TestCase (assertEqual "translate (size): quantum ancillas."
                                (size circ14))
 
 -----------------------------------------------------------------------------------------
+-- Measurement translations.
+
+circ15 = translate [AstQubitDecl Nothing "qvar",
+                    AstBitDecl Nothing "cvar",
+                    AstAssign "cvar" Nothing $ Measure $ QRef "qvar"]
+
+test57 = TestCase (assertEqual "translate (inputs): measure and assign."
+                               2
+                               (IntMap.size $ inputs circ15))
+
+test58 = TestCase (assertEqual "translate (gates): measure and assign."
+                               [CDiscardGate 1,
+                                QInitGate False 1,
+                                Quip.NamedGate Quip.GateX False [1] [Quip.Pos 0],
+                                QMeasGate 1]
+                               (gates circ15))
+
+test59 = TestCase (assertEqual "translate (outputs): measure and assign."
+                               2
+                               (IntMap.size $ outputs circ15))
+
+test60 = TestCase (assertEqual "translate (size): measure and assign."
+                               2
+                               (size circ15))
+
+-----------------------------------------------------------------------------------------
+-- * Void measure translations.
+
+circ16 = translate [AstQubitDecl Nothing "qvar",
+                    AstQubitDecl (Just 5) "qreg",
+                    AstCall $ VoidMeasure $ QRef "qvar",
+                    AstCall $ VoidMeasure $ Cell "qreg" 2]
+
+test61 = TestCase (assertEqual "translate (inputs): void measure."
+                               6
+                               (IntMap.size $ inputs circ16))
+
+test62 = TestCase (assertEqual "translate (gates): void measure."
+                               [QInitGate False 6,
+                                Quip.NamedGate Quip.GateX False [6] [Quip.Pos 0],
+                                QMeasGate 6,
+                                CDiscardGate 6,
+                                QInitGate False 7,
+                                Quip.NamedGate Quip.GateX False [7] [Quip.Pos 3],
+                                QMeasGate 7,
+                                CDiscardGate 7]
+                               (gates circ16))
+
+test63 = TestCase (assertEqual "translate (outputs): void measure."
+                               6
+                               (IntMap.size $ outputs circ16))
+
+test64 = TestCase (assertEqual "translate (size): void measure."
+                               7
+                               (size circ16))
+
+-----------------------------------------------------------------------------------------
+-- Measurement translations.
+
+circ17 = translate [AstQubitDecl Nothing "qvar",
+                    AstBitDecl Nothing "cvar",
+                    AstAssign "cvar" Nothing $ QuipMeasure $ QRef "qvar"]
+
+test65 = TestCase (assertEqual "translate (inputs): measure and assign."
+                               1
+                               (IntMap.size $ inputs circ17))
+
+test66 = TestCase (assertEqual "translate (gates): measure and assign."
+                               [QMeasGate 0]
+                               (gates circ17))
+
+test67 = TestCase (assertEqual "translate (outputs): measure and assign."
+                               1
+                               (IntMap.size $ outputs circ17))
+
+test68 = TestCase (assertEqual "translate (size): measure and assign."
+                               1
+                               (size circ17))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "Empty_Inputs" test1,
@@ -446,6 +525,18 @@ tests = hUnitTestToTests $ TestList [TestLabel "Empty_Inputs" test1,
                                      TestLabel "QAncilla_Inputs" test53,
                                      TestLabel "QAncilla_Gates" test54,
                                      TestLabel "QAncilla_Outputs" test55,
-                                     TestLabel "QAncilla_Size" test56]
+                                     TestLabel "QAncilla_Size" test56,
+                                     TestLabel "QMeas_Assign_Inputs" test57,
+                                     TestLabel "QMeas_Assign_Gates" test58,
+                                     TestLabel "QMeas_Assign_Outputs" test59,
+                                     TestLabel "QMeas_Assign_Size" test60,
+                                     TestLabel "QMeas_Void_Inputs" test61,
+                                     TestLabel "QMeas_Void_Gates" test62,
+                                     TestLabel "QMeas_Void_Outputs" test63,
+                                     TestLabel "QMeas_Void_Size" test64,
+                                     TestLabel "InvQMeas_Inputs" test65,
+                                     TestLabel "InvQMeas_Gates" test66,
+                                     TestLabel "InvQMeas_Outputs" test67,
+                                     TestLabel "InvQMeas_Size" test68]
 
 main = defaultMain tests

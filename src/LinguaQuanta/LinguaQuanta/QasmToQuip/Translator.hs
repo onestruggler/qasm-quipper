@@ -18,6 +18,7 @@ import LinguaQuanta.QasmToQuip.Call
   , translateQTerm0
   , translateQTerm1
   , translateReset
+  , translateVoidMeasure
   )
 import LinguaQuanta.QasmToQuip.Gate
   ( d1RotTransl
@@ -32,6 +33,8 @@ import LinguaQuanta.QasmToQuip.Assign
   , translateCInit1
   , translateCTerm0
   , translateCTerm1
+  , translateMeasure
+  , translateQMeas
   )
 import LinguaQuanta.QasmToQuip.Operand
   ( UpdatePair
@@ -40,6 +43,7 @@ import LinguaQuanta.QasmToQuip.Operand
 import LinguaQuanta.QasmToQuip.Wire
   ( WireAllocMap
   , allocate
+  , hasLoans
   , initialAllocations
   , toQuipperInputs
   , toQuipperOutputs
@@ -72,8 +76,7 @@ translateCall wmap (QuipQTerm0 op)   = translateQTerm0 wmap op
 translateCall wmap (QuipQTerm1 op)   = translateQTerm1 wmap op
 translateCall wmap (QuipQDiscard op) = translateQDiscard wmap op
 translateCall wmap (VoidReset op)    = translateReset wmap op
-translateCall wmap (VoidMeasure op)  = error msg
-    where msg = "VoidMeasure translation not implemented."
+translateCall wmap (VoidMeasure op)  = translateVoidMeasure wmap op
 
 -------------------------------------------------------------------------------
 -- * Assignment Translation.
@@ -87,10 +90,9 @@ translateAssign wmap id idx QuipCInit1       = translateCInit1 wmap id idx
 translateAssign wmap id idx QuipCTerm0       = translateCTerm0 wmap id idx
 translateAssign wmap id idx QuipCTerm1       = translateCTerm1 wmap id idx
 translateAssign wmap id idx QuipCDiscard     = translateCDiscard wmap id idx
-translateAssign wmap id idx (QuipMeasure op) = error msg
-    where msg = "QMeas translation not implemented."
-translateAssign wmap id idx (Measure op) = error msg
-    where msg = "OpenQASM measure translation not implemented."
+translateAssign wmap id idx (QuipMeasure op) = translateQMeas wmap id idx op
+translateAssign wmap id idx (Measure op)     = (wmap, gates)
+    where gates = translateMeasure wmap id idx op
 
 -------------------------------------------------------------------------------
 -- * Gate Translation.
@@ -167,9 +169,11 @@ translateStmts wmap (stmt:stmts) = (wmap'', gates ++ rest)
 -- | Takes as input an abstract OpenQASM circuit. Returns an equivalent Quipper
 -- gate circuit.
 translate :: [AstStmt] -> GateCirc
-translate circ = GateCirc { inputs  = toQuipperInputs wmap
-                          , gates   = gates
-                          , outputs = toQuipperOutputs wmap
-                          , size    = toSize wmap
-                          }
+translate circ
+    | hasLoans wmap = error "Loaned wire not returend to wire allocation map."
+    | otherwise     = GateCirc { inputs  = toQuipperInputs wmap
+                               , gates   = gates
+                               , outputs = toQuipperOutputs wmap
+                               , size    = toSize wmap
+                               }
     where (wmap, gates) = translateStmts initialAllocations circ

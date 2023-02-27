@@ -160,3 +160,50 @@ isParamInverse GateCRZ    = True
 isParamInverse GateP      = True
 isParamInverse GateCP     = True
 isParamInverse _          = False
+
+-- | Returns true if the gate is defined in the qelib1.inc library.
+isQelib1Gate :: GateName -> Bool
+isQelib1Gate GateX      = True
+isQelib1Gate GateCX     = True
+isQelib1Gate GateCCX    = True
+isQelib1Gate GateY      = True
+isQelib1Gate GateCY     = True
+isQelib1Gate GateZ      = True
+isQelib1Gate GateCZ     = True
+isQelib1Gate GateH      = True
+isQelib1Gate GateCH     = True
+isQelib1Gate GateS      = True
+isQelib1Gate GateSdg    = True
+isQelib1Gate GateT      = True
+isQelib1Gate GateTdg    = True
+isQelib1Gate GateID     = True
+isQelib1Gate GateRX     = True
+isQelib1Gate GateRY     = True
+isQelib1Gate GateRZ     = True
+isQelib1Gate GateCRZ    = True
+isQelib1Gate GatePhase  = True
+isQelib1Gate GateCPhase = True
+isQelib1Gate GateU1     = True
+isQelib1Gate GateU2     = True
+isQelib1Gate GateU3     = True
+isQelib1Gate _          = False
+
+-- | Returns true if the gate is defined in the bkpgate.inc library.
+isBackportGate :: GateName -> Bool
+isBackportGate GateSwap  = True
+isBackportGate GateCSwap = True
+isBackportGate GateSX    = True
+isBackportGate GateCRX   = True
+isBackportGate GateCRY   = True
+isBackportGate GateP     = True
+isBackportGate GateCP    = True
+isBackportGate GateCU    = True
+isBackportGate _         = False
+
+-- | Returns true if the gate is defined in the quipgates.inc library.
+isQuipperGate :: GateName -> Bool
+isQuipperGate GateQuipIX    = True
+isQuipperGate GateQuipOmega = True
+isQuipperGate GateQuipE     = True
+isQuipperGate GateQuipW     = True
+isQuipperGate _             = False

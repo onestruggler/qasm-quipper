@@ -681,6 +681,140 @@ test136 = TestCase (assertEqual "getCellIndex: fails for scalar declarations."
                                 (getCellIndex "decl1" 0 alloc4))
 
 -----------------------------------------------------------------------------------------
+-- Wire Loans.
+
+(loanMap1 ,w1)  = loanWire alloc0
+(loanMap2, w2)  = loanWire loanMap1
+(Just loanMap3) = returnWire w1 loanMap2
+(loanMap4, w3)  = loanWire loanMap3
+(Just loanMap5) = returnWire w3 loanMap4
+(Just loanMap6) = returnWire w2 loanMap5
+
+test137 = TestCase (assertBool "loanWire returns distinct wires (1/2)."
+                               (w1 /= w2))
+
+test138 = TestCase (assertBool "loanWire returns distinct wires (2/2)."
+                               (w2 /= w3))
+
+test139 = TestCase (assertBool "WireAllocMaps track outstanding loans (1/7)."
+                               (not $ hasLoans alloc0))
+
+test140 = TestCase (assertBool "WireAllocMaps track outstanding loans (2/7)."
+                               (hasLoans loanMap1))
+
+test141 = TestCase (assertBool "WireAllocMaps track outstanding loans (3/7)."
+                               (hasLoans loanMap2))
+
+test142 = TestCase (assertBool "WireAllocMaps track outstanding loans (4/7)."
+                               (hasLoans loanMap3))
+
+test143 = TestCase (assertBool "WireAllocMaps track outstanding loans (5/7)."
+                               (hasLoans loanMap4))
+
+test144 = TestCase (assertBool "WireAllocMaps track outstanding loans (6/7)."
+                               (hasLoans loanMap5))
+
+test145 = TestCase (assertBool "WireAllocMaps track outstanding loans (7/7)."
+                               (not $ hasLoans loanMap6))
+
+test146 = TestCase (assertBool "returnWire fails if the wire was never loaned."
+                               (isNothing $ returnWire 100 loanMap2))
+
+test147 = TestCase (assertBool "returnWire fails if the wire was already returned."
+                               (isNothing $ returnWire w1 loanMap6))
+
+-----------------------------------------------------------------------------------------
+-- Copying states.
+
+(Just mvMap1) = mvScalarToScalar "decl1" "decl4" scalarRes1
+
+test148 = TestCase (assertEqual "mvScalarToScalar type test."
+                                (Scalar CWire)
+                                (getDeclType "decl4" mvMap1))
+
+test149 = TestCase (assertEqual "mvScalarToScalar state test."
+                                (IntMap.delete 10 scalarIn1)
+                                (toQuipperInputs mvMap1))
+
+test150 = TestCase (assertEqual "mvScalarToScalar with invalid src."
+                                (Nothing :: Maybe WireAllocMap)
+                                (mvScalarToScalar "decl5" "decl4" scalarRes1))
+
+test151 = TestCase (assertEqual "mvScalarToScalar with invalid dst."
+                                (Nothing :: Maybe WireAllocMap)
+                                (mvScalarToScalar "decl1" "decl5" scalarRes1))
+
+(Just mvMap2) = mvScalarToCell "decl1" "decl2" 1 scalarRes1
+
+test152 = TestCase (assertEqual "mvScalarToCell type test."
+                                (Array CWire 5)
+                                (getDeclType "decl2" mvMap2))
+
+test153 = TestCase (assertEqual "mvScalarToCell state test."
+                                (IntMap.delete 2 scalarIn1)
+                                (toQuipperInputs mvMap2))
+
+test154 = TestCase (assertEqual "mvScalarToCell with invalid src."
+                                (Nothing :: Maybe WireAllocMap)
+                                (mvScalarToCell "decl5" "decl2" 1 scalarRes1))
+
+test155 = TestCase (assertEqual "mvScalarToCell with invalid dst."
+                                (Nothing :: Maybe WireAllocMap)
+                                (mvScalarToCell "decl1" "decl2" 10 scalarRes1))
+
+(Just mvMap3) = mvCellToScalar "decl3" 1 "decl4" scalarRes1
+
+test156 = TestCase (assertEqual "mvCellToScalar type test."
+                                (Scalar CWire)
+                                (getDeclType "decl4" mvMap3))
+
+test157 = TestCase (assertEqual "mvCellToScalar state test."
+                                (IntMap.delete 10 scalarIn1)
+                                (toQuipperInputs mvMap3))
+
+test158 = TestCase (assertEqual "mvCellToScalar with invalid src."
+                                (Nothing :: Maybe WireAllocMap)
+                                (mvCellToScalar "decl3" 10 "decl4" scalarRes1))
+
+test159 = TestCase (assertEqual "mvCellToScalar with invalid dst."
+                                (Nothing :: Maybe WireAllocMap)
+                                (mvCellToScalar"decl3" 1 "decl5" scalarRes1))
+
+(Just mvMap4) = mvCellToCell "decl3" 1 "decl2" 1 scalarRes1
+
+test160 = TestCase (assertEqual "mvCellToCell type test."
+                                (Array CWire 5)
+                                (getDeclType "decl2" mvMap4))
+
+test161 = TestCase (assertEqual "mvCellToCell state test."
+                                (IntMap.delete 2 scalarIn1)
+                                (toQuipperInputs mvMap4))
+
+test162 = TestCase (assertEqual "mvCellToCell with invalid src."
+                                (Nothing :: Maybe WireAllocMap)
+                                (mvCellToCell "decl3" 10 "decl2" 1 scalarRes1))
+
+test163 = TestCase (assertEqual "mvCellToCell with invalid dst."
+                                (Nothing :: Maybe WireAllocMap)
+                                (mvCellToCell "decl3" 1 "decl2" 10 scalarRes1))
+
+test164 = TestCase (assertEqual "mv{S,C}To{S,C} impacts circuit size (1/4)."
+                                10
+                                (toSize mvMap1))
+
+test165 = TestCase (assertEqual "mv{S,C}To{S,C} impacts circuit size (2/4)."
+                                10
+                                (toSize mvMap2))
+
+test166 = TestCase (assertEqual "mv{S,C}To{S,C} impacts circuit size (3/4)."
+                                10
+                                (toSize mvMap3))
+
+test167 = TestCase (assertEqual "mv{S,C}To{S,C} impacts circuit size (4/4)."
+                                10
+                                (toSize mvMap4))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "WireAPI_UniqueStates_1" test1,
@@ -818,6 +952,37 @@ tests = hUnitTestToTests $ TestList [TestLabel "WireAPI_UniqueStates_1" test1,
                                      TestLabel "getCellIndex_Valid_1" test133,
                                      TestLabel "getCellIndex_Valid_2" test134,
                                      TestLabel "getCellIndex_UndeclaredErr" test135,
-                                     TestLabel "getCellIndex_ScalarErr" test136]
+                                     TestLabel "getCellIndex_ScalarErr" test136,
+                                     TestLabel "loanWire_Distinct_1" test137,
+                                     TestLabel "loanWire_Distinct_2" test138,
+                                     TestLabel "hasLoan_1" test139,
+                                     TestLabel "hasLoan_2" test140,
+                                     TestLabel "hasLoan_3" test141,
+                                     TestLabel "hasLoan_4" test142,
+                                     TestLabel "hasLoan_5" test143,
+                                     TestLabel "hasLoan_6" test144,
+                                     TestLabel "hasLoan_7" test145,
+                                     TestLabel "returnWire_CanFail_1" test146,
+                                     TestLabel "returnWire_CanFail_2" test147,
+                                     TestLabel "mvScalarToScalar_Type" test148,
+                                     TestLabel "mvScalarToScalar_State" test149,
+                                     TestLabel "mvScalarToScalar_BadSrc" test150,
+                                     TestLabel "mvScalarToScalar_BadDst" test151,
+                                     TestLabel "mvScalarToCell_Type" test152,
+                                     TestLabel "mvScalarToCell_State" test153,
+                                     TestLabel "mvScalarToCell_BadSrc" test154,
+                                     TestLabel "mvScalarToCell_BadDst" test155,
+                                     TestLabel "mvCellToScalar_Type" test156,
+                                     TestLabel "mvCellToScalar_State" test157,
+                                     TestLabel "mvCellToScalar_BadSrc" test158,
+                                     TestLabel "mvCellToScalar_BadDst" test159,
+                                     TestLabel "mvCellTocell_Type" test160,
+                                     TestLabel "mvCellToCell_State" test161,
+                                     TestLabel "mvCellToCell_BadSrc" test162,
+                                     TestLabel "mvCellToCell_BadDst" test163,
+                                     TestLabel "mv{S,C}To{S,C}_Size_1" test163,
+                                     TestLabel "mv{S,C}To{S,C}_Size_2" test164,
+                                     TestLabel "mv{S,C}To{S,C}_Size_3" test165,
+                                     TestLabel "mv{S,C}To{S,C}_Size_4" test166]
 
 main = defaultMain tests

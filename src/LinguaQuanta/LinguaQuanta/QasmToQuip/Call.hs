@@ -7,6 +7,7 @@ module LinguaQuanta.QasmToQuip.Call
   , translateQTerm0
   , translateQTerm1
   , translateReset 
+  , translateVoidMeasure
   ) where
 
 -------------------------------------------------------------------------------
@@ -22,10 +23,16 @@ import LinguaQuanta.QasmToQuip.Wire
   ( WireAllocMap
   , initCell
   , initScalar
+  , loanWire
+  , returnWire
   , termCell
   , termScalar
   )
-import LinguaQuanta.Quip.Gate (Gate(..))
+import LinguaQuanta.Quip.Gate
+  ( Control(..)
+  , Gate(..)
+  )
+import LinguaQuanta.Quip.GateName (GateName(..))
 
 -------------------------------------------------------------------------------
 -- * Ancilla Translation.
@@ -93,6 +100,23 @@ translateQTerm1 wmap op = (wmap', gates)
 translateReset :: WireAllocMap -> Operand -> TranslRes
 translateReset wmap op =
     case getWire op wmap of
-        Just w  -> let gates = [QDiscardGate w, QInitGate False w]
-                   in (wmap, gates)
+        Just w -> let gates = [QDiscardGate w, QInitGate False w]
+                  in (wmap, gates)
         Nothing -> error $ "Failed to handle reset at: " ++ show op
+
+-- | Takes as input a wire allocation map and an operand to measure. Returns a
+-- sequence of Quipper instructions to measure the corresponding wire
+-- (according to the allocation map). A new wire map is returned to reflect
+-- ancillas used during the measurement.
+translateVoidMeasure :: WireAllocMap -> Operand -> TranslRes
+translateVoidMeasure wmap op =
+    case getWire op wmap of
+        Just qw -> case returnWire cw wmap' of
+            Just wmap'' -> let gates = [QInitGate False cw,
+                                        NamedGate GateX False [cw] [Pos qw],
+                                        QMeasGate cw,
+                                        CDiscardGate cw]
+                           in (wmap'', gates)
+            Nothing-> error "Unexpected error from returnWire."
+        Nothing -> error $ "Failed to handle measure at: " ++ show op
+    where (wmap', cw) = loanWire wmap

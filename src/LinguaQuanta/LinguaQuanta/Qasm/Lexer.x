@@ -20,12 +20,28 @@ $decimal    = [0-9]
 $alpha      = [A-Za-z]
 $greek      = [\x370-\x3FF]
 $idchars    = ['_' $alpha $greek]
+$space      = [\ \t\r]
+$filepath   = [$alpha $decimal \. \- '_']
 
 @decint     = ($decimal _?)* $decimal
 @floatexp   = [e E] [\+ \-]? @decint
 
 tokens :-
     <0>             $white+                           ;
+    -- Format Parsing.
+    <0>             OPENQASM                          { (constLex TokenOpenQasm)
+                                                        `andBegin` version }
+    <version>       $space+                           ;
+    <version>       $decimal+ (\. $decimal+)?         { charLex TokenVer }
+    <version>       \;                                { constLex TokenSemicolon }
+    <version>       \n                                { begin 0 }
+    -- Header Parsing.
+    <0>             include                           { (constLex TokenInclude)
+                                                        `andBegin` includefn }
+    <includefn>     $space+                           ;
+    <includefn>     \" $filepath* \"                  { charLex TokenPath }
+    <includefn>     \;                                { constLex TokenSemicolon }
+    <includefn>     \n                                { begin 0 }
     -- Comment Parsing.
     <0>             \/\/                              { begin commentsl }
     <0>             \/\*                              { begin commentml }
@@ -87,7 +103,11 @@ setFilePath :: FilePath -> Alex ()
 setFilePath = alexSetUserState . AlexUserState
 
 -- The tokens returned by the parser.
-data TokenClass = TokenCtrl
+data TokenClass = TokenOpenQasm
+                | TokenVer String
+                | TokenInclude
+                | TokenPath String
+                | TokenCtrl
                 | TokenNegCtrl
                 | TokenInv
                 | TokenPow
@@ -124,6 +144,10 @@ data Token = Token AlexPosn TokenClass deriving (Show)
 
 -- Converts tokens into strings for nicer error messages.
 unlex :: TokenClass -> String
+unlex TokenOpenQasm    = "OPENQASM"
+unlex (TokenVer str)   = str  
+unlex TokenInclude     = "include"
+unlex (TokenPath fp)   = fp
 unlex TokenCtrl        = "ctrl"
 unlex TokenNegCtrl     = "negctrl"
 unlex TokenInv         = "inv"
@@ -133,12 +157,12 @@ unlex TokenReset       = "reset"
 unlex TokenMeasure     = "measure"
 unlex TokenQReg        = "qreg"
 unlex TokenQubit       = "qubit"
-unlex (TokenFloat x)   = show x
-unlex (TokenDecInt x)  = show x
-unlex (TokenEuler tok) = show tok
-unlex (TokenPi tok)    = show tok
-unlex (TokenTau tok)   = show tok
-unlex (TokenID str)    = show str
+unlex (TokenFloat x)   = x
+unlex (TokenDecInt x)  = x
+unlex (TokenEuler tok) = tok
+unlex (TokenPi tok)    = tok
+unlex (TokenTau tok)   = tok
+unlex (TokenID str)    = str
 unlex TokenEquals      = "="
 unlex TokenArrow       = "->"
 unlex TokenAt          = "@"
