@@ -28,6 +28,7 @@ library
                        LinguaQuanta.Qasm.Header
                        LinguaQuanta.Qasm.Inversion
                        LinguaQuanta.Qasm.Language
+                       LinguaQuanta.Qasm.LatticeSurgery
                        LinguaQuanta.Qasm.Operand
                        LinguaQuanta.Qasm.Passes
                        LinguaQuanta.Qasm.Parser
@@ -228,6 +229,11 @@ test-suite qasm-header-tests
 test-suite qasm-inversion-tests
   import:              basic-unit-test-props
   main-is:             Qasm-Inversion-Tests.hs
+  type:                exitcode-stdio-1.0
+
+test-suite qasm-latticesurgery-tests
+  import:              basic-unit-test-props
+  main-is:             Qasm-LatticeSurgery-Tests.hs
   type:                exitcode-stdio-1.0
 
 test-suite qasm-parser-tests
