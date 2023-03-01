@@ -12,8 +12,10 @@ module LinguaQuanta.Qasm.Gate
   , addNegCtrlsToMod
   , exprToGate
   , getCtrlList
+  , hasControlMod
   , hasInversionMod
   , invert
+  , isControlled
   , isInverted
   , negateMod
   , nullGateMod
@@ -81,6 +83,10 @@ addNegCtrlsToMod = addSignsToMod Neg
 hasInversionMod :: GateMod -> Bool
 hasInversionMod (GateMod inv _) = inv
 
+-- | Returns true if at least one control modifier is active.
+hasControlMod :: GateMod -> Bool
+hasControlMod (GateMod _ ctrls) = not $ null ctrls 
+
 -- | Returns a list of control modifiers.
 getCtrlList :: GateMod -> [Sign]
 getCtrlList (GateMod _ ctrls) = ctrls
@@ -118,6 +124,11 @@ isInverted :: Gate -> Bool
 isInverted (NamedGate _ _ _ mod) = hasInversionMod mod
 isInverted (GPhaseGate _ _ mod)  = hasInversionMod mod
 
+-- | Returns true if the gate is controlled.
+isControlled :: Gate -> Bool
+isControlled (NamedGate _ _ _ mod) = hasControlMod mod
+isControlled (GPhaseGate _ _ mod)  = hasControlMod mod
+
 -------------------------------------------------------------------------------
 -- * Gate Summarization.
 
@@ -145,8 +156,8 @@ tryUpdate f gateExpr =
 tryParseParam :: Expr -> Either Int GateSummaryErr
 tryParseParam expr =
     case toConstInt expr of
-        Left n    -> if n > 0 then Left n else Right (NonPosParam n expr)
-        Right err -> Right (NonConstParam err expr)
+        Left n    -> if n > 0 then Left n else Right $ NonPosParam n expr
+        Right err -> Right $ NonConstParam err expr
 
 -- | Wrapper to parseGateOperand.
 tryParseOperand :: GateOperand -> Either Operand GateSummaryErr
@@ -215,7 +226,7 @@ checkParamCt :: Maybe Int -> [Expr] -> Maybe GateSummaryErr
 checkParamCt Nothing  _ = Nothing
 checkParamCt (Just expect) params
     | actual == expect = Nothing
-    | otherwise        = Just (UnexpectedParamCount actual expect)
+    | otherwise        = Just $ UnexpectedParamCount actual expect
     where actual = length params
 
 -- | Takes as input a gate modifier (mod), an operand list (operands), and an
@@ -225,14 +236,14 @@ checkParamCt (Just expect) params
 -- does not equal the number of operands, then an UnexpectedOperandCount
 -- expection is returned. Otherwise, nothing is returned.
 checkOpCt :: Maybe Int -> GateMod -> [Operand] -> Maybe GateSummaryErr
-checkOpCt Nothing  (GateMod _ ctrls) operands
+checkOpCt Nothing (GateMod _ ctrls) operands
     | actual >= expect = Nothing
-    | otherwise        = Just (UnexpectedOperandCount actual expect)
+    | otherwise        = Just $ UnexpectedOperandCount actual expect
     where actual = length operands
           expect = length ctrls + 1
 checkOpCt (Just n) (GateMod _ ctrls) operands
     | actual == expect = Nothing
-    | otherwise        = Just (UnexpectedOperandCount actual expect)
+    | otherwise        = Just $ UnexpectedOperandCount actual expect
     where actual = length operands
           expect = length ctrls + n
 
