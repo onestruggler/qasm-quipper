@@ -32,8 +32,8 @@ import System.IO (hPutStrLn)
 -- * ElimCtrls Interface.
 
 doTask :: DoTaskFn QuipCirc
-doTask file input = Right $ applyTransformer elimCtrlsTransformer
-                          $ parseQuip file input
+doTask file input = Right $ applyTransformer elim $ parseQuip file input
+    where elim = elimCtrlsTransformer False False False
 
 display :: DisplayFn QuipCirc
 display hdl = hPutStrLn hdl . gatesToAscii . quipToGates
