@@ -174,6 +174,15 @@ executable quip_tools
   hs-source-dirs:      exe
   default-language:    Haskell2010
 
+executable to_lsc
+  main-is:             ToLsc/Main.hs
+  other-modules:       ToLsc.CmdLn
+  build-depends:       base,
+                       LinguaQuanta,
+                       LinguaQuantaExe
+  hs-source-dirs:      exe
+  default-language:    Haskell2010
+
 -----------------------------------------------------------------------------------------
 -- Unit Testing.
 
