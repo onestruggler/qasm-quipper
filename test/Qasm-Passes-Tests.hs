@@ -14,6 +14,7 @@ import LinguaQuanta.Qasm.Gate
 import LinguaQuanta.Qasm.GateName
 import LinguaQuanta.Qasm.Header
 import LinguaQuanta.Qasm.Language
+import LinguaQuanta.Qasm.LatticeSurgery
 import LinguaQuanta.Qasm.Operand
 import LinguaQuanta.Qasm.Passes
 
@@ -543,6 +544,37 @@ test91 = TestCase (assertEqual "elimFun handles inline failures for gata paramet
           errs = FailedToEval 2 "f"
 
 -----------------------------------------------------------------------------------------
+-- toLsc.
+
+test92 = TestCase (assertEqual "toLsc handles valid translations."
+                               (Left louts :: Either [AstStmt] ToLscErr)
+                               (toLsc input))
+    where decl1 = AstQubitDecl Nothing "q1"
+          gate1 = AstGateStmt 0 $ NamedGate GateZ [] [QRef "q1"] nullGateMod
+          gate2 = AstGateStmt 0 $ NamedGate GateID [] [QRef "q1"] nullGateMod
+          gate3 = AstGateStmt 0 $ NamedGate GateQuipIX [] [QRef "q1"] nullGateMod
+          decl2 = AstBitDecl Nothing "c1"
+          asgn1 = AstAssign "c1" Nothing $ QuipMeasure $ QRef "q1"
+          call1 = AstCall $ VoidReset $ QRef "q1"
+          input = [decl1, gate1, gate2, gate3, decl2, asgn1, call1]
+          out3a = AstGateStmt 0 $ NamedGate GateX [] [QRef "q1"] nullGateMod
+          louts = [decl1, gate1, out3a, decl2, asgn1, call1]
+
+test93 = TestCase (assertEqual "toLsc handles rewriteLscGate errors."
+                               (Right errs :: Either [AstStmt] ToLscErr)
+                               (toLsc [decl, gate]))
+    where decl = AstQubitDecl Nothing "q"
+          gate = AstGateStmt 0 $ NamedGate GateU [] [QRef "q"] nullGateMod
+          errs = LscRewriteFailure 2 $ UnsupportedCompilation GateU
+
+test94 = TestCase (assertEqual "toLsc handles power modifier errors."
+                               (Right errs :: Either [AstStmt] ToLscErr)
+                               (toLsc [decl, gate]))
+    where decl = AstQubitDecl Nothing "q"
+          gate = AstGateStmt 5 $ NamedGate GateX [] [QRef "q"] nullGateMod
+          errs = UnexpectedPowerMod 2
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "toAst_EmptyFile" test1,
@@ -635,6 +667,9 @@ tests = hUnitTestToTests $ TestList [TestLabel "toAst_EmptyFile" test1,
                                      TestLabel "elimFun_VoidCall" test88,
                                      TestLabel "elimFun_Assign" test89,
                                      TestLabel "elimFun_Gate" test90,
-                                     TestLabel "elimFun_GateFail" test91]
+                                     TestLabel "elimFun_GateFail" test91,
+                                     TestLabel "toLsc_ValidInput" test92,
+                                     TestLabel "toLsc_Error_Lsc" test93,
+                                     TestLabel "toLsc_Error_Pow" test94]
 
 main = defaultMain tests

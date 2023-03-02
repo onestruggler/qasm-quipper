@@ -4,10 +4,12 @@ module LinguaQuanta.Qasm.Passes
   ( AbstractionErr(..)
   , InlineError(..)
   , InversionErr(..)
+  , ToLscErr(..)
   , elimFun
   , elimInv
   , elimPow
   , toAst
+  , toLsc
   ) where
 
 -------------------------------------------------------------------------------
@@ -55,6 +57,10 @@ import LinguaQuanta.Qasm.Language
   , LValue(..)
   , Stmt(..)
   , Type(..)
+  )
+import LinguaQuanta.Qasm.LatticeSurgery
+  ( LscGateErr(..)
+  , lscRewriteGate
   )
 import LinguaQuanta.Qasm.Operand
   ( RValue(..)
@@ -411,3 +417,26 @@ elimFunImpl _  stmt                    = Left [stmt]
 -- | Inlines function calls that are not built into version 2.0 of OpenQASM.
 elimFun :: [AstStmt] -> InlineRes
 elimFun = applyPerLinePass elimFunImpl 1
+
+-------------------------------------------------------------------------------
+-- * Secondary Pass: Phase Elimination
+
+data ToLscErr = UnexpectedPowerMod Int
+              | LscRewriteFailure Int LscGateErr
+              deriving (Show, Eq)
+
+-- | Rewrites a single AST gate statement to conform with the lattice surgery
+-- compiler, or returns an error when this is not possible.
+toLscImpl :: Int -> AstStmt -> Either [AstStmt] ToLscErr
+toLscImpl ln (AstGateStmt 0 gate) =
+    case lscRewriteGate gate of
+        Left gates -> Left $ map (AstGateStmt 0) gates
+        Right err  -> Right $ LscRewriteFailure ln err
+toLscImpl ln (AstGateStmt _ _) = Right $ UnexpectedPowerMod ln
+toLscImpl _  stmt              = Left [stmt]
+
+-- | Rewrites the gates of an OpenQASM program so that it is amenable to the
+-- lattice surgery compiler. Requires that the program has already undergone
+-- a round translation, with maximum inlining.
+toLsc :: [AstStmt] -> Either [AstStmt] ToLscErr
+toLsc = applyPerLinePass toLscImpl 1
