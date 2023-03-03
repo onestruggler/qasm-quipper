@@ -5,6 +5,7 @@
 module LinguaQuantaExe.CmdLnFlags
   ( QuipVizFormat(..)
   , def
+  , elimGateFlags
   , outFlags
   , quipVizFlags
   , srcFlags
@@ -42,6 +43,15 @@ srcFlags x = x &= help "Input source (defaults to stdin)."
 outFlags :: String -> String
 outFlags x = x &= help "Output destination (defaults to stdout)."
                &= typFile
+
+-------------------------------------------------------------------------------
+-- * Gate Set Flags.
+
+-- | Takes as input the name of a gate. Returns the flags for the --elim_{gate}
+-- argument. The default value is taken as an argument, since flags are impure.
+elimGateFlags :: String -> Bool -> Bool
+elimGateFlags gate x = x &= help helpMsg
+    where helpMsg = "Decompose all " ++ gate ++ " gates."
 
 -------------------------------------------------------------------------------
 -- * Output Format Flags.
