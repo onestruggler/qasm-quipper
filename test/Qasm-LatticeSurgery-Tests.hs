@@ -17,7 +17,7 @@ two_op = [QRef "q", QRef "r"]
 swp_op = [QRef "r", QRef "q"]
 
 -----------------------------------------------------------------------------------------
--- * Identity cases.
+-- * lscRewriteGate: Identity Cases.
 
 mk_id_test :: String -> Gate -> Test.HUnit.Test
 mk_id_test name gate = TestCase (assertEqual msg exp act)
@@ -56,7 +56,7 @@ test15 = mk_noop_test "ID" $ NamedGate GateID [] one_op nullGateMod
 test16 = mk_noop_test "GPhase" $ GPhaseGate Pi [] nullGateMod
 
 -----------------------------------------------------------------------------------------
--- * Simple rewrite cases.
+-- * lscRewriteGate: Simple Rewrite Cases.
 
 test17 = TestCase (assertEqual "lscRewriteGate handles swap gates."
                                (Left list :: Either [Gate] LscGateErr)
@@ -83,7 +83,7 @@ test19 = TestCase (assertEqual "lscRewriteGate handles SX gates."
                   NamedGate GateH [] one_op nullGateMod]
 
 -----------------------------------------------------------------------------------------
--- * Rewrites up to global phase.
+-- * lscRewriteGate: Rewrites Up-to Global Phase.
 
 test20 = TestCase (assertEqual "lscRewriteGate handles Y gates."
                                (Left list :: Either [Gate] LscGateErr)
@@ -132,7 +132,7 @@ test26 = TestCase (assertEqual "lscRewriteGate handles CPhase gates."
           list = [NamedGate GateCRZ [Pi] two_op nullGateMod]
 
 -----------------------------------------------------------------------------------------
--- * Rejects controls and inversions.
+-- * lscRewriteGate: Rejects Controls and Inversions.
 
 test27 = TestCase (assertEqual "lscRewriteGate rejects inverted gates."
                                (Right UnexpectedInvMod :: Either [Gate] LscGateErr)
@@ -145,7 +145,7 @@ test28 = TestCase (assertEqual "lscRewriteGate rejects controlled gates."
     where gate = NamedGate GateSX [] one_op $ addCtrlsToMod 1 nullGateMod
 
 -----------------------------------------------------------------------------------------
--- * Rejects unsupported gate sets.
+-- * lscRewriteGate: Rejects Unsupported Gate Sets.
 
 test29 = TestCase (assertEqual "lscRewriteGate rejects named gates."
                                (Right errs :: Either [Gate] LscGateErr)
@@ -164,6 +164,97 @@ test31 = TestCase (assertEqual "lscRewriteGate rejects gates with complex decomp
                                (lscRewriteGate gate))
     where gate = NamedGate GateQuipW [] one_op nullGateMod
           errs = UnsupportedCompilation GateQuipW
+
+-----------------------------------------------------------------------------------------
+-- * MergedVarMap.
+
+map1 = makeMergedVarMap "qvar" "cvar"
+map2 = addQDecl map1 "q1" 1
+map3 = addCDecl map2 "c1" 5
+map4 = addQDecl map3 "q2" 6
+map5 = addCDecl map4 "c2" 3
+map6 = addQDecl map5 "q3" 4
+map7 = addCDecl map6 "c3" 7
+
+test32 = TestCase (assertEqual "toQDecl returns the correct declarations (1/7)"
+                               ("qvar", 0)
+                               (toQDecl map1))
+
+test33 = TestCase (assertEqual "toQDecl returns the correct declarations (2/7)"
+                               ("qvar", 1)
+                               (toQDecl map2))
+
+test34 = TestCase (assertEqual "toQDecl returns the correct declarations (3/7)"
+                               ("qvar", 1)
+                               (toQDecl map3))
+
+test35 = TestCase (assertEqual "toQDecl returns the correct declarations (4/7)"
+                               ("qvar", 7)
+                               (toQDecl map4))
+
+test36 = TestCase (assertEqual "toQDecl returns the correct declarations (5/7)"
+                               ("qvar", 7)
+                               (toQDecl map5))
+
+test37 = TestCase (assertEqual "toQDecl returns the correct declarations (6/7)"
+                               ("qvar", 11)
+                               (toQDecl map6))
+
+test38 = TestCase (assertEqual "toQDecl returns the correct declarations (7/7)"
+                               ("qvar", 11)
+                               (toQDecl map7))
+
+test39 = TestCase (assertEqual "toCDecl returns the correct declarations (1/7)"
+                               ("cvar", 0)
+                               (toCDecl map1))
+
+test40 = TestCase (assertEqual "toCDecl returns the correct declarations (2/7)"
+                               ("cvar", 0)
+                               (toCDecl map2))
+
+test41 = TestCase (assertEqual "toCDecl returns the correct declarations (3/7)"
+                               ("cvar", 5)
+                               (toCDecl map3))
+
+test42 = TestCase (assertEqual "toCDecl returns the correct declarations (4/7)"
+                               ("cvar", 5)
+                               (toCDecl map4))
+
+test43 = TestCase (assertEqual "toCDecl returns the correct declarations (5/7)"
+                               ("cvar", 8)
+                               (toCDecl map5))
+
+test44 = TestCase (assertEqual "toCDecl returns the correct declarations (6/7)"
+                               ("cvar", 8)
+                               (toCDecl map6))
+
+test45 = TestCase (assertEqual "toCDecl returns the correct declarations (7/7)"
+                               ("cvar", 15)
+                               (toCDecl map7))
+
+test46 = TestCase (assertEqual "lookupQVar with in-scope declaration (1/2)."
+                               (Just ("qvar", 3) :: Maybe (String, Int))
+                               (lookupQVar map7 "q2" 2))
+
+test47 = TestCase (assertEqual "lookupQVar with in-scope declaration (2/2)."
+                               (Just ("qvar", 4) :: Maybe (String, Int))
+                               (lookupQVar map7 "q2" 3))
+
+test48 = TestCase (assertEqual "lookupQVar with out-of-scope declaration."
+                               (Nothing :: Maybe (String, Int))
+                               (lookupQVar map1 "q2" 3))
+
+test49 = TestCase (assertEqual "lookupCVar with in-scope declaration (1/2)."
+                               (Just ("cvar", 8) :: Maybe (String, Int))
+                               (lookupCVar map7 "c2" 3))
+
+test50 = TestCase (assertEqual "lookupCVar with in-scope declaration (2/2)."
+                               (Just ("cvar", 9) :: Maybe (String, Int))
+                               (lookupCVar map7 "c2" 4))
+
+test51 = TestCase (assertEqual "lookupCVar with out-of-scope declaration."
+                               (Nothing :: Maybe (String, Int))
+                               (lookupCVar map1 "c2" 3))
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
@@ -198,6 +289,26 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateX" test1,
                                      TestLabel "Error_Ctrl" test28,
                                      TestLabel "Error_UserDefined" test29,
                                      TestLabel "Error_UGate" test30,
-                                     TestLabel "Error_Complex" test31]
+                                     TestLabel "Error_Complex" test31,
+                                     TestLabel "toQDecl_1" test32,
+                                     TestLabel "toQDecl_2" test33,
+                                     TestLabel "toQDecl_3" test34,
+                                     TestLabel "toQDecl_4" test35,
+                                     TestLabel "toQDecl_5" test36,
+                                     TestLabel "toQDecl_6" test37,
+                                     TestLabel "toQDecl_7" test38,
+                                     TestLabel "toCDecl_1" test39,
+                                     TestLabel "toCDecl_2" test40,
+                                     TestLabel "toCDecl_3" test41,
+                                     TestLabel "toCDecl_4" test42,
+                                     TestLabel "toCDecl_5" test43,
+                                     TestLabel "toCDecl_6" test44,
+                                     TestLabel "toCDecl_7" test45,
+                                     TestLabel "lookupQVar_Match_1" test46,
+                                     TestLabel "lookupQVar_Match_2" test47,
+                                     TestLabel "lookupQVar_NoMatch" test48,
+                                     TestLabel "lookupCVar_Match_1" test49,
+                                     TestLabel "lookupCVar_Match_2" test50,
+                                     TestLabel "lookupCVar_NoMatch" test51]
 
 main = defaultMain tests

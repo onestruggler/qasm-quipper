@@ -2,12 +2,21 @@
 
 module LinguaQuanta.Qasm.LatticeSurgery
   ( LscGateErr(..)
+  , MergedVarMap
+  , addCDecl
+  , addQDecl
+  , lookupCVar
+  , lookupQVar
   , lscRewriteGate
+  , makeMergedVarMap
+  , toCDecl
+  , toQDecl
   ) where
 
 -------------------------------------------------------------------------------
 -- * Import Section.
 
+import qualified Data.Map.Strict as Map
 import LinguaQuanta.Qasm.Gate
   ( Gate(..)
   , isInverted
@@ -70,6 +79,86 @@ rewriteSwap [a, b] = [cx a b, cx b a, cx a b]
 rewriteCY :: [Operand] -> [Gate]
 rewriteCY [c, t] = [mk GateSdg [t], mk GateCX [c, t], mk GateS [t]]
     where mk name ops = NamedGate name [] ops nullGateMod
+
+-------------------------------------------------------------------------------
+-- * Preprocessing to merge all variables into a single register.
+
+-- | Merges variables of a given type into a single register. Retains the name
+-- of the register, the current offset (number of cells), and a mapping from
+-- variable names to offsets. For example, if v has offset n then v[i] has
+-- offset (n + i).
+data TypedVarMap = TypedVarMap String Int (Map.Map String Int)
+
+-- | Returns a valid TypedVarMap with the given register name and offset 0.
+makeTypedVarMap :: String -> TypedVarMap
+makeTypedVarMap reg = TypedVarMap reg 0 Map.empty
+
+-- | Takes as input a TypedVarMap, the name of a variable, and its size (by
+-- convention, a scalar declaration has size 1). Returns the TypedVarDecl map
+-- obtained by mapping the variable name to a region of the given size.
+addDecl :: TypedVarMap -> String -> Int -> TypedVarMap
+addDecl (TypedVarMap reg offset map) id size = TypedVarMap reg offset' map'
+    where offset' = offset + size
+          map'    = Map.insert id offset map
+
+-- | Returns the register name and size for a TypedVarDecl.
+toDecl :: TypedVarMap -> (String, Int)
+toDecl (TypedVarMap reg offset _) = (reg, offset)
+
+-- | Takes as input a TypedVarMap, the name of a variable, and an index into
+-- the variable (by convention, a scalar has index 0). If the variable's name
+-- has been added to the TypedVarMap, then the register name and index
+-- associated with the cell are returned. Otherwise, nothing is returned.
+lookupVar :: TypedVarMap -> String -> Int -> Maybe (String, Int)
+lookupVar (TypedVarMap reg _ map) id idx =
+    case Map.lookup id map of
+        Just offset -> Just (reg, offset + idx)
+        Nothing     -> Nothing
+
+-- | Maintains a TypedVarMap for quantum variables, and a TypedVarMap for
+-- classical variables.
+data MergedVarMap = MergedVarMap TypedVarMap TypedVarMap
+
+-- | Takes as input a name for a quantum register and a name for a classical
+-- register. Initializes a MergedVarMap where the quantum and classical
+-- registers have the given names, and both have offset 0.
+makeMergedVarMap :: String -> String -> MergedVarMap
+makeMergedVarMap qreg creg = MergedVarMap qvars cvars
+    where qvars = makeTypedVarMap qreg
+          cvars = makeTypedVarMap creg
+
+-- | Takes as input a MergedVarMap, the name of a quantum variable, and its size
+-- (by convention, a scalar declaration has size 1). Returns the MergedVarMap
+-- obtained by mapping the variable name to a quantum region of the given size.
+addQDecl :: MergedVarMap -> String -> Int -> MergedVarMap
+addQDecl (MergedVarMap qvars cvars) id size = MergedVarMap qvars' cvars
+    where qvars' = addDecl qvars id size
+
+-- | addCDecl for classical variables.
+addCDecl :: MergedVarMap -> String -> Int -> MergedVarMap
+addCDecl (MergedVarMap qvars cvars) id size = MergedVarMap qvars cvars'
+    where cvars' = addDecl cvars id size
+
+-- | Returns the register name and size for the quantum register of a
+-- MergedVarMap.
+toQDecl :: MergedVarMap -> (String, Int)
+toQDecl (MergedVarMap qvars _) = toDecl qvars
+
+-- | toQDecl for classical registers.
+toCDecl :: MergedVarMap -> (String, Int)
+toCDecl (MergedVarMap _ cvars) = toDecl cvars
+
+-- | Takes as input a MergedVarMap, the name of a quantum variable, and an
+-- index into the variable (by convention, a scalar has index 0). If the
+-- variable's name has been added to the quantum register of the MergedVarMap,
+-- then the register name and index associated with the cell are returned.
+-- Otherwise, nothing is returned.
+lookupQVar :: MergedVarMap -> String -> Int -> Maybe (String, Int)
+lookupQVar (MergedVarMap qvars _) id idx = lookupVar qvars id idx
+
+-- | qLookup for classical entrties
+lookupCVar :: MergedVarMap -> String -> Int -> Maybe (String, Int)
+lookupCVar (MergedVarMap _ cvars) id idx = lookupVar cvars id idx
 
 -------------------------------------------------------------------------------
 -- * Preprocessing for Lattice Surgery Compilation.
