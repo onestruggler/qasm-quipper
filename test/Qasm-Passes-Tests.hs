@@ -468,11 +468,11 @@ test86 = allIncludesIn3Test "quip_omega" []
 -- elimFun.
 
 test87 = TestCase (assertEqual "elimFun supports empty files."
-                               (Left [] :: Either [AstStmt] InlineError)
+                               (Left [] :: Either [AstStmt] InlineErr)
                                (elimFun []))
 
 test88 = TestCase (assertEqual "elimFun for void calls."
-                               (Left elims :: Either [AstStmt] InlineError)
+                               (Left elims :: Either [AstStmt] InlineErr)
                                (elimFun input))
     where decl1 = AstQubitDecl Nothing "q1"
           decl2 = AstQubitDecl (Just 5) "q2"
@@ -491,7 +491,7 @@ test88 = TestCase (assertEqual "elimFun for void calls."
           elims = [decl1, decl2, out1a, out2a, out2b, call6, call7, decl3]
 
 test89 = TestCase (assertEqual "elimFun for assignment (no classical initialization)."
-                               (Left elims :: Either [AstStmt] InlineError)
+                               (Left elims :: Either [AstStmt] InlineErr)
                                (elimFun input))
     where decl1 = AstQubitDecl Nothing "q1"
           decl2 = AstQubitDecl (Just 5) "q2"
@@ -519,7 +519,7 @@ eval_as_float :: Expr -> Expr
 eval_as_float = DecFloat . show . fromLeft 0 . toConstFloat
 
 test90 = TestCase (assertEqual "elimFun for gates."
-                               (Left elims :: Either [AstStmt] InlineError)
+                               (Left elims :: Either [AstStmt] InlineErr)
                                (elimFun input))
     where expr1 = Call "arcsin" [DecInt "1"]
           expr2 = Call "arccos" [DecFloat "0.5"]
@@ -536,7 +536,7 @@ test90 = TestCase (assertEqual "elimFun for gates."
           elims = [decls, gate1, out2a, out3a, gate4]
 
 test91 = TestCase (assertEqual "elimFun handles inline failures for gata parameters."
-                               (Right errs :: Either [AstStmt] InlineError)
+                               (Right errs :: Either [AstStmt] InlineErr)
                                (elimFun [decl, gate]))
     where mods = nullGateMod
           decl = AstQubitDecl (Just 5) "q1"

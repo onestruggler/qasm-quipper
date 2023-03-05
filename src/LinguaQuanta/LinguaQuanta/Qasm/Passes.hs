@@ -2,7 +2,7 @@
 
 module LinguaQuanta.Qasm.Passes
   ( AbstractionErr(..)
-  , InlineError(..)
+  , InlineErr(..)
   , InversionErr(..)
   , ToLscErr(..)
   , elimFun
@@ -70,30 +70,54 @@ import LinguaQuanta.Qasm.Operand
 -------------------------------------------------------------------------------
 -- * Pass Template.
 
+-- | A function that takes a line number and input line, and computes either a
+-- sequence of output lines or an error.
+type PerLineFn ins outs err = Int -> ins -> Either [outs] err
+
+-- | Specialization of PerLineFn to functions which output AST statements.
+type PerStmtFn ins err = PerLineFn ins AstStmt err
+
+-- | Extends PerLineFn to retain state across function calls.
+type StatefulFn st ins outs err = Int -> st -> ins -> Either (st, [outs]) err
+
+-- | A "stateful pass" is a pure-line pass the retains state across each call.
+-- The input and output of the PerLineFn are extended to tuples, where the
+-- first component is the program state, and the second component is the input
+-- (resp. output) data.
+applyStatefulPass :: StatefulFn s a b c -> Int -> s -> [a] -> Either (s, [b]) c
+applyStatefulPass _ _ st []           = Left (st, [])
+applyStatefulPass f n st (line:lines) =
+    case f n st line of
+        Left (st', stmt) -> case applyStatefulPass f (n + 1) st' lines of
+            Left (st'', rest) -> Left (st'', stmt ++ rest)
+            Right err         -> Right err
+        Right err -> Right err
+
 -- | A "per-line pass" is a translation pass that rewrites each statement of an
--- AST independently. A per-line pass is defined by a function f that consumes
--- a line number and program statement (of AST type a), and returns either a
--- list of program statements (each of AST type b) or an error (of type c). The
--- applyPerLinePass function consumes such an f, and returns an analysis pass
--- that applies f to each statement of an AST.
-applyPerLinePass :: (Int -> a -> Either [b] c) -> Int -> [a] -> Either [b] c
-applyPerLinePass _ _ []           = Left []
-applyPerLinePass f n (line:lines) =
+-- AST independently. A per-line pass is defined by a function f that takes as
+-- input a line number and program statement (of AST type a), and returns
+-- either a list of program statements (each of AST type b) or an error (of
+-- type c). The PerLineFn consumes such an f, and returns an analysis pass that
+-- applies f to each statement of an AST.
+applyPerLineFn :: PerLineFn a b c -> Int -> [a] -> Either [b] c
+applyPerLineFn _ _ []           = Left []
+applyPerLineFn f n (line:lines) =
     case f n line of
-        Left stmt -> case applyPerLinePass f (n + 1) lines of
+        Left stmt -> case applyPerLineFn f (n + 1) lines of
             Left rest -> Left (stmt ++ rest)
             Right err -> Right err
         Right err -> Right err
 
 -- | An "safe per-line pass" is equivalent to a per-line pass, except that the
 -- error case is never encountered.
-applySafePerLinePass :: (a -> [b]) -> [a] -> [b]
-applySafePerLinePass _ []           = []
-applySafePerLinePass f (line:lines) = f line ++ applySafePerLinePass f lines
+applySafePerLineFn :: (a -> [b]) -> [a] -> [b]
+applySafePerLineFn _ []           = []
+applySafePerLineFn f (line:lines) = f line ++ applySafePerLineFn f lines
 
 -------------------------------------------------------------------------------
 -- * Primary Pass: Utilities.
 
+-- | Enumerates the possible failures from toAst.
 data AbstractionErr = GateAbstractionErr Int GateSummaryErr
                     | ArrayLenAbstractionErr Int ExprErr
                     | RValueAbstractionErr Int ExprErr
@@ -164,12 +188,10 @@ checkVoidCallScope _      ln (VoidMeasure _)  = Just $ UnexpectedMeasureExpr ln
 -------------------------------------------------------------------------------
 -- * Primary Pass: Abstraction Pass.
 
-type AbstractionRes = Either [AstStmt] AbstractionErr
-
 -- | Consumes a line number (ln) and an expression (expr). If expr evaluates to
 -- a valid gate (g) that is supported by the translator, then g is returned.
 -- Otherwise, an error is returned with line number set to ln.
-abstractGate :: QasmHeader -> Int -> GateExpr -> AbstractionRes
+abstractGate :: QasmHeader -> PerStmtFn GateExpr AbstractionErr
 abstractGate header ln expr =
     case exprToGate expr of
         Left (n, gate) -> case validateGate gate of
@@ -196,7 +218,7 @@ getDeclLen ln expr =
 -- for a variable with name decl is returned. The constructor of the abstract
 -- declaration is determined by the type. If the type is invalid, then an error
 -- is returned with line number set to ln.
-abstractDecl :: Int -> Type -> String -> AbstractionRes
+abstractDecl :: Int -> Type -> String -> Either [AstStmt] AbstractionErr
 abstractDecl _  QubitT           decl = Left [AstQubitDecl Nothing decl]
 abstractDecl ln (QubitArrT expr) decl =
     case getDeclLen ln expr of
@@ -209,8 +231,8 @@ abstractDecl ln (BitArrT expr) decl =
         Right err -> Right err
 
 -- | Implementation details for abstractAssign.
-assignImpl :: QasmHeader -> Int -> String -> Maybe Int -> Expr -> AbstractionRes
-assignImpl header ln id idx expr = 
+assignImpl :: QasmHeader -> PerStmtFn (String, Maybe Int, Expr) AbstractionErr
+assignImpl header ln (id, idx, expr) = 
     case toRValue expr of
         Left rval -> case checkRValueScope header ln rval of
             Just err -> Right err
@@ -221,12 +243,12 @@ assignImpl header ln id idx expr =
 -- to the variable (rval). If the lvalue and rvalue are valid, then an abstract
 -- assignment statement for rval into lval is returned. Otherwise, an error for
 -- the first failure is returned. is returned.
-abstractAssign :: QasmHeader -> Int -> LValue -> Expr -> AbstractionRes
-abstractAssign header ln (CVar id) expr = stmt
-    where stmt = assignImpl header ln id Nothing expr
-abstractAssign header ln (CReg id idx) expr =
+abstractAssign :: QasmHeader -> PerStmtFn (LValue, Expr) AbstractionErr
+abstractAssign header ln (CVar id, expr) = stmt
+    where stmt = assignImpl header ln (id, Nothing, expr)
+abstractAssign header ln (CReg id idx, expr) =
     case toArrayIndex idx of
-        Left n    -> assignImpl header ln id (Just n) expr
+        Left n    -> assignImpl header ln (id, Just n, expr)
         Right err -> Right $ ArrayLenAbstractionErr ln err
 
 -- | Consumes a line number (ln), a variable type, the name of a newly declared
@@ -235,10 +257,10 @@ abstractAssign header ln (CReg id idx) expr =
 -- statement for a variable of the name decl, an an abstract initialization
 -- statement setting decl to expr, are returned. Otherwise, an error for the
 -- first failure is returned. is returned.
-abstractInitDecl :: QasmHeader -> Int -> Type -> String -> Expr -> AbstractionRes
-abstractInitDecl header ln ty decl rval =
+abstractInitDecl :: QasmHeader -> PerStmtFn (Type, String, Expr) AbstractionErr
+abstractInitDecl header ln (ty, decl, rval) =
     case abstractDecl ln ty decl of
-        Left dstmt -> case abstractAssign header ln (CVar decl) rval of
+        Left dstmt -> case abstractAssign header ln (CVar decl, rval) of
             Left istmt -> Left $ dstmt ++ istmt
             Right err  -> Right err
         Right err -> Right err
@@ -247,7 +269,7 @@ abstractInitDecl header ln ty decl rval =
 -- statement. If expr evaluates to a valid expression statement, then the
 -- corresponding abstract statement is returned. Otherwise, an error for the
 -- first failure is returned.
-abstractExprStmt :: QasmHeader -> Int -> Expr -> AbstractionRes
+abstractExprStmt :: QasmHeader -> PerStmtFn Expr AbstractionErr
 abstractExprStmt header ln (Brack expr) = astmts
     where astmts = abstractExprStmt header ln expr
 abstractExprStmt header ln (Call name args) =
@@ -267,7 +289,7 @@ abstractExprStmt _ ln _ = Right $ UnknownExprStmt ln
 -- | Consume a line number (ln) and the argument to a reset statement (expr).
 -- If expr evaluates to a valid operand, then a VoidReset parameterized by the
 -- operand is returned. Otherwise, an error for the first failure is returned.
-abstractResetStmt :: Int -> GateOperand -> AbstractionRes
+abstractResetStmt :: PerStmtFn GateOperand AbstractionErr
 abstractResetStmt ln gop =
     case parseGateOperand gop of
         Left op   -> Left [AstCall $ VoidReset op]
@@ -275,7 +297,7 @@ abstractResetStmt ln gop =
 
 -- | Converts a single statement into a sequence of equivalent AST statements.
 -- If then conversion fails, then an appropriate abstraction error is returned.
-abstractStmt :: QasmHeader -> Int -> Stmt -> AbstractionRes
+abstractStmt :: QasmHeader -> PerStmtFn Stmt AbstractionErr
 abstractStmt header ln (QasmGateStmt expr) = astmts
     where astmts = abstractGate header ln expr
 abstractStmt header ln (QasmDeclStmt ty decl)
@@ -285,12 +307,12 @@ abstractStmt _ ln (QasmLDeclStmt ty decl) = astmts
     where astmts = abstractDecl ln ty decl
 abstractStmt header ln (QasmAssignStmt lval rval)
     | isLegacy header = Right $ NonLegacyStmt ln
-    | otherwise       = abstractAssign header ln lval rval
+    | otherwise       = abstractAssign header ln (lval, rval)
 abstractStmt header ln (QasmLAssignStmt lval rval) = astmts
-    where astmts = abstractAssign header ln lval rval
+    where astmts = abstractAssign header ln (lval, rval)
 abstractStmt header ln (QasmInitDeclStmt ty decl rval)
     | isLegacy header = Right $ NonLegacyStmt ln
-    | otherwise       = abstractInitDecl header ln ty decl rval
+    | otherwise       = abstractInitDecl header ln (ty, decl, rval)
 abstractStmt header ln (QasmExprStmt expr) = astmts
     where astmts = abstractExprStmt header ln expr
 abstractStmt _ ln (QasmResetStmt expr) = astmts
@@ -298,13 +320,14 @@ abstractStmt _ ln (QasmResetStmt expr) = astmts
 
 -- | Converts a list of statements into an AST. If the conversion fails, then
 -- an appropriate abstraction error is returned.
-toAst :: QasmHeader -> [Stmt] -> AbstractionRes
-toAst header = applyPerLinePass f 1
+toAst :: QasmHeader -> [Stmt] -> Either [AstStmt] AbstractionErr
+toAst header = applyPerLineFn f 1
     where f = abstractStmt header
 
 -------------------------------------------------------------------------------
 -- * Secondary Pass: Inverse Elimination
 
+-- Enumeartes the possible failures in elimInv.
 data InversionErr = UnknownUserDefinedInv Int String
                   | UnknownNativeInv Int GateName
                   | UnhandledInvErr Int
@@ -324,7 +347,7 @@ inlineInv n circ  = concat $ replicate n $ inlineInv 0 circ
 -- or the inverse of g is unknown. If g is user-defined, and an inverse can be
 -- resolved, then the inverse is returned. Otherwise, an appropriate error is
 -- returned.
-resolveUnknownInv :: Int -> Gate -> Either [AstStmt] InversionErr
+resolveUnknownInv :: PerStmtFn Gate InversionErr
 resolveUnknownInv ln (NamedGate (UserDefined str) _ _ _) = Right err
     where err = UnknownUserDefinedInv ln str
 resolveUnknownInv ln (NamedGate name _ _ _) = Right err
@@ -335,7 +358,7 @@ resolveUnknownInv ln _ = Right err
 -- | Consumes a single AST statement. If the statement is an inverted gate,
 -- then the inverse circuit is returned. Otherwise, the statement is returned
 -- unchanged. If inlining fails, then an appropriate error is returned.
-elimInvImpl :: Int -> AstStmt -> Either [AstStmt] InversionErr
+elimInvImpl :: PerStmtFn AstStmt InversionErr
 elimInvImpl ln (AstGateStmt n gate) =
     case invertGate gate of
         Just inv -> Left (inlineInv n inv)
@@ -345,7 +368,7 @@ elimInvImpl _ stmt = Left [stmt]
 -- | Inlines all inverse gates in a list of AST statements. If inlining fails,
 -- then an appropriate error is returned.
 elimInv :: [AstStmt] -> Either [AstStmt] InversionErr
-elimInv = applyPerLinePass elimInvImpl 1
+elimInv = applyPerLineFn elimInvImpl 1
 
 -------------------------------------------------------------------------------
 -- * Secondary Pass: Integral Power Elimination
@@ -358,18 +381,17 @@ elimPowImpl stmt                 = [stmt]
 
 -- | Inlines all power modifers in a list of AST statements.
 elimPow :: [AstStmt] -> [AstStmt]
-elimPow = applySafePerLinePass elimPowImpl
+elimPow = applySafePerLineFn elimPowImpl
 
 -------------------------------------------------------------------------------
 -- * Secondary Pass: Call Elimination
 
-data InlineError = FailedToEval Int String deriving (Show, Eq)
-
-type InlineRes = Either [AstStmt] InlineError
+-- | Enumerates the possible failures in elimFun.
+data InlineErr = FailedToEval Int String deriving (Show, Eq)
 
 -- | Takes as input a line number and a gate. Implements elimFunImpl for all
 -- parameters in (AstGateStmt _ gate).
-elimInGate :: Int -> Gate -> Either Gate InlineError
+elimInGate :: Int -> Gate -> Either Gate InlineErr
 elimInGate ln (NamedGate name args ops mods) =
     case elimCallsInArglist args of
         Left args' -> Left $ NamedGate name args' ops mods
@@ -379,55 +401,55 @@ elimInGate ln (GPhaseGate arg ops mods) =
         Left arg'  -> Left $ GPhaseGate arg' ops mods
         Right name -> Right $ FailedToEval ln name
 
--- | Takes as input a line number and a void call. Implements elimFunImpl for
--- the statement (AstCall call).
-elimVoidCall :: Int -> VoidCall -> InlineRes
-elimVoidCall _ (QuipQInit1 op) = Left [setTo0, setTo1]
+-- | Implements elimFunImpl for the statement (AstCall call).
+elimVoidCall :: VoidCall -> Either [AstStmt] InlineErr
+elimVoidCall (QuipQInit1 op) = Left [setTo0, setTo1]
     where setTo0 = AstCall $ VoidReset op
           setTo1 = AstGateStmt 0 $ NamedGate GateX [] [op] nullGateMod
-elimVoidCall _  (QuipQInit0 op)      = Left [AstCall $ VoidReset op]
-elimVoidCall _  (QuipQTerm0 _)       = Left []
-elimVoidCall _  (QuipQTerm1 _)       = Left []
-elimVoidCall _  (QuipQDiscard _)     = Left []
-elimVoidCall _  call@(VoidReset _)   = Left [AstCall call]
-elimVoidCall _  call@(VoidMeasure _) = Left [AstCall call]
+elimVoidCall (QuipQInit0 op)      = Left [AstCall $ VoidReset op]
+elimVoidCall (QuipQTerm0 _)       = Left []
+elimVoidCall (QuipQTerm1 _)       = Left []
+elimVoidCall (QuipQDiscard _)     = Left []
+elimVoidCall call@(VoidReset _)   = Left [AstCall call]
+elimVoidCall call@(VoidMeasure _) = Left [AstCall call]
 
 -- | Takes as input a line number, the name and index of an lvalue, and an
 -- rvalue. Implements elimFunImpl for the statement (AstAssign id idx rval).
-elimInAssign :: Int -> String -> Maybe Int -> RValue -> InlineRes
-elimInAssign _  id idx (QuipMeasure op) = Left [AstAssign id idx $ Measure op]
-elimInAssign _  id idx QuipCInit0       = error "Classical computation."
-elimInAssign _  id idx QuipCInit1       = error "Classical computation."
-elimInAssign _  id idx QuipCTerm0       = Left []
-elimInAssign _  id idx QuipCTerm1       = Left []
-elimInAssign _  id idx QuipCDiscard     = Left []
-elimInAssign _  id idx rval@(Measure _) = Left [AstAssign id idx rval]
+elimInAssign :: String -> Maybe Int -> RValue -> Either [AstStmt] InlineErr
+elimInAssign id idx (QuipMeasure op) = Left [AstAssign id idx $ Measure op]
+elimInAssign id idx QuipCInit0       = error "Classical computation."
+elimInAssign id idx QuipCInit1       = error "Classical computation."
+elimInAssign id idx QuipCTerm0       = Left []
+elimInAssign id idx QuipCTerm1       = Left []
+elimInAssign id idx QuipCDiscard     = Left []
+elimInAssign id idx rval@(Measure _) = Left [AstAssign id idx rval]
 
 -- | Inlines function calls that are not built into version 2.0 of OpenQASM,
 -- for a single AST statement.
-elimFunImpl :: Int -> AstStmt -> InlineRes
+elimFunImpl :: PerStmtFn AstStmt InlineErr
 elimFunImpl ln (AstGateStmt n gate) = 
     case elimInGate ln gate of
         Left gate' -> Left [AstGateStmt n gate']
         Right err  -> Right err
-elimFunImpl ln (AstAssign id idx rval) = elimInAssign ln id idx rval
-elimFunImpl ln (AstCall call)          = elimVoidCall ln call
-elimFunImpl _  stmt                    = Left [stmt] 
+elimFunImpl _ (AstAssign id idx rval) = elimInAssign id idx rval
+elimFunImpl _ (AstCall call)          = elimVoidCall call
+elimFunImpl _ stmt                    = Left [stmt] 
 
 -- | Inlines function calls that are not built into version 2.0 of OpenQASM.
-elimFun :: [AstStmt] -> InlineRes
-elimFun = applyPerLinePass elimFunImpl 1
+elimFun :: [AstStmt] -> Either [AstStmt] InlineErr
+elimFun = applyPerLineFn elimFunImpl 1
 
 -------------------------------------------------------------------------------
 -- * Secondary Pass: Phase Elimination
 
+-- | Enumerates the possible failures in toLsc.
 data ToLscErr = UnexpectedPowerMod Int
               | LscRewriteFailure Int LscGateErr
               deriving (Show, Eq)
 
 -- | Rewrites a single AST gate statement to conform with the lattice surgery
 -- compiler, or returns an error when this is not possible.
-toLscImpl :: Int -> AstStmt -> Either [AstStmt] ToLscErr
+toLscImpl :: PerStmtFn AstStmt ToLscErr
 toLscImpl ln (AstGateStmt 0 gate) =
     case lscRewriteGate gate of
         Left gates -> Left $ map (AstGateStmt 0) gates
@@ -439,4 +461,4 @@ toLscImpl _  stmt              = Left [stmt]
 -- lattice surgery compiler. Requires that the program has already undergone
 -- a round translation, with maximum inlining.
 toLsc :: [AstStmt] -> Either [AstStmt] ToLscErr
-toLsc = applyPerLinePass toLscImpl 1
+toLsc = applyPerLineFn toLscImpl 1
