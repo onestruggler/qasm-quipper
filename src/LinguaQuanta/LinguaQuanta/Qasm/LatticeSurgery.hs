@@ -21,6 +21,7 @@ module LinguaQuanta.Qasm.LatticeSurgery
 -- * Import Section.
 
 import qualified Data.Map.Strict as Map
+import LinguaQuanta.Either (expandLeft)
 import LinguaQuanta.Maybe (branchJust)
 import LinguaQuanta.Qasm.Gate
   ( Gate(..)
@@ -204,10 +205,8 @@ lookupOperands map (op:ops) =
 -- returned. Otherwise, the name of the unknown declaration is returned as an
 -- error message.
 lookupCtorOperand :: MergedVarMap -> (Operand -> a) -> Operand -> Either a String
-lookupCtorOperand map ctor op =
-    case lookupOperand map op of
-        Left op' -> Left $ ctor op
-        Right id -> Right id
+lookupCtorOperand map ctor op = expandLeft (lookupOperand map op) $
+                                           \op' -> Left $ ctor op'
 
 -------------------------------------------------------------------------------
 -- * Preprocessing for Lattice Surgery Compilation.

@@ -9,6 +9,7 @@ module LinguaQuanta.Qasm.Call
 -------------------------------------------------------------------------------
 -- * Import Section.
 
+import LinguaQuanta.Either (expandLeft)
 import LinguaQuanta.Qasm.Expression
   ( applyBinaryOp
   , applyUnaryOp
@@ -46,9 +47,8 @@ type ExprOrCall = Either Expr String
 elimCall :: String -> [Expr] -> ExprOrCall
 elimCall name args =
     if isLegacyCall name
-    then case elimCallsInArglist args of
-        Left args' -> Left $ Call name args'
-        Right err  -> Right err
+    then expandLeft (elimCallsInArglist args) $
+                    \args' -> Left $ Call name args'
     else case toConstInt call of
         Left val -> Left $ DecInt $ show val
         Right _  -> case toConstFloat call of
@@ -73,10 +73,8 @@ elimCallsInExpr lit@(DecFloat _)  = Left lit
 elimCallsInExpr lit@(DecInt _)    = Left lit
 elimCallsInExpr id@(QasmId _)     = Left id
 elimCallsInExpr (Call name args)  = elimCall name args
-elimCallsInExpr (QasmCell id idx) =
-    case elimCallsInExpr idx of
-        Left idx' -> Left $ QasmCell id idx'
-        Right err -> Right err
+elimCallsInExpr (QasmCell id idx) = expandLeft (elimCallsInExpr idx) $
+                                               \idx' -> Left $ QasmCell id idx'
 
 -- | Applies elimCallsInExpr to the elements of an argument list. If any
 -- application returns an error value, then the error value is returned.

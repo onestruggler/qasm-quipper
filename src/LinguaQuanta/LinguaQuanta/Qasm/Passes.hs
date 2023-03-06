@@ -15,6 +15,7 @@ module LinguaQuanta.Qasm.Passes
 -------------------------------------------------------------------------------
 -- * Import Section.
 
+import LinguaQuanta.Either (expandLeft)
 import LinguaQuanta.Qasm.AST (AstStmt(..))
 import LinguaQuanta.Qasm.Call
   ( elimCallsInArglist
@@ -87,11 +88,9 @@ type StatefulFn st ins outs err = Int -> st -> ins -> Either (st, [outs]) err
 applyStatefulPass :: StatefulFn s a b c -> Int -> s -> [a] -> Either (s, [b]) c
 applyStatefulPass _ _ st []           = Left (st, [])
 applyStatefulPass f n st (line:lines) =
-    case f n st line of
-        Left (st', stmt) -> case applyStatefulPass f (n + 1) st' lines of
-            Left (st'', rest) -> Left (st'', stmt ++ rest)
-            Right err         -> Right err
-        Right err -> Right err
+    expandLeft (f n st line) $
+        \(st', stmt) -> expandLeft (applyStatefulPass f (n + 1) st' lines) $
+            \(st'', rest) -> Left (st'', stmt ++ rest)
 
 -- | A "per-line pass" is a translation pass that rewrites each statement of an
 -- AST independently. A per-line pass is defined by a function f that takes as
@@ -102,11 +101,9 @@ applyStatefulPass f n st (line:lines) =
 applyPerLineFn :: PerLineFn a b c -> Int -> [a] -> Either [b] c
 applyPerLineFn _ _ []           = Left []
 applyPerLineFn f n (line:lines) =
-    case f n line of
-        Left stmt -> case applyPerLineFn f (n + 1) lines of
-            Left rest -> Left (stmt ++ rest)
-            Right err -> Right err
-        Right err -> Right err
+    expandLeft (f n line) $
+        \stmt -> expandLeft (applyPerLineFn f (n + 1) lines) $
+            \rest -> Left $ stmt ++ rest
 
 -- | An "safe per-line pass" is equivalent to a per-line pass, except that the
 -- error case is never encountered.
@@ -221,14 +218,12 @@ getDeclLen ln expr =
 abstractDecl :: Int -> Type -> String -> Either [AstStmt] AbstractionErr
 abstractDecl _  QubitT           decl = Left [AstQubitDecl Nothing decl]
 abstractDecl ln (QubitArrT expr) decl =
-    case getDeclLen ln expr of
-        Left n    -> Left [AstQubitDecl (Just n) decl]
-        Right err -> Right err
+    expandLeft (getDeclLen ln expr) $
+        \n -> Left [AstQubitDecl (Just n) decl]
 abstractDecl _  BitT decl = Left [AstBitDecl Nothing decl]
 abstractDecl ln (BitArrT expr) decl =
-    case getDeclLen ln expr of
-        Left n    -> Left [AstBitDecl (Just n) decl]
-        Right err -> Right err
+    expandLeft (getDeclLen ln expr) $
+        \n -> Left [AstBitDecl (Just n) decl]
 
 -- | Implementation details for abstractAssign.
 assignImpl :: QasmHeader -> PerStmtFn (String, Maybe Int, Expr) AbstractionErr
@@ -259,11 +254,9 @@ abstractAssign header ln (CReg id idx, expr) =
 -- first failure is returned. is returned.
 abstractInitDecl :: QasmHeader -> PerStmtFn (Type, String, Expr) AbstractionErr
 abstractInitDecl header ln (ty, decl, rval) =
-    case abstractDecl ln ty decl of
-        Left dstmt -> case abstractAssign header ln (CVar decl, rval) of
-            Left istmt -> Left $ dstmt ++ istmt
-            Right err  -> Right err
-        Right err -> Right err
+    expandLeft (abstractDecl ln ty decl) $
+        \dstmt -> expandLeft (abstractAssign header ln (CVar decl, rval)) $
+            \istmt -> Left $ dstmt ++ istmt
 
 -- | Consumes a line number (ln) and an expression (expr) intended to act as a
 -- statement. If expr evaluates to a valid expression statement, then the
@@ -427,10 +420,9 @@ elimInAssign id idx rval@(Measure _) = Left [AstAssign id idx rval]
 -- | Inlines function calls that are not built into version 2.0 of OpenQASM,
 -- for a single AST statement.
 elimFunImpl :: PerStmtFn AstStmt InlineErr
-elimFunImpl ln (AstGateStmt n gate) = 
-    case elimInGate ln gate of
-        Left gate' -> Left [AstGateStmt n gate']
-        Right err  -> Right err
+elimFunImpl ln (AstGateStmt n gate) =
+    expandLeft (elimInGate ln gate) $
+        \gate' -> Left [AstGateStmt n gate']
 elimFunImpl _ (AstAssign id idx rval) = elimInAssign id idx rval
 elimFunImpl _ (AstCall call)          = elimVoidCall call
 elimFunImpl _ stmt                    = Left [stmt] 

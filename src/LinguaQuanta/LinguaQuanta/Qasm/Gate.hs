@@ -25,6 +25,7 @@ module LinguaQuanta.Qasm.Gate
 -------------------------------------------------------------------------------
 -- * Import Section.
 
+import LinguaQuanta.Either (expandLeft)
 import LinguaQuanta.Qasm.Expression
   ( ExprErr(..)
   , parseGateOperand
@@ -145,10 +146,8 @@ type GateEval = Either (Int, Gate) GateSummaryErr
 -- If expr evaluates successfully to (n, gate), then returns (n, f gate).
 -- Otherwise, a gate summarization error is returned to describe the failure.
 tryUpdate :: (Gate -> Gate) -> GateExpr -> GateEval
-tryUpdate f gateExpr =
-    case exprToGate gateExpr of
-        Left (n, gate) -> Left (n, f gate)
-        Right err      -> Right err
+tryUpdate f gateExpr = expandLeft (exprToGate gateExpr) $
+                                  \(n, gate) -> Left (n, f gate)
 
 -- | Takes as input an expression (expr). If expr evaluates to a constant,
 -- positive integer n, then n is returned. Otherwise, a gate summarization
@@ -183,10 +182,8 @@ tryParseOperands (gop:gops) =
 -- successfully to m, then (n, f m gate) is returned. Otherwise, a gate
 -- summarization error is returned to descrie the first evaluation failure.
 tryParamUpdate :: (Int -> Gate -> Gate) -> GateExpr -> Expr -> GateEval
-tryParamUpdate f gateExpr paramExpr =
-    case tryParseParam paramExpr of
-        Left n    -> tryUpdate (f n) gateExpr
-        Right err -> Right err
+tryParamUpdate f gateExpr paramExpr = expandLeft (tryParseParam paramExpr) $
+                                                 \n -> tryUpdate (f n) gateExpr
 
 -- | Evaluates a gate expression as a tuple (n, gate) where gate is the
 -- specified gate and n is the number of applications of gate. If summarization
@@ -194,27 +191,23 @@ tryParamUpdate f gateExpr paramExpr =
 -- evaluation failure.
 exprToGate :: GateExpr -> GateEval
 exprToGate (NamedGateOp nameStr params gops) =
-    case tryParseOperands gops of
-        Right err -> Right err
-        Left  ops -> let name = toGateName nameStr
-                         gate = NamedGate name params ops nullGateMod
-                     in Left (0, gate)
+    expandLeft (tryParseOperands gops) $
+        \ops -> let name = toGateName nameStr
+                    gate = NamedGate name params ops nullGateMod
+                in Left (0, gate)
 exprToGate (GPhaseOp param gops) =
-    case tryParseOperands gops of
-        Right err -> Right err
-        Left  ops -> let gate = GPhaseGate param ops nullGateMod
-                     in Left (0, gate)
+    expandLeft (tryParseOperands gops) $
+        \ops -> let gate = GPhaseGate param ops nullGateMod
+                in Left (0, gate)
 exprToGate (CtrlMod Nothing gate)        = tryUpdate (addCtrls 1) gate
 exprToGate (CtrlMod (Just expr) gate)    = tryParamUpdate addCtrls gate expr
 exprToGate (NegCtrlMod Nothing gate)     = tryUpdate (addNegCtrls 1) gate
 exprToGate (NegCtrlMod (Just expr) gate) = tryParamUpdate addNegCtrls gate expr
 exprToGate (InvMod gate)                 = tryUpdate invert gate
 exprToGate (PowMod expr gate) =
-    case tryParseParam expr of
-        Left m -> case exprToGate gate of
-            Left (n, gate) -> Left (n + m, gate)
-            Right err      -> Right err
-        Right err -> Right err
+    expandLeft (tryParseParam expr) $
+        \m -> expandLeft (exprToGate gate) $
+            \(n, gate) -> Left (n + m, gate)
 
 -------------------------------------------------------------------------------
 -- * Gate Validation.
