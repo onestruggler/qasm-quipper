@@ -257,6 +257,65 @@ test51 = TestCase (assertEqual "lookupCVar with out-of-scope declaration."
                                (lookupCVar map1 "c2" 3))
 
 -----------------------------------------------------------------------------------------
+-- * toMergedSize.
+
+test52 = TestCase (assertEqual "toMergedSize works on Just constructors."
+                               1
+                               (toMergedSize Nothing))
+
+test53 = TestCase (assertEqual "toMergedSize works on Nothing constructors."
+                               10
+                               (toMergedSize $ Just 10))
+
+-----------------------------------------------------------------------------------------
+-- * lookupOperand.
+
+test54 = TestCase (assertEqual "lookupOperand handles in-scope QRef operands."
+                               (Left $ Cell "qvar" 0 :: Either Operand String)
+                               (lookupOperand map7 $ QRef "q1"))
+
+test55 = TestCase (assertEqual "lookupOperand handles in-scope Cell operands."
+                               (Left $ Cell "qvar" 4 :: Either Operand String)
+                               (lookupOperand map7 $ Cell "q2" 3))
+
+test56 = TestCase (assertEqual "lookupOperand handles out-of-scope QRef operands."
+                               (Right "qqq" :: Either Operand String)
+                               (lookupOperand map7 $ QRef "qqq"))
+
+test57 = TestCase (assertEqual "lookupOperand handles out-of-scope Cell operands."
+                               (Right "vvv" :: Either Operand String)
+                               (lookupOperand map7 $ Cell "vvv" 3))
+
+-----------------------------------------------------------------------------------------
+-- * lookupOperand.
+
+test58 = TestCase (assertEqual "lookupOperand handles in-scope mixed lists."
+                               (Left result :: Either [Operand] String)
+                               (lookupOperands map7 inputs))
+    where inputs = [QRef "q1", Cell "q2" 1, Cell "q2" 3]
+          result = [Cell "qvar" 0, Cell "qvar" 2, Cell "qvar" 4]
+
+test59 = TestCase (assertEqual "lookupOperand handles lists with out-of-scope operands."
+                               (Right "vvv" :: Either [Operand] String)
+                               (lookupOperands map7 inputs))
+    where inputs = [QRef "q1", Cell "vvv" 1, Cell "q2" 3]
+
+-----------------------------------------------------------------------------------------
+-- * lookupCtorOperand.
+
+ctor :: Operand -> String
+ctor (QRef id)     = id
+ctor (Cell id idx) = id ++ "[" ++ show idx ++ "]"
+
+test60 = TestCase (assertEqual "lookupCtorOperand supports valid operands."
+                               (Left "qvar[0]" :: Either String String)
+                               (lookupCtorOperand map7 ctor $ QRef "q1"))
+
+test61 = TestCase (assertEqual "lookupCtorOperand rejects invalid operands."
+                               (Right "vvv" :: Either String String)
+                               (lookupCtorOperand map7 ctor $ QRef "vvv"))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "GateX" test1,
@@ -309,6 +368,16 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateX" test1,
                                      TestLabel "lookupQVar_NoMatch" test48,
                                      TestLabel "lookupCVar_Match_1" test49,
                                      TestLabel "lookupCVar_Match_2" test50,
-                                     TestLabel "lookupCVar_NoMatch" test51]
+                                     TestLabel "lookupCVar_NoMatch" test51,
+                                     TestLabel "toMergedSize_Nothing" test52,
+                                     TestLabel "toMergedSize_Just" test53,
+                                     TestLabel "lookupOperand_QRef" test54,
+                                     TestLabel "lookupOperand_Cell" test55,
+                                     TestLabel "lookupOperand_QRef_Err" test56,
+                                     TestLabel "lookupOperand_Cell_Err" test57,
+                                     TestLabel "lookupOperands" test58,
+                                     TestLabel "lookupOperands_Err" test59,
+                                     TestLabel "lookupCtorOperand" test60,
+                                     TestLabel "lookupCtorOperand_Err" test61]
 
 main = defaultMain tests
