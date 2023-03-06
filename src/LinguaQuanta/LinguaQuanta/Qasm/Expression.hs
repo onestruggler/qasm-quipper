@@ -2,6 +2,8 @@
 
 module LinguaQuanta.Qasm.Expression
   ( ExprErr(..)
+  , applyBinaryOp
+  , applyUnaryOp
   , avgExpr
   , euler
   , negateExpr
@@ -50,8 +52,9 @@ data ExprErr = BadType String
              | UnexpectedMeasure
              deriving (Show, Eq)
 
-type ExprEval a = Either a ExprErr
-type ExprEvalFn a = Expr -> ExprEval a
+type ExprEval a   = Either a ExprErr
+type EvalFn a err = Expr -> Either a err
+type ExprEvalFn a = EvalFn a ExprErr
 
 -------------------------------------------------------------------------------
 -- * Useful Expressions.
@@ -97,7 +100,7 @@ readFloat = read . padFloat . (filter (/= '_'))
 -- type (op), and two expressions (lhs and rhs). If (f lhs) evaluates to v1 and
 -- (f rhs) evaluates to v2, then returns (op v1 v2). Otherwise, returns the
 -- first error value produced by f.
-applyBinaryOp :: ExprEvalFn a -> (a -> a -> b) -> Expr -> Expr -> ExprEval b
+applyBinaryOp :: EvalFn a err -> (a -> a -> b) -> Expr -> Expr -> Either b err
 applyBinaryOp f op lhs rhs =
     case f lhs of
         Left x -> case f rhs of
@@ -108,7 +111,7 @@ applyBinaryOp f op lhs rhs =
 -- | Consumes an evaluation function (f), a unary operation on the evaluation
 -- type (op), and an expression (expr). If (f expr) evaluates to v, then
 -- returns (op v). Otherwise, returns the first error value produced by f.
-applyUnaryOp :: ExprEvalFn a -> (a -> b) -> Expr -> ExprEval b
+applyUnaryOp :: EvalFn a err -> (a -> b) -> Expr -> Either b err
 applyUnaryOp f op expr =
     case f expr of
         Left x  -> Left $ op x
@@ -325,7 +328,7 @@ toConstFloat expr =
 -------------------------------------------------------------------------------
 -- * Manipulation Methods.
 
--- Returns the symbolic negation of a numeric expression.
+-- | Returns the symbolic negation of a numeric expression.
 negateExpr :: Expr -> Expr
 negateExpr expr = Qasm.Negate (Qasm.Brack expr)
 
