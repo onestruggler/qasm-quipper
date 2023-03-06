@@ -1,4 +1,4 @@
--- | General-purpose utility functions.
+-- | Utility functions for Maybe types.
 
 module LinguaQuanta.Maybe
   ( branchJust
@@ -16,7 +16,7 @@ import Data.Maybe
   )
 
 -------------------------------------------------------------------------------
--- * Maybe Utilities.
+-- * Maybe Lists.
 
 -- | Takes as input a value v of type T and maybe a value u also of type T. If
 -- v is nothing, then just u is returned. Otherwise, v is returned.
@@ -33,6 +33,9 @@ maybeWrap = maybe Nothing (\x -> Just [x])
 -- list, then just v:vs is returned. Otherwise, nothing is returned.
 maybeAppend :: a -> Maybe [a] -> Maybe [a]
 maybeAppend v = maybe Nothing (\vs -> Just (v:vs))
+
+-------------------------------------------------------------------------------
+-- * Maybe Mapping.
 
 -- | Consumes a (Maybe a) value and a function f from type a to type (Maybe b). If the
 -- Maybe argument wraps a value x of type a, then (f x) is returned. Otherwise, nothing

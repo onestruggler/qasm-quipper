@@ -108,11 +108,9 @@ allocateInputWires map = WireLookup allocs 0
 -- | Returns the declaration associated to a wire.
 getAllocation :: WireType -> Wire -> WireLookup -> Maybe Operand
 getAllocation ty id (WireLookup map _) =
-    case IntMap.lookup id map of
-        Nothing    -> Nothing
-        Just entry -> case ty of
-            QWire -> qalloc entry
-            CWire -> calloc entry
+    branchJust (IntMap.lookup id map) $ \entry -> case ty of
+        QWire -> qalloc entry
+        CWire -> calloc entry
 
 -- | Returns the current state of the wire.
 getState :: Wire -> WireLookup -> Maybe WireType

@@ -21,6 +21,7 @@ module LinguaQuanta.Qasm.LatticeSurgery
 -- * Import Section.
 
 import qualified Data.Map.Strict as Map
+import LinguaQuanta.Maybe (branchJust)
 import LinguaQuanta.Qasm.Gate
   ( Gate(..)
   , isInverted
@@ -115,9 +116,7 @@ toDecl (TypedVarMap reg offset _) = (reg, offset)
 -- associated with the cell are returned. Otherwise, nothing is returned.
 lookupVar :: TypedVarMap -> String -> Int -> Maybe (String, Int)
 lookupVar (TypedVarMap reg _ map) id idx =
-    case Map.lookup id map of
-        Just offset -> Just (reg, offset + idx)
-        Nothing     -> Nothing
+    branchJust (Map.lookup id map) $ \offset -> Just (reg, offset + idx)
 
 -- | Maintains a TypedVarMap for quantum variables, and a TypedVarMap for
 -- classical variables.
