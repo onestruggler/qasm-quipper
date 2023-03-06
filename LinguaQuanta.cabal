@@ -17,9 +17,10 @@ extra-source-files:  CHANGELOG.md, README.md
 -- Main library.
 
 library
-  exposed-modules:     LinguaQuanta.MaxTracker
-                       LinguaQuanta.Maybe
+  exposed-modules:     LinguaQuanta.Either
                        LinguaQuanta.List
+                       LinguaQuanta.MaxTracker
+                       LinguaQuanta.Maybe
                        LinguaQuanta.Qasm.AST
                        LinguaQuanta.Qasm.Call
                        LinguaQuanta.Qasm.Expression
@@ -194,6 +195,11 @@ common basic-unit-test-props
                        test-framework-hunit,
                        HUnit,
                        LinguaQuanta
+
+test-suite either-tests
+  import:              basic-unit-test-props
+  main-is:             Either-Tests.hs
+  type:                exitcode-stdio-1.0
 
 test-suite maxtracker-tests
   import:              basic-unit-test-props
