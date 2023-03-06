@@ -15,12 +15,12 @@ module LinguaQuanta.Qasm.Passes
 -------------------------------------------------------------------------------
 -- * Import Section.
 
-import LinguaQuanta.Either (expandLeft)
-import LinguaQuanta.Qasm.AST (AstStmt(..))
-import LinguaQuanta.Qasm.Call
-  ( elimCallsInArglist
-  , elimCallsInExpr
+import LinguaQuanta.Either
+  ( expandLeft
+  , leftMap
   )
+import LinguaQuanta.Qasm.AST (AstStmt(..))
+import LinguaQuanta.Qasm.Call (elimCallsInExpr)
 import LinguaQuanta.Qasm.Expression
   ( ExprErr
   , parseGateOperand
@@ -386,7 +386,7 @@ data InlineErr = FailedToEval Int String deriving (Show, Eq)
 -- parameters in (AstGateStmt _ gate).
 elimInGate :: Int -> Gate -> Either Gate InlineErr
 elimInGate ln (NamedGate name args ops mods) =
-    case elimCallsInArglist args of
+    case leftMap elimCallsInExpr args of
         Left args' -> Left $ NamedGate name args' ops mods
         Right name -> Right $ FailedToEval ln name
 elimInGate ln (GPhaseGate arg ops mods) =

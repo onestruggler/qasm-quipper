@@ -8,7 +8,6 @@ module LinguaQuanta.Qasm.LatticeSurgery
   , lookupCtorOperand
   , lookupCVar
   , lookupOperand
-  , lookupOperands
   , lookupQVar
   , lscRewriteGate
   , makeMergedVarMap
@@ -184,19 +183,6 @@ lookupOperand map (Cell id idx) =
         Just (id', idx') -> Left $ Cell id' idx'
         Nothing          -> Right id
 lookupOperand map (QRef id) = lookupOperand map (Cell id 0)
-
--- | Takes as input a MergedVarMap and a list of quantum operands. If all
--- operands can be found in the quantum declaration map, then an equivalent
--- list of operands using the new register is returned. Otherwise, the name of
--- the first unknown declaration is returned as an error message.
-lookupOperands :: MergedVarMap -> [Operand] -> Either [Operand] String
-lookupOperands _   []       = Left []
-lookupOperands map (op:ops) =
-    case lookupOperand map op of
-        Left op' -> case lookupOperands map ops of
-            Left ops' -> Left $ op':ops'
-            Right id  -> Right id
-        Right id -> Right id
 
 -- | Takes as input a MergedVarMap, a type constructor parameterized by a
 -- quantum operand (e.g., for QInit0 or QTerm0), and an operand. If the operand

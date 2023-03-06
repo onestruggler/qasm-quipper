@@ -3,6 +3,7 @@ module Main where
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit
+import LinguaQuanta.Either
 import LinguaQuanta.Qasm.Gate
 import LinguaQuanta.Qasm.GateName
 import LinguaQuanta.Qasm.Language
@@ -291,13 +292,13 @@ test57 = TestCase (assertEqual "lookupOperand handles out-of-scope Cell operands
 
 test58 = TestCase (assertEqual "lookupOperand handles in-scope mixed lists."
                                (Left result :: Either [Operand] String)
-                               (lookupOperands map7 inputs))
+                               (leftMap (lookupOperand map7) inputs))
     where inputs = [QRef "q1", Cell "q2" 1, Cell "q2" 3]
           result = [Cell "qvar" 0, Cell "qvar" 2, Cell "qvar" 4]
 
 test59 = TestCase (assertEqual "lookupOperand handles lists with out-of-scope operands."
                                (Right "vvv" :: Either [Operand] String)
-                               (lookupOperands map7 inputs))
+                               (leftMap (lookupOperand map7) inputs))
     where inputs = [QRef "q1", Cell "vvv" 1, Cell "q2" 3]
 
 -----------------------------------------------------------------------------------------

@@ -25,7 +25,10 @@ module LinguaQuanta.Qasm.Gate
 -------------------------------------------------------------------------------
 -- * Import Section.
 
-import LinguaQuanta.Either (expandLeft)
+import LinguaQuanta.Either
+  ( expandLeft
+  , leftMap
+  )
 import LinguaQuanta.Qasm.Expression
   ( ExprErr(..)
   , parseGateOperand
@@ -165,17 +168,6 @@ tryParseOperand gop =
         Left op   -> Left op
         Right err -> Right $ BadArrIndex err
 
--- | Applies tryParseOperand to a list of GateOperands. The first error from
--- left-to-right is returned.
-tryParseOperands :: [GateOperand] -> Either [Operand] GateSummaryErr
-tryParseOperands [] = Left []
-tryParseOperands (gop:gops) =
-    case tryParseOperand gop of
-        Right err -> Right err
-        Left op   -> case tryParseOperands gops of
-            Right err -> Right err
-            Left ops  -> Left $ op:ops
-
 -- | Takes as input a gate update function parameterized by an integer (f), 
 -- gate expression (gateExpr), and a parameter expression (paramExpr). If
 -- gateExpr evaluates successfully to (n, gate) and paramExpr evaluates
@@ -191,12 +183,12 @@ tryParamUpdate f gateExpr paramExpr = expandLeft (tryParseParam paramExpr) $
 -- evaluation failure.
 exprToGate :: GateExpr -> GateEval
 exprToGate (NamedGateOp nameStr params gops) =
-    expandLeft (tryParseOperands gops) $
+    expandLeft (leftMap tryParseOperand gops) $
         \ops -> let name = toGateName nameStr
                     gate = NamedGate name params ops nullGateMod
                 in Left (0, gate)
 exprToGate (GPhaseOp param gops) =
-    expandLeft (tryParseOperands gops) $
+    expandLeft (leftMap tryParseOperand gops) $
         \ops -> let gate = GPhaseGate param ops nullGateMod
                 in Left (0, gate)
 exprToGate (CtrlMod Nothing gate)        = tryUpdate (addCtrls 1) gate

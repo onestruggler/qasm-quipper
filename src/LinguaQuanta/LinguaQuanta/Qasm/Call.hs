@@ -1,15 +1,17 @@
 -- | Functions for analzing and inlining function calls.
 
 module LinguaQuanta.Qasm.Call
-  ( elimCallsInArglist
-  , elimCallsInExpr
+  ( elimCallsInExpr
   , isLegacyCall
   ) where
 
 -------------------------------------------------------------------------------
 -- * Import Section.
 
-import LinguaQuanta.Either (expandLeft)
+import LinguaQuanta.Either
+  ( expandLeft
+  , leftMap
+  )
 import LinguaQuanta.Qasm.Expression
   ( applyBinaryOp
   , applyUnaryOp
@@ -38,16 +40,16 @@ isLegacyCall _      = False
 type ExprOrCall = Either Expr String
 
 -- | Takes as input the name and arguments of a function call. If the function
--- is built into OpenQASM 2.0, then elimCallsInArglist is applied to the
--- argument list where either elimCallsInArglist fails and the error value is
--- returned, or elimCallsInArglist succeeds and the new call is returned. If
--- the function is not built into OpenQASM 2.0, then an attempt is made to
--- evaluate the call, first as an integer, and then as a float. If both
--- attempts fail, then the name of the call is returned.
+-- is built into OpenQASM 2.0, then elimCallsInExpr is applied to the argument
+-- list where either elimCallsInExpr fails and the error value is returned, or
+-- elimCallsInExpr succeeds and the new call is returned. If the function is
+-- not built into OpenQASM 2.0, then an attempt is made to evaluate the call,
+-- first as an integer, and then as a float. If both attempts fail, then the
+-- name of the call is returned.
 elimCall :: String -> [Expr] -> ExprOrCall
 elimCall name args =
     if isLegacyCall name
-    then expandLeft (elimCallsInArglist args) $
+    then expandLeft (leftMap elimCallsInExpr args) $
                     \args' -> Left $ Call name args'
     else case toConstInt call of
         Left val -> Left $ DecInt $ show val
@@ -75,16 +77,3 @@ elimCallsInExpr id@(QasmId _)     = Left id
 elimCallsInExpr (Call name args)  = elimCall name args
 elimCallsInExpr (QasmCell id idx) = expandLeft (elimCallsInExpr idx) $
                                                \idx' -> Left $ QasmCell id idx'
-
--- | Applies elimCallsInExpr to the elements of an argument list. If any
--- application returns an error value, then the error value is returned.
--- Otherwise, returns a list equivalent to mapping elimCallsInExpr over all
--- elements of the input list.
-elimCallsInArglist :: [Expr] -> Either [Expr] String
-elimCallsInArglist []         = Left []
-elimCallsInArglist (arg:args) =
-    case elimCallsInExpr arg of
-        Left arg' -> case elimCallsInArglist args of
-            Left args' -> Left $ arg':args'
-            Right err  -> Right err
-        Right err -> Right err
