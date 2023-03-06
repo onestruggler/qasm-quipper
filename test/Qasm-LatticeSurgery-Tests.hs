@@ -317,6 +317,71 @@ test61 = TestCase (assertEqual "lookupCtorOperand rejects invalid operands."
                                (lookupCtorOperand map7 ctor $ QRef "vvv"))
 
 -----------------------------------------------------------------------------------------
+-- * updateExpr.
+
+mk_expr t1 t2 = Plus (Brack (Div (Times (Minus Euler Pi) (DecFloat "0.5")) t1))
+                     (Negate (Times Tau (Times (DecInt "1") t2)))
+
+test62 = TestCase (assertEqual "updateExpr supports QasmId expressions."
+                               (Left $ mk_expr oexpr1 oexpr2 :: Either Expr String)
+                               (updateExpr map7 $ mk_expr iexpr1 iexpr2))
+    where iexpr1 = QasmId "q1"
+          iexpr2 = QasmId "c2"
+          oexpr1 = QasmCell "qvar" $ Plus (DecInt "0") (DecInt "0")
+          oexpr2 = QasmCell "cvar" $ Plus (DecInt "0") (DecInt "5")
+
+test63 = TestCase (assertEqual "updateExpr supports QasmCell expressions."
+                               (Left $ mk_expr oexpr1 oexpr2 :: Either Expr String)
+                               (updateExpr map7 $ mk_expr iexpr1 iexpr2))
+    where index1 = DecInt "2"
+          index2 = Plus (DecInt "1") (DecInt "2")
+          iexpr1 = QasmCell "q2" index1
+          iexpr2 = QasmCell "c2" index2
+          oexpr1 = QasmCell "qvar" $ Plus index1 (DecInt "1")
+          oexpr2 = QasmCell "cvar" $ Plus index2 (DecInt "5")
+
+test64 = TestCase (assertEqual "updateExpr supports QasmMeasure expressions."
+                               (Left $ mk_expr oexpr1 oexpr2 :: Either Expr String)
+                               (updateExpr map7 $ mk_expr iexpr1 iexpr2))
+    where index2 = DecInt "2"
+          iexpr1 = QasmMeasure $ QVar "q1"
+          iexpr2 = QasmMeasure $ QReg "q2" index2
+          oexpr1 = QasmMeasure $ QReg "qvar" $ Plus (DecInt "0") (DecInt "0")
+          oexpr2 = QasmMeasure $ QReg "qvar" $ Plus index2 (DecInt "1")
+
+test65 = TestCase (assertEqual "updateExpr supports Call expressions."
+                               (Left $ mk_expr oexpr1 oexpr2 :: Either Expr String)
+                               (updateExpr map7 $ mk_expr iexpr1 iexpr2))
+    where iexpr1 = Call "f" [Pi, QasmId "q1", Tau]
+          iexpr2 = Call "g" [QasmCell "q2" $ DecInt "2"]
+          oexpr1 = Call "f" [Pi, QasmCell "qvar" $ Plus (DecInt "0") (DecInt "0"), Tau]
+          oexpr2 = Call "g" [QasmCell "qvar" $ Plus (DecInt "2") (DecInt "1")]
+
+test66 = TestCase (assertEqual "updateExpr handles missing declaration in QasmId."
+                               (Right "qqqq" :: Either Expr String)
+                               (updateExpr map7 $ QasmId "qqqq"))
+
+test67 = TestCase (assertEqual "updateExpr handles missing declaration in QasmCell."
+                               (Right "qqqq" :: Either Expr String)
+                               (updateExpr map7 $ QasmCell "qqqq" $ DecInt "1"))
+
+test68 = TestCase (assertEqual "updateExpr handles missing declaration in QVar."
+                               (Right "qqq" :: Either Expr String)
+                               (updateExpr map7 $ QasmMeasure $ QVar "qqq"))
+
+test69 = TestCase (assertEqual "updateExpr handles missing declaration in QReg."
+                               (Right "qqq" :: Either Expr String)
+                               (updateExpr map7 $ QasmMeasure $ QReg "qqq" $ DecInt "1"))
+
+test70 = TestCase (assertEqual "updateExpr handles invalid declaration types in QVar."
+                               (Right "c2" :: Either Expr String)
+                               (updateExpr map7 $ QasmMeasure $ QVar "c2"))
+
+test71 = TestCase (assertEqual "updateExpr handles invalid declaration types in QReg."
+                               (Right "c2" :: Either Expr String)
+                               (updateExpr map7 $ QasmMeasure $ QReg "c2" $ DecInt "1"))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "GateX" test1,
@@ -379,6 +444,16 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateX" test1,
                                      TestLabel "lookupOperands" test58,
                                      TestLabel "lookupOperands_Err" test59,
                                      TestLabel "lookupCtorOperand" test60,
-                                     TestLabel "lookupCtorOperand_Err" test61]
+                                     TestLabel "lookupCtorOperand_Err" test61,
+                                     TestLabel "updateExpr_QasmId" test62,
+                                     TestLabel "updateExpr_QasmCell" test63,
+                                     TestLabel "updateExpr_QasmMeasure" test64,
+                                     TestLabel "updateExpr_Call" test65,
+                                     TestLabel "updateExpr_Decl_Except_1" test66,
+                                     TestLabel "updateExpr_Decl_Except_2" test67,
+                                     TestLabel "updateExpr_Decl_Except_3" test68,
+                                     TestLabel "updateExpr_Decl_Except_4" test69,
+                                     TestLabel "updateExpr_Type_Except_1" test68,
+                                     TestLabel "updateExpr_Type_Except_2" test69]
 
 main = defaultMain tests

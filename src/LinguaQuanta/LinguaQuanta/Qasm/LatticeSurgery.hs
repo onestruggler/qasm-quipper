@@ -14,14 +14,24 @@ module LinguaQuanta.Qasm.LatticeSurgery
   , toCDecl
   , toMergedSize
   , toQDecl
+  , updateExpr
   ) where
 
 -------------------------------------------------------------------------------
 -- * Import Section.
 
 import qualified Data.Map.Strict as Map
-import LinguaQuanta.Either (expandLeft)
+import Data.Maybe (maybe)
+import LinguaQuanta.Either
+  ( expandLeft
+  , leftMap
+  )
 import LinguaQuanta.Maybe (branchJust)
+import LinguaQuanta.Qasm.Expression
+  ( applyBinaryOp
+  , applyUnaryOp
+  , zero
+  )
 import LinguaQuanta.Qasm.Gate
   ( Gate(..)
   , isInverted
@@ -32,7 +42,10 @@ import LinguaQuanta.Qasm.GateName
   ( GateName(..)
   , isUGate
   )
-import LinguaQuanta.Qasm.Language (Expr)
+import LinguaQuanta.Qasm.Language
+  ( Expr(..)
+  , GateOperand(..)
+  )
 import LinguaQuanta.Qasm.Operand (Operand(..))
 
 -------------------------------------------------------------------------------
@@ -193,6 +206,60 @@ lookupOperand map (QRef id) = lookupOperand map (Cell id 0)
 lookupCtorOperand :: MergedVarMap -> (Operand -> a) -> Operand -> Either a String
 lookupCtorOperand map ctor op = expandLeft (lookupOperand map op) $
                                            \op' -> Left $ ctor op'
+
+-------------------------------------------------------------------------------
+-- * Preprocessing for exprs when merging variables into a single register.
+
+-- | Takes as input a MergedVarMap and an identifier. First attempts to resolve
+-- the identifier as a quantum variable. If this fails, then tries to resolve
+-- the identifier as a classical variable. If either attempt fails, then the
+-- ofset is returned. Otherwise, nothing is returned.
+lookupExprId :: MergedVarMap -> String -> Either (String, Int) String
+lookupExprId (MergedVarMap qvars cvars) id =
+    case lookupVar qvars id 0 of
+        Just x  -> Left x
+        Nothing -> case lookupVar cvars id 0 of
+            Just x  -> Left x
+            Nothing -> Right id
+
+-- | Takes as input a MergedVarMap and an unparsed gate operand. If the operand
+-- can be found in the quantum declaration map, then an equivalent operand
+-- using the new register is returned. Otherwise, the name of the unknown
+-- declaration is returned as an error message.
+lookupGateOperand :: MergedVarMap -> GateOperand -> Either GateOperand String
+lookupGateOperand map (QReg id idx) =
+    case lookupQVar map id 0 of
+        Just (id', offset) -> expandLeft (updateExpr map idx) $
+            \idx -> Left $ QReg id' $ Plus idx $ DecInt $ show offset
+        Nothing -> Right id
+lookupGateOperand map (QVar id) = lookupGateOperand map (QReg id zero)
+
+-- | Takes as input a MergedVarMap and an OpenQASM expression. Returns the
+-- expression obtained by rewriting every variable access as dictated by the
+-- MergedVarMap (i.e., applying updateExpr twice will result in an error).
+updateExpr :: MergedVarMap -> Expr -> Either Expr String
+updateExpr map (Plus lhs rhs)   = applyBinaryOp (updateExpr map) Plus lhs rhs
+updateExpr map (Minus lhs rhs)  = applyBinaryOp (updateExpr map) Minus lhs rhs
+updateExpr map (Times lhs rhs)  = applyBinaryOp (updateExpr map) Times lhs rhs
+updateExpr map (Div lhs rhs)    = applyBinaryOp (updateExpr map) Div lhs rhs
+updateExpr map (Brack expr)     = applyUnaryOp (updateExpr map) Brack expr
+updateExpr map (Negate expr)    = applyUnaryOp (updateExpr map) Negate expr
+updateExpr _   Euler            = Left Euler
+updateExpr _   Pi               = Left Pi
+updateExpr _   Tau              = Left Tau
+updateExpr _   lit@(DecInt _)   = Left lit
+updateExpr _   lit@(DecFloat _) = Left lit
+updateExpr map (QasmId id)      = updateExpr map (QasmCell id zero)
+updateExpr map (Call str args)  =
+    expandLeft (leftMap (updateExpr map) args) $
+        \args' -> Left $ Call str args'
+updateExpr map (QasmCell id idx) =
+    expandLeft (lookupExprId map id) $
+        \(id', offset) -> expandLeft (updateExpr map idx) $
+            \idx' -> Left $ QasmCell id' $ Plus idx' $ DecInt $ show offset
+updateExpr map (QasmMeasure gop) =
+    expandLeft (lookupGateOperand map gop) $
+        \gop' -> Left $ QasmMeasure gop'
 
 -------------------------------------------------------------------------------
 -- * Preprocessing for Lattice Surgery Compilation.
