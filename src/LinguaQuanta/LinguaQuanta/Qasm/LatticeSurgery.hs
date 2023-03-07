@@ -21,7 +21,7 @@ module LinguaQuanta.Qasm.LatticeSurgery
 -- * Import Section.
 
 import qualified Data.Map.Strict as Map
-import Data.Maybe (maybe)
+import Data.Maybe (fromMaybe)
 import LinguaQuanta.Either
   ( expandLeft
   , leftMap
@@ -183,8 +183,7 @@ lookupCVar (MergedVarMap _ cvars) id idx = lookupVar cvars id idx
 -- scalar variable and (Just n) for an array with n cells). Returns the size
 -- expected by MergedVarMap.
 toMergedSize :: Maybe Int -> Int
-toMergedSize Nothing  = 1
-toMergedSize (Just n) = n
+toMergedSize = fromMaybe 1
 
 -- | Takes as input a MergedVarMap and a quantum operand. If the operand can be
 -- found in the quantum declaration map, then an equivalent operand using the

@@ -4,10 +4,12 @@ module LinguaQuanta.Qasm.Passes
   ( AbstractionErr(..)
   , InlineErr(..)
   , InversionErr(..)
+  , RegMergeErr(..)
   , ToLscErr(..)
   , elimFun
   , elimInv
   , elimPow
+  , mergeReg
   , toAst
   , toLsc
   ) where
@@ -15,6 +17,10 @@ module LinguaQuanta.Qasm.Passes
 -------------------------------------------------------------------------------
 -- * Import Section.
 
+import Data.Maybe
+  ( catMaybes
+  , fromMaybe
+  )
 import LinguaQuanta.Either
   ( expandLeft
   , leftMap
@@ -61,7 +67,19 @@ import LinguaQuanta.Qasm.Language
   )
 import LinguaQuanta.Qasm.LatticeSurgery
   ( LscGateErr(..)
+  , MergedVarMap
+  , addCDecl
+  , addQDecl
+  , lookupCtorOperand
+  , lookupCVar
+  , lookupOperand
+  , lookupQVar
   , lscRewriteGate
+  , makeMergedVarMap
+  , toCDecl
+  , toMergedSize
+  , toQDecl
+  , updateExpr
   )
 import LinguaQuanta.Qasm.Operand
   ( RValue(..)
@@ -454,3 +472,90 @@ toLscImpl _  stmt              = Left [stmt]
 -- a round translation, with maximum inlining.
 toLsc :: [AstStmt] -> Either [AstStmt] ToLscErr
 toLsc = applyPerLineFn toLscImpl 1
+
+-------------------------------------------------------------------------------
+-- * Secondary Pass: Register Merger
+
+-- | Enumerates the possible failures in mergeReg.
+data RegMergeErr = MissingDecl Int String deriving (Show, Eq)
+
+-- | Specializes mergeRegImpl to gates.
+mergeGate :: Int -> MergedVarMap -> Gate -> Either Gate RegMergeErr
+mergeGate ln map (NamedGate x args ops y) =
+    case leftMap (updateExpr map) args of
+        Left args' -> case leftMap (lookupOperand map) ops of
+            Left ops' -> Left $ NamedGate x args' ops' y
+            Right id  -> Right $ MissingDecl ln id
+        Right id -> Right $ MissingDecl ln id
+mergeGate ln map (GPhaseGate arg ops x) =
+    case updateExpr map arg of
+        Left arg' -> case leftMap (lookupOperand map) ops of
+            Left ops' -> Left $ GPhaseGate arg' ops' x
+            Right id  -> Right $ MissingDecl ln id
+        Right id -> Right $ MissingDecl ln id
+
+-- | Specializes mergeRegImpl to void calls.
+mergeCall :: MergedVarMap -> VoidCall -> Either VoidCall String
+mergeCall map (QuipQInit0 op)   = lookupCtorOperand map QuipQInit0 op
+mergeCall map (QuipQInit1 op)   = lookupCtorOperand map QuipQInit1 op
+mergeCall map (QuipQTerm0 op)   = lookupCtorOperand map QuipQTerm0 op
+mergeCall map (QuipQTerm1 op)   = lookupCtorOperand map QuipQTerm1 op
+mergeCall map (QuipQDiscard op) = lookupCtorOperand map QuipQDiscard op
+mergeCall map (VoidReset op)    = lookupCtorOperand map VoidReset op
+mergeCall map (VoidMeasure op)  = lookupCtorOperand map VoidMeasure op
+
+-- | Specializes mergeRegImpl to r-values.
+mergeRValue :: MergedVarMap -> RValue -> Either RValue String
+mergeRValue map (QuipMeasure op) = lookupCtorOperand map QuipMeasure op
+mergeRValue _   QuipCInit0       = Left QuipCInit0
+mergeRValue _   QuipCInit1       = Left QuipCInit1
+mergeRValue _   QuipCTerm0       = Left QuipCTerm0
+mergeRValue _   QuipCTerm1       = Left QuipCTerm1
+mergeRValue _   QuipCDiscard     = Left QuipCDiscard
+mergeRValue map (Measure op)     = lookupCtorOperand map Measure op
+
+-- | Rewrites a single statement of an OpenQASM program, so that the statement
+-- uses a single quantum register, and a single classical register. To maintain
+-- the state of these registers (e.g., size, name, allocation) a MergedVarMap
+-- is used, together with a StatefulFn.
+mergeRegImpl :: StatefulFn MergedVarMap AstStmt AstStmt RegMergeErr
+mergeRegImpl ln map (AstGateStmt n gate) =
+    expandLeft (mergeGate ln map gate) $
+        \gate' -> Left (map, [AstGateStmt n gate'])
+mergeRegImpl ln map (AstQubitDecl size id) = Left (map', [])
+    where map' = addQDecl map id $ toMergedSize size
+mergeRegImpl ln map (AstBitDecl size id) = Left (map', [])
+    where map' = addCDecl map id $ toMergedSize size
+mergeRegImpl ln map (AstAssign id idx rval) =    
+    case lookupCVar map id $ fromMaybe 0 idx of
+        Just (id', idx') -> case mergeRValue map rval of
+            Left rval' -> Left (map, [AstAssign id' (Just idx') rval'])
+            Right id   -> Right $ MissingDecl ln id
+        Nothing -> Right $ MissingDecl ln id
+mergeRegImpl ln map (AstCall call) =
+    case mergeCall map call of
+        Left call' -> Left (map, [AstCall call'])
+        Right id   -> Right $ MissingDecl ln id
+
+-- | Takes as input a declaration constructor (either AstQubitDecl or
+-- AstBitDecl) together with the declaration data from the MergedVarMap. If the
+-- register has at least one cell, then returns the declaration. Otherwise,
+-- nothing is returned.
+makeMergedDecl :: (Maybe Int -> a -> AstStmt) -> (a, Int) -> Maybe AstStmt
+makeMergedDecl ctor (id, idx) = if idx == 0
+                                then Nothing
+                                else Just $ ctor (Just  idx) id
+
+-- | Takes as input a MergedVarMap, and returns the quantum and classical
+-- declarations required to implement the merged variables.
+toMergedDecls :: MergedVarMap -> [AstStmt]
+toMergedDecls map = catMaybes [qdecl, cdecl]
+    where qdecl = makeMergedDecl AstQubitDecl $ toQDecl map
+          cdecl = makeMergedDecl AstBitDecl $ toCDecl map
+
+-- | Rewrites the statements of an OpenQASM program so that there is a single
+-- quantum and a single classical register.
+mergeReg :: [AstStmt] -> Either [AstStmt] RegMergeErr
+mergeReg stmts = expandLeft (applyStatefulPass mergeRegImpl 1 map stmts) $
+                            \(map, body) -> Left $ toMergedDecls map ++ body
+    where map = makeMergedVarMap "q" "c"
