@@ -168,6 +168,10 @@ common basic-unit-test-props
                        HUnit,
                        LinguaQuanta
 
+common container-unit-test-props
+  import:              basic-unit-test-props
+  build-depends:       containers
+
 test-suite either-tests
   import:              basic-unit-test-props
   main-is:             Either-Tests.hs
@@ -234,51 +238,43 @@ test-suite qasm-passes-tests
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-ancilla-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QasmToQuip-Ancilla-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-assign-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QasmToQuip-Assign-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-call-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QasmToQuip-Call-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-control-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QasmToQuip-Control-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-gate-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QasmToQuip-Gate-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-operand-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QasmToQuip-Operand-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-translator-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QasmToQuip-Translator-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-wire-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QasmToQuip-Wire-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite quip-gate-tests
@@ -298,37 +294,31 @@ test-suite quip-transformers-tests
   type:                exitcode-stdio-1.0
 
 test-suite quip-wire-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             Quip-Wire-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite quiptoqasm-ancilla-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QuipToQasm-Ancilla-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite quiptoqasm-gate-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QuipToQasm-Gate-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite quiptoqasm-measurement-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QuipToQasm-Measurement-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite quiptoqasm-translator-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QuipToQasm-Translator-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite quiptoqasm-wire-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QuipToQasm-Wire-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
