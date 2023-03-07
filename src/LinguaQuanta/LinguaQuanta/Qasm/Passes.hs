@@ -138,6 +138,7 @@ data AbstractionErr = GateAbstractionErr Int GateSummaryErr
                     | RValueAbstractionErr Int ExprErr
                     | VoidCallAbstractionErr Int ExprErr
                     | MeasureCallAbstractionErr Int ExprErr
+                    | NestedMeasureTerm Int
                     | UnknownExprStmt Int
                     | NonPosArrayLen Int
                     | NonLegacyStmt Int
@@ -276,26 +277,28 @@ abstractInitDecl header ln (ty, decl, rval) =
         \dstmt -> expandLeft (abstractAssign header ln (CVar decl, rval)) $
             \istmt -> Left $ dstmt ++ istmt
 
--- | Consumes a line number (ln) and an expression (expr) intended to act as a
--- statement. If expr evaluates to a valid expression statement, then the
+-- | Consumes a line number (ln), a Boolean flag indicating if the current
+-- expression is a top-level term, and an expression (expr) intended to act as
+-- a statement. If expr evaluates to a valid expression statement, then the
 -- corresponding abstract statement is returned. Otherwise, an error for the
 -- first failure is returned.
-abstractExprStmt :: QasmHeader -> PerStmtFn Expr AbstractionErr
-abstractExprStmt header ln (Brack expr) = astmts
-    where astmts = abstractExprStmt header ln expr
-abstractExprStmt header ln (Call name args) =
+abstractExprStmt :: QasmHeader -> Bool -> PerStmtFn Expr AbstractionErr
+abstractExprStmt header _ ln (Brack expr) = astmts
+    where astmts = abstractExprStmt header False ln expr
+abstractExprStmt header _ ln (Call name args) =
     case toVoidCall name args of
         Left call -> case checkVoidCallScope header ln call of
             Just err -> Right err
             Nothing  -> Left [AstCall call]
         Right err -> Right $ VoidCallAbstractionErr ln err
-abstractExprStmt header ln (QasmMeasure gop) =
+abstractExprStmt _ False ln (QasmMeasure _) = Right $ NestedMeasureTerm ln
+abstractExprStmt header True ln (QasmMeasure gop) =
     case parseGateOperand gop of
         Left op -> if isLegacy header
                    then Right $ NonLegacyStmt ln
                    else Left [AstCall $ VoidMeasure op]
         Right err -> Right $ MeasureCallAbstractionErr ln err
-abstractExprStmt _ ln _ = Right $ UnknownExprStmt ln
+abstractExprStmt _ _ ln _ = Right $ UnknownExprStmt ln
 
 -- | Consume a line number (ln) and the argument to a reset statement (expr).
 -- If expr evaluates to a valid operand, then a VoidReset parameterized by the
@@ -325,7 +328,7 @@ abstractStmt header ln (QasmInitDeclStmt ty decl rval)
     | isLegacy header = Right $ NonLegacyStmt ln
     | otherwise       = abstractInitDecl header ln (ty, decl, rval)
 abstractStmt header ln (QasmExprStmt expr) = astmts
-    where astmts = abstractExprStmt header ln expr
+    where astmts = abstractExprStmt header True ln expr
 abstractStmt _ ln (QasmResetStmt expr) = astmts
     where astmts = abstractResetStmt ln expr
 

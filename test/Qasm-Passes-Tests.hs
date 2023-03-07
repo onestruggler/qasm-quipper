@@ -674,6 +674,16 @@ test105 = TestCase (assertEqual "mergeReg detects undeclared declarations in voi
           errs = MissingDecl 4 "qqq"
 
 -----------------------------------------------------------------------------------------
+-- Top-level Measure Statements.
+
+test106 = TestCase (assertEqual "toAst detects undeclared declarations in void calls."
+                                (Right errs :: Either [AstStmt] AbstractionErr)
+                                (toAst libhdr prog))
+    where prog = [qdecStmt,
+                  QasmExprStmt $ Brack $ QasmMeasure $ QVar "qvar"]
+          errs = NestedMeasureTerm 2
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "toAst_EmptyFile" test1,
@@ -780,6 +790,7 @@ tests = hUnitTestToTests $ TestList [TestLabel "toAst_EmptyFile" test1,
                                      TestLabel "mergeReg_Invalid_4" test102,
                                      TestLabel "mergeReg_Invalid_5" test103,
                                      TestLabel "mergeReg_Invalid_6" test104,
-                                     TestLabel "mergeReg_Invalid_6" test105]
+                                     TestLabel "mergeReg_Invalid_6" test105,
+                                     TestLabel "toAst_NestedMeas_Err" test106]
 
 main = defaultMain tests
