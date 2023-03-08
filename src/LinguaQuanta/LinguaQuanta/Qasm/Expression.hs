@@ -13,6 +13,7 @@ module LinguaQuanta.Qasm.Expression
   , toArrayIndex
   , toConstFloat
   , toConstInt
+  , toQasm3
   , toRValue
   , toVoidCall
   , zero
@@ -306,6 +307,28 @@ toSymReal (Qasm.DecFloat str)   = Left $ SR.Decimal val str
 toConstFloat :: Expr -> ExprEval Double
 toConstFloat expr = expandLeft (toSymReal expr) $
                                \val -> Left $ to_real val
+
+
+-- | Takes as input an OpenQASM 2.0 expression. Returns an equivalent OpenQASM
+-- 3 expression. In particular, every instance of ln is replaced by log.
+toQasm3 :: Expr -> Expr
+toQasm3 (Qasm.Plus lhs rhs)      = Qasm.Plus (toQasm3 lhs) (toQasm3 rhs)
+toQasm3 (Qasm.Minus lhs rhs)     = Qasm.Minus (toQasm3 lhs) (toQasm3 rhs)
+toQasm3 (Qasm.Times lhs rhs)     = Qasm.Times (toQasm3 lhs) (toQasm3 rhs)
+toQasm3 (Qasm.Div lhs rhs)       = Qasm.Div (toQasm3 lhs) (toQasm3 rhs)
+toQasm3 (Qasm.Brack expr)        = Qasm.Brack $ toQasm3 expr
+toQasm3 (Qasm.Negate expr)       = Qasm.Negate $ toQasm3 expr
+toQasm3 Qasm.Euler               = Qasm.Euler
+toQasm3 Qasm.Pi                  = Qasm.Pi
+toQasm3 Qasm.Tau                 = Qasm.Tau
+toQasm3 lit@(Qasm.DecInt _)      = lit
+toQasm3 lit@(Qasm.DecFloat _)    = lit
+toQasm3 id@(Qasm.QasmId _)       = id
+toQasm3 cell@(Qasm.QasmCell _ _) = cell
+toQasm3 expr@(QasmMeasure _)     = expr
+toQasm3 (Qasm.Call name args)    = Qasm.Call name' args'
+    where name' = if name == "ln" then "log" else name
+          args' = map toQasm3 args
 
 -------------------------------------------------------------------------------
 -- * Manipulation Methods.

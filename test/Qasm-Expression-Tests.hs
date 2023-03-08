@@ -640,6 +640,16 @@ test112 = TestCase (assertBool "Euler literal is correct."
     where Left v = toConstFloat euler
 
 -----------------------------------------------------------------------------------------
+-- toQasm3.
+
+test113 = TestCase (assertEqual "toQasm3 rewrites all instances of ln(-)."
+                                (expr $ Call "log" [Euler])
+                                (toQasm3 $ expr $ Call "ln" [Euler]))
+    where expr term = Plus (Minus (Negate term) (Brack term))
+                           (Div (Times (Call "exp" [Pi, Tau, Euler, term]) term)
+                                (QasmId "var"))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores" test1,
@@ -753,6 +763,7 @@ tests = hUnitTestToTests $ TestList [TestLabel "readDecInt_Postive_NoUnderscores
                                      TestLabel "toGateOperand_QVar" test109,
                                      TestLabel "toGateOperand_QReg" test110,
                                      TestLabel "toGateOperand_BadIndex" test111,
-                                     TestLabel "euler_literal" test112]
+                                     TestLabel "euler_literal" test112,
+                                     TestLabel "toQasm3" test113]
 
 main = defaultMain tests
