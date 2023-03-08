@@ -4,6 +4,7 @@
 
 module Main where
 
+import LinguaQuanta.Either (expandLeft)
 import LinguaQuanta.QasmToQuip.Translator (translate)
 import LinguaQuanta.Quip.Quipper
   ( GateCirc
@@ -25,9 +26,8 @@ import System.IO (hPutStr)
 -- * Translation Interface.
 
 doTask :: DoTaskFn GateCirc
-doTask file text = case parseQasmAST file text of
-    Left err  -> Left err
-    Right ast -> Right $ translate ast
+doTask file text = expandLeft (parseQasmAST file text) $
+                              \ast -> Left $ translate ast
 
 display :: DisplayFn GateCirc
 display hdl circ = hPutStr hdl $ gatesToAscii circ

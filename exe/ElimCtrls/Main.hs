@@ -32,8 +32,8 @@ import System.IO (hPutStrLn)
 -- * ElimCtrls Interface.
 
 doTask :: Bool -> Bool -> Bool -> DoTaskFn QuipCirc
-doTask elimTof elimCH elimCSwap file input = Right $ applyTransformer elim
-                                                   $ parseQuip file input
+doTask elimTof elimCH elimCSwap file input = Left $ applyTransformer elim
+                                                  $ parseQuip file input
     where elim = elimCtrlsTransformer elimTof elimCH elimCSwap
 
 display :: DisplayFn QuipCirc

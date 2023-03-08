@@ -23,7 +23,7 @@ import System.IO (Handle)
 -- returns either an abstract representation for the program of type a, or a
 -- parsing error in the form of a string. The first string indicates the input
 -- source, and is used for error logging.
-type DoTaskFn a = String -> String -> Either String a
+type DoTaskFn a = String -> String -> Either a String
 
 -- | A function that takes as input a file handle and the abstraction
 -- represerntation of an OpenQASM 3 program of type a. The abstract
@@ -40,8 +40,8 @@ type DisplayFn a = Handle -> a -> IO ()
 runTool :: DoTaskFn a -> DisplayFn a -> String -> String -> Handle -> IO ()
 runTool doTask display text file outHdl =
     case doTask file text of
-        Left err  -> die err
-        Right rep -> display outHdl rep
+        Left rep  -> display outHdl rep
+        Right err -> die err
 
 -- | Takes an input a tool task (doTask), a function to display the results
 -- (display), an input source (src), and an output destination (dst). Reads all

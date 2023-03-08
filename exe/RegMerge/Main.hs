@@ -11,6 +11,10 @@ import RegMerge.CmdLn
   ( RegMergeTool(..)
   , getToolArgs
   )
+import LinguaQuanta.Either
+  ( expandLeft
+  , expandRight
+  )
 import LinguaQuanta.Qasm.AST (AstStmt)
 import LinguaQuanta.Qasm.Passes (mergeReg)
 import LinguaQuantaExe.SetupTools
@@ -27,11 +31,9 @@ import LinguaQuantaExe.QasmUtils
 -- * ElimPows Interface.
 
 doTask :: DoTaskFn [AstStmt]
-doTask file input = case parseQasmAST file input of
-    Left err  -> Left err
-    Right ast -> case mergeReg ast of
-        Left ast  -> Right ast
-        Right err -> Left $ show err
+doTask file input = 
+    expandLeft (parseQasmAST file input) $
+        \ast -> expandRight (mergeReg ast) $ \err -> Right $ show err
 
 -------------------------------------------------------------------------------
 -- * Entry Point.

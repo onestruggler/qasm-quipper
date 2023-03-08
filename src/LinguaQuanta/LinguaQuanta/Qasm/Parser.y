@@ -142,8 +142,9 @@ lexwrap :: (Token -> Alex a) -> Alex a
 lexwrap = (alexQasmMonadScan >>=)
 
 happyError :: Token -> Alex a
-happyError (Token p t) = alexQasmError p ("parse error at token '" ++ unlex t ++ "'")
+happyError (Token p t) = alexQasmError p msg
+    where msg = "parse error at token '" ++ unlex t ++ "'"
 
-parseQasm :: FilePath -> String -> Either String Program
-parseQasm = runAlexQasm parse
+parseQasm :: FilePath -> String -> Either Program String
+parseQasm fp input = runAlexQasm parse fp input
 }

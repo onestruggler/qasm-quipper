@@ -7,6 +7,7 @@ module Main where
 -------------------------------------------------------------------------------
 -- * Import Section.
 
+import LinguaQuanta.Either (expandLeft)
 import LinguaQuanta.Qasm.AST (AstStmt)
 import LinguaQuanta.Qasm.Parser (parseQasm)
 import LinguaQuanta.Qasm.Printer (printAst)
@@ -28,10 +29,8 @@ import Text.Pretty.Simple (pHPrint)
 -- * Writer Interface.
 
 codegen :: Bool -> DoTaskFn [String]
-codegen legacy file text =
-    case parseQasmAST file text of
-        Left err  -> Left err
-        Right ast -> Right $ printAst legacy ast
+codegen legacy file text = expandLeft (parseQasmAST file text) $
+                                      \ast -> Left $ printAst legacy ast
 
 -------------------------------------------------------------------------------
 -- * Entry Point.

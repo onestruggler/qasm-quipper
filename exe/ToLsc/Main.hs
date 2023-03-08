@@ -11,6 +11,10 @@ import ToLsc.CmdLn
   ( ToLscTool(..)
   , getToolArgs
   )
+import LinguaQuanta.Either
+  ( expandLeft
+  , expandRight
+  )
 import LinguaQuanta.Qasm.AST (AstStmt)
 import LinguaQuanta.Qasm.Passes (toLsc)
 import LinguaQuantaExe.SetupTools
@@ -27,11 +31,9 @@ import LinguaQuantaExe.QasmUtils
 -- * ElimInvs Interface.
 
 doTask :: DoTaskFn [AstStmt]
-doTask file input = case parseQasmAST file input of
-    Left err  -> Left err
-    Right ast -> case toLsc ast of
-        Left ast  -> Right ast
-        Right err -> Left $ show err
+doTask file input = 
+    expandLeft (parseQasmAST file input) $
+        \ast -> expandRight (toLsc ast) $ \err -> Right $ show err
 
 -------------------------------------------------------------------------------
 -- * Entry Point.
