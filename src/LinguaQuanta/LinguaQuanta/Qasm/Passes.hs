@@ -32,6 +32,7 @@ import LinguaQuanta.Qasm.Expression
   , parseGateOperand
   , toArrayIndex
   , toConstInt
+  , toQasm3
   , toRValue
   , toVoidCall
   )
@@ -204,6 +205,15 @@ checkVoidCallScope _      ln (VoidMeasure _)  = Just $ UnexpectedMeasureExpr ln
 -------------------------------------------------------------------------------
 -- * Primary Pass: Abstraction Pass.
 
+-- | Consumes an OpenQASM file header summary and a gate. If the header is for
+-- an OpenQASM 2.0 file, then all gate arguments are updated to OpenQASM 3.
+-- Otherwise, the same gate is returned.
+modernizeGate :: QasmHeader -> Gate -> Gate
+modernizeGate header (NamedGate x args y z) = NamedGate x args' y z
+    where args' = if isLegacy header then map toQasm3 args else args
+modernizeGate header (GPhaseGate arg x y) = GPhaseGate arg' x y
+    where arg' = if isLegacy header then toQasm3 arg else arg
+
 -- | Consumes a line number (ln) and an expression (expr). If expr evaluates to
 -- a valid gate (g) that is supported by the translator, then g is returned.
 -- Otherwise, an error is returned with line number set to ln.
@@ -213,9 +223,10 @@ abstractGate header ln expr =
         Left (n, gate) -> case validateGate gate of
             Nothing -> case checkGateScope header ln gate of
                 Just err -> Right err
-                Nothing  -> Left [AstGateStmt n gate]
-            Just err -> Right (GateAbstractionErr ln err)
-        Right err -> Right (GateAbstractionErr ln err)
+                Nothing  -> let gate' = modernizeGate header gate
+                            in Left [AstGateStmt n gate']
+            Just err -> Right $ GateAbstractionErr ln err
+        Right err -> Right $ GateAbstractionErr ln err
 
 -- | Consumes a line number (ln) and the lenght of an array given as an
 -- OpenQASM exprsesion (expr). If the array length is valid, then its integer
@@ -223,7 +234,7 @@ abstractGate header ln expr =
 -- returned with line number set to ln.
 getDeclLen :: Int -> Expr -> Either Int AbstractionErr
 getDeclLen ln expr =
-    case toConstInt expr of
+    case toConstInt $ toQasm3 expr of
         Left n -> if n > 0
                   then Left n
                   else Right $ NonPosArrayLen ln
@@ -247,11 +258,12 @@ abstractDecl ln (BitArrT expr) decl =
 -- | Implementation details for abstractAssign.
 assignImpl :: QasmHeader -> PerStmtFn (String, Maybe Int, Expr) AbstractionErr
 assignImpl header ln (id, idx, expr) = 
-    case toRValue expr of
+    case toRValue expr' of
         Left rval -> case checkRValueScope header ln rval of
             Just err -> Right err
             Nothing  -> Left [AstAssign id idx rval]
         Right err -> Right $ RValueAbstractionErr ln err
+    where expr' = if isLegacy header then toQasm3 expr else expr
 
 -- | Consumes a line number (ln), a variable to update, and a value to assign
 -- to the variable (rval). If the lvalue and rvalue are valid, then an abstract
@@ -277,28 +289,34 @@ abstractInitDecl header ln (ty, decl, rval) =
         \dstmt -> expandLeft (abstractAssign header ln (CVar decl, rval)) $
             \istmt -> Left $ dstmt ++ istmt
 
--- | Consumes a line number (ln), a Boolean flag indicating if the current
--- expression is a top-level term, and an expression (expr) intended to act as
--- a statement. If expr evaluates to a valid expression statement, then the
--- corresponding abstract statement is returned. Otherwise, an error for the
--- first failure is returned.
-abstractExprStmt :: QasmHeader -> Bool -> PerStmtFn Expr AbstractionErr
-abstractExprStmt header _ ln (Brack expr) = astmts
-    where astmts = abstractExprStmt header False ln expr
-abstractExprStmt header _ ln (Call name args) =
+-- | Implementation details for abstractExprStmt. Assumes that top-level
+-- measure statements have been handled, and that all OpenQASM 2.0 expression
+-- terms have been accounted for.
+abstractExprStmtImpl :: QasmHeader -> PerStmtFn Expr AbstractionErr
+abstractExprStmtImpl header ln (Brack expr) = astmts
+    where astmts = abstractExprStmtImpl header ln expr
+abstractExprStmtImpl header ln (Call name args) =
     case toVoidCall name args of
         Left call -> case checkVoidCallScope header ln call of
             Just err -> Right err
             Nothing  -> Left [AstCall call]
         Right err -> Right $ VoidCallAbstractionErr ln err
-abstractExprStmt _ False ln (QasmMeasure _) = Right $ NestedMeasureTerm ln
-abstractExprStmt header True ln (QasmMeasure gop) =
+abstractExprStmtImpl _ ln (QasmMeasure _) = Right $ NestedMeasureTerm ln
+abstractExprStmtImpl _ ln _               = Right $ UnknownExprStmt ln
+
+-- | Consumes a line number (ln) and an expression (expr) intended to act as a
+-- statement. If expr evaluates to a valid expression statement, then the
+-- corresponding abstract statement is returned. Otherwise, an error for the
+-- first failure is returned.
+abstractExprStmt :: QasmHeader -> PerStmtFn Expr AbstractionErr
+abstractExprStmt header ln (QasmMeasure gop) =
     case parseGateOperand gop of
         Left op -> if isLegacy header
                    then Right $ NonLegacyStmt ln
                    else Left [AstCall $ VoidMeasure op]
         Right err -> Right $ MeasureCallAbstractionErr ln err
-abstractExprStmt _ _ ln _ = Right $ UnknownExprStmt ln
+abstractExprStmt header ln expr = abstractExprStmtImpl header ln expr'
+    where expr' = if isLegacy header then toQasm3 expr else expr
 
 -- | Consume a line number (ln) and the argument to a reset statement (expr).
 -- If expr evaluates to a valid operand, then a VoidReset parameterized by the
@@ -328,7 +346,7 @@ abstractStmt header ln (QasmInitDeclStmt ty decl rval)
     | isLegacy header = Right $ NonLegacyStmt ln
     | otherwise       = abstractInitDecl header ln (ty, decl, rval)
 abstractStmt header ln (QasmExprStmt expr) = astmts
-    where astmts = abstractExprStmt header True ln expr
+    where astmts = abstractExprStmt header ln expr
 abstractStmt _ ln (QasmResetStmt expr) = astmts
     where astmts = abstractResetStmt ln expr
 
@@ -547,7 +565,7 @@ mergeRegImpl ln map (AstCall call) =
 makeMergedDecl :: (Maybe Int -> a -> AstStmt) -> (a, Int) -> Maybe AstStmt
 makeMergedDecl ctor (id, idx) = if idx == 0
                                 then Nothing
-                                else Just $ ctor (Just  idx) id
+                                else Just $ ctor (Just idx) id
 
 -- | Takes as input a MergedVarMap, and returns the quantum and classical
 -- declarations required to implement the merged variables.

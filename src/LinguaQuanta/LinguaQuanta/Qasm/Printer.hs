@@ -153,7 +153,8 @@ printExpr True   (DecInt str)      = filter (/= '_') str
 printExpr False  (DecInt str)      = str
 printExpr _      (QasmId id)       = id
 printExpr legacy (QasmCell id idx) = printQasmCell legacy id idx
-printExpr legacy (Call id args)    = printExprCall legacy id args
+printExpr legacy (Call id args)    = printExprCall legacy id'  args
+    where id' = if legacy && id == "log" then "ln" else id
 
 -- | Takes as input a legacy flag, a parameter list, and a base case string.
 -- The parameter list is converted to a list of syntactic expressions,

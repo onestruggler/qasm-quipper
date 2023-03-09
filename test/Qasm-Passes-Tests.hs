@@ -684,6 +684,26 @@ test106 = TestCase (assertEqual "toAst detects undeclared declarations in void c
           errs = NestedMeasureTerm 2
 
 -----------------------------------------------------------------------------------------
+-- Legacy support for ln.
+
+ln_prog = [QasmLDeclStmt QubitT "v1",
+           QasmGateStmt $ NamedGateOp "rz" [call] [QVar "v1"]]
+    where call = Call "ln" [Euler]
+
+
+ln_ast name = [AstQubitDecl Nothing "v1",
+               AstGateStmt 0 $ NamedGate GateRZ [call] [QRef "v1"] nullGateMod]
+    where call = Call name [Euler]
+
+test107 = TestCase (assertEqual "toAst will replace ln with log for v2.0 input files."
+                                (Left $ ln_ast "log" :: Either [AstStmt] AbstractionErr)
+                                (toAst legacyAll ln_prog))
+
+test108 = TestCase (assertEqual "toAst will not replace ln with log for v3 input files."
+                                (Left $ ln_ast "ln" :: Either [AstStmt] AbstractionErr)
+                                (toAst libhdr ln_prog))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "toAst_EmptyFile" test1,
@@ -791,6 +811,8 @@ tests = hUnitTestToTests $ TestList [TestLabel "toAst_EmptyFile" test1,
                                      TestLabel "mergeReg_Invalid_5" test103,
                                      TestLabel "mergeReg_Invalid_6" test104,
                                      TestLabel "mergeReg_Invalid_6" test105,
-                                     TestLabel "toAst_NestedMeas_Err" test106]
+                                     TestLabel "toAst_NestedMeas_Err" test106,
+                                     TestLabel "toAst_ln_Qasm2" test107,
+                                     TestLabel "toAst_ln_Qasm3" test108]
 
 main = defaultMain tests
