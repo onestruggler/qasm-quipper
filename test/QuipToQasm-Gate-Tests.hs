@@ -552,7 +552,7 @@ test57 = TestCase (assertEqual "rotGateTransl: support for the RotExpZ gate (4/4
 test58 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (1/2)."
                                [AstGateStmt 0 gate]
                                (rotGateTransl qalloc Quip.RotZ False 2.0 [3] []))
-    where expzt = Div (Times Pi $ DecInt "2") (DecFloat "2.0")
+    where expzt = Div Pi (DecFloat "2.0")
           param = Times expzt (DecInt "2")
           decl1 = Cell "input_qwires" 2
           gate  = Qasm.NamedGate Qasm.GateRZ [param] [decl1] nullGateMod
@@ -560,7 +560,7 @@ test58 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (1/2)."
 test59 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (2/2)."
                                [AstGateStmt 0 gate]
                                (rotGateTransl qalloc Quip.RotZ True 2.0 [4] []))
-    where expzt = Div (Times Pi $ DecInt "2") (DecFloat "2.0")
+    where expzt = Div Pi (DecFloat "2.0")
           param = Times expzt (DecInt "2")
           decl1 = Cell "input_qwires" 3
           mod   = negateMod $ nullGateMod
@@ -594,7 +594,7 @@ test62 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (1/2)."
                                [AstGateStmt 0 gate]
                                (rotGateTransl qalloc Quip.RotZ False 2.0 [3] ctrls))
     where ctrls = [Quip.Pos 1]
-          expzt = Div (Times Pi $ DecInt "2") (DecFloat "2.0")
+          expzt = Div Pi (DecFloat "2.0")
           param = Times expzt (DecInt "2")
           decl1 = Cell "input_qwires" 2
           decl2 = Cell "input_qwires" 0
@@ -606,7 +606,7 @@ test63 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (2/2)."
                                 AstGateStmt 0 neg]
                                (rotGateTransl qalloc Quip.RotZ False 3.0 [3] ctrls))
     where ctrls = [Quip.Neg 1]
-          expzt = Div (Times Pi $ DecInt "2") (DecFloat "3.0")
+          expzt = Div Pi (DecFloat "3.0")
           param = Times expzt (DecInt "2")
           decl1 = Cell "input_qwires" 2
           decl2 = Cell "input_qwires" 0
@@ -645,7 +645,7 @@ test66 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (1/2)."
                                [AstGateStmt 0 gate]
                                (rotGateTransl qalloc Quip.RotZ False 2.0 [3] ctrls))
     where ctrls = [Quip.Pos 1, Quip.Pos 2]
-          expzt = Div (Times Pi $ DecInt "2") (DecFloat "2.0")
+          expzt = Div Pi (DecFloat "2.0")
           param = Times expzt (DecInt "2")
           decl1 = Cell "input_qwires" 1
           decl2 = Cell "input_qwires" 0
@@ -659,7 +659,7 @@ test67 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (2/2)."
                                 AstGateStmt 0 neg]
                                (rotGateTransl qalloc Quip.RotZ False 3.0 [3] ctrls))
     where ctrls = [Quip.Neg 1, Quip.Neg 2]
-          expzt = Div (Times Pi $ DecInt "2") (DecFloat "3.0")
+          expzt = Div Pi (DecFloat "3.0")
           param = Times expzt (DecInt "2")
           decl1 = Cell "input_qwires" 1
           decl2 = Cell "input_qwires" 0
