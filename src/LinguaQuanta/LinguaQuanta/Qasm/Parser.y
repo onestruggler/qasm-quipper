@@ -121,6 +121,7 @@ Expr : Expr '+' Expr                        { Plus $1 $3 }
      | '(' Expr ')'                         { Brack $2 }
      | '-' Expr %prec NEG                   { Negate $2 }
      | id '(' ExprList ')'                  { Call $1 $3 }
+     | pow '(' ExprList ')'                 { Call "pow" $3 }
      | id '(' ')'                           { Call $1 [] }
      | euler                                { Euler }
      | pi                                   { Pi }
