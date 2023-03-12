@@ -296,7 +296,7 @@ printQRv legacy used name op = (used', call)
 
 -- | Specializes printCHelper to printRValue.
 printCRv :: Bool -> LibUsage -> String -> LineSummary
-printCRv legacy used name = (used', call ++ ";")
+printCRv legacy used name = (used', call)
     where call  = printCHelper legacy name
           used' = useQuipfuncs used
 
