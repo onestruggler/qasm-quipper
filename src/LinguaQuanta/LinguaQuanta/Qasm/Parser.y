@@ -121,6 +121,7 @@ Expr : Expr '+' Expr                        { Plus $1 $3 }
      | '(' Expr ')'                         { Brack $2 }
      | '-' Expr %prec NEG                   { Negate $2 }
      | id '(' ExprList ')'                  { Call $1 $3 }
+     | pow '(' ExprList ')'                 { Call "pow" $3 }
      | id '(' ')'                           { Call $1 [] }
      | euler                                { Euler }
      | pi                                   { Pi }
@@ -142,8 +143,9 @@ lexwrap :: (Token -> Alex a) -> Alex a
 lexwrap = (alexQasmMonadScan >>=)
 
 happyError :: Token -> Alex a
-happyError (Token p t) = alexQasmError p ("parse error at token '" ++ unlex t ++ "'")
+happyError (Token p t) = alexQasmError p msg
+    where msg = "parse error at token '" ++ unlex t ++ "'"
 
-parseQasm :: FilePath -> String -> Either String Program
-parseQasm = runAlexQasm parse
+parseQasm :: FilePath -> String -> Either Program String
+parseQasm fp input = runAlexQasm parse fp input
 }

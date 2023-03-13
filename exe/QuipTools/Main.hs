@@ -7,6 +7,7 @@ module Main where
 -------------------------------------------------------------------------------
 -- * Import Section.
 
+import LinguaQuanta.Either (expandLeft)
 import LinguaQuanta.Quip.Quipper
   ( GateCirc
   , gatesToAscii
@@ -31,7 +32,7 @@ import Text.Pretty.Simple (pHPrint)
 -- | Composes parsing functions to convert a Quipper ASCII circuit into an
 -- abstract gate circuit.
 readQuip :: DoTaskFn GateCirc
-readQuip file text = Right $ quipToGates $ parseQuip file text
+readQuip file text = Left $ quipToGates $ parseQuip file text
 
 -------------------------------------------------------------------------------
 -- * Writer Interface.
@@ -40,10 +41,8 @@ readQuip file text = Right $ quipToGates $ parseQuip file text
 -- | Composes parsing functions to convert a Quipper ASCII circuit into an
 -- equivalent Quipper ASCII circuit (obtained after performing all processing).
 writeQuip :: DoTaskFn String
-writeQuip file text =
-    case readQuip file text of
-        Left  err  -> Left err
-        Right circ -> Right $ gatesToAscii circ
+writeQuip file text = expandLeft (readQuip file text) $
+                                 \circ -> Left $ gatesToAscii circ
 
 -------------------------------------------------------------------------------
 -- * Entry Point.

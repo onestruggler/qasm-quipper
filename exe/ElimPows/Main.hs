@@ -11,6 +11,7 @@ import ElimPows.CmdLn
   ( ElimPowsTool(..)
   , getToolArgs
   )
+import LinguaQuanta.Either (expandLeft)
 import LinguaQuanta.Qasm.AST (AstStmt)
 import LinguaQuanta.Qasm.Passes (elimPow)
 import LinguaQuantaExe.SetupTools
@@ -27,9 +28,8 @@ import LinguaQuantaExe.QasmUtils
 -- * ElimPows Interface.
 
 doTask :: DoTaskFn [AstStmt]
-doTask file input = case parseQasmAST file input of
-    Left err  -> Left err
-    Right ast -> Right $ elimPow ast
+doTask file input = expandLeft (parseQasmAST file input) $
+                               \ast -> Left $ elimPow ast
 
 -------------------------------------------------------------------------------
 -- * Entry Point.

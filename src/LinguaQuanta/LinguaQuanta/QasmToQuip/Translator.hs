@@ -7,6 +7,8 @@ module LinguaQuanta.QasmToQuip.Translator (translate) where
 
 import LinguaQuanta.Qasm.AST (AstStmt(..))
 import LinguaQuanta.Qasm.Gate as Qasm
+import LinguaQuanta.Qasm.GateName (GateName)
+import LinguaQuanta.Qasm.Language (Expr)
 import LinguaQuanta.Qasm.Operand
   ( RValue(..)
   , VoidCall(..)
@@ -24,6 +26,7 @@ import LinguaQuanta.QasmToQuip.Gate
   ( d1RotTransl
   , d2RotTransl
   , d3RotTransl
+  , d4RotTransl
   , namedGateTransl
   , translGPhase
   )
@@ -97,21 +100,27 @@ translateAssign wmap id idx (Measure op)     = (wmap, gates)
 -------------------------------------------------------------------------------
 -- * Gate Translation.
 
+-- |
+type NamedGateData = (GateName, [Expr], [Operand], GateMod)
+
+-- |
+namedToStmts :: WireAllocMap -> NamedGateData -> [Quip.Gate]
+namedToStmts wmap (name, args, ops, mod) =
+    case args of
+        []           -> namedGateTransl wmap name ops mod
+        [a]          -> d1RotTransl wmap name a ops mod
+        [a, b]       -> d2RotTransl wmap name (a, b) ops mod
+        [a, b, c]    -> d3RotTransl wmap name (a, b, c) ops mod
+        [a, b, c, d] -> d4RotTransl wmap name (a, b, c, d) ops mod
+        _            -> error "Rotations must not exceed four dimensions."
+
 -- | Takes as input an allocation map (wmap), a gate repetition count (n), and
 -- a Quipper gate (g). Returns a tuple (ops, gates) where ops contains the
 -- operands for g, and gates contains n copies of the Quipper gate equivalent
 -- to g with respect to wmap.
 translateGate :: WireAllocMap -> Int -> Qasm.Gate -> ([Operand], [Quip.Gate])
-translateGate wmap 0 (Qasm.NamedGate name [] ops mod) = (ops, stmts)
-    where stmts = namedGateTransl wmap name ops mod
-translateGate wmap 0 (Qasm.NamedGate name [p] ops mod) = (ops, stmts)
-    where stmts = d1RotTransl wmap name p ops mod
-translateGate wmap 0 (Qasm.NamedGate name [p1, p2] ops mod) = (ops, stmts)
-    where stmts = d2RotTransl wmap name (p1, p2) ops mod
-translateGate wmap 0 (Qasm.NamedGate name [p1, p2, p3] ops mod) = (ops, stmts)
-    where stmts = d3RotTransl wmap name (p1, p2, p3) ops mod
-translateGate wmap 0 (Qasm.NamedGate name params ops mod) = error msg
-    where msg = "Rotations must not exceed three dimensions."
+translateGate wmap 0 (Qasm.NamedGate name args ops mod) = (ops, stmts)
+    where stmts = namedToStmts wmap (name, args, ops, mod)       
 translateGate wmap 0 (Qasm.GPhaseGate param ops mod) = (ops, stmts)
     where stmts = translGPhase wmap param ops mod
 translateGate wmap n gate = (ops, concat $ replicate n $ gates)

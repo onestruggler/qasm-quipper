@@ -24,6 +24,7 @@ import Data.Maybe
   ( fromJust
   , isNothing
   )
+import LinguaQuanta.Either (expandLeft)
 import LinguaQuanta.Maybe (branchJust)
 import LinguaQuanta.Qasm.AST (AstStmt(..))
 import LinguaQuanta.Qasm.Gate (Operand(..))
@@ -108,11 +109,9 @@ allocateInputWires map = WireLookup allocs 0
 -- | Returns the declaration associated to a wire.
 getAllocation :: WireType -> Wire -> WireLookup -> Maybe Operand
 getAllocation ty id (WireLookup map _) =
-    case IntMap.lookup id map of
-        Nothing    -> Nothing
-        Just entry -> case ty of
-            QWire -> qalloc entry
-            CWire -> calloc entry
+    branchJust (IntMap.lookup id map) $ \entry -> case ty of
+        QWire -> qalloc entry
+        CWire -> calloc entry
 
 -- | Returns the current state of the wire.
 getState :: Wire -> WireLookup -> Maybe WireType
@@ -203,10 +202,9 @@ updateMap ty id alloc (WireLookup map n, name) = (WireLookup map' n', name)
 collapseState :: Wire -> StateChangeFn MaybeNDecl
 collapseState id lookup@(WireLookup map n) =
     case IntMap.lookup id map of
-        Nothing    -> Right $ UnallocatedWire id
-        Just entry -> case nameClassicalDecl n entry of
-            Right err -> Right err
-            Left name -> Left $ updateMap CWire id entry (lookup, name)
+        Just entry -> expandLeft (nameClassicalDecl n entry) $
+            \name -> Left $ updateMap CWire id entry (lookup, name)
+        Nothing -> Right $ UnallocatedWire id
 
 -- | Takes as input a wire type (ty) and a declaration allocation (alloc). If
 -- alloc is in state ty, then alloc is set to the inactive state and returned.
@@ -227,11 +225,10 @@ toInactive ty alloc
 termBitByType :: WireType -> Wire -> StateChangeFn WireLookup
 termBitByType ty id (WireLookup map n) =
     case IntMap.lookup id map of
-        Nothing    -> Right $ UnallocatedWire id
-        Just entry -> case toInactive ty entry of
-            Right err   -> Right err
-            Left entry' -> let map' = IntMap.insert id entry' map
-                           in Left $ WireLookup map' n
+        Just entry -> expandLeft (toInactive ty entry) $
+            \entry' -> let map' = IntMap.insert id entry' map
+                       in Left $ WireLookup map' n
+        Nothing -> Right $ UnallocatedWire id
 
 -- | Specializes termBitByType to classical wires.
 termCBit :: Wire -> StateChangeFn WireLookup

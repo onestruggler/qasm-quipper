@@ -13,6 +13,7 @@ module ElimCtrls.CmdLn
 
 import LinguaQuantaExe.CmdLnFlags
   ( def
+  , elimGateFlags
   , outFlags
   , srcFlags
   )
@@ -26,16 +27,22 @@ import LinguaQuantaExe.CmdLnParser
 -------------------------------------------------------------------------------
 -- * Argument Data Type.
 
-data ElimCtrlsTool = ElimCtrls { src :: String
-                               , out :: String
+data ElimCtrlsTool = ElimCtrls { src            :: String
+                               , out            :: String
+                               , elim_toffoli   :: Bool
+                               , elim_fredkin   :: Bool
+                               , elim_chadamard :: Bool
                                } deriving (Show, Eq, Data, Typeable)
 
 -------------------------------------------------------------------------------
 -- * Program Modes.
 
 elimCtrlsMode :: ElimCtrlsTool
-elimCtrlsMode = ElimCtrls { src = srcFlags def
-                          , out = outFlags def
+elimCtrlsMode = ElimCtrls { src            = srcFlags def
+                          , out            = outFlags def
+                          , elim_toffoli   = elimGateFlags "Toffoli" def
+                          , elim_fredkin   = elimGateFlags "Fredkin" def
+                          , elim_chadamard = elimGateFlags "C(H)" def
                           }
 
 -------------------------------------------------------------------------------

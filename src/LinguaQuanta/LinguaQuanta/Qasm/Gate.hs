@@ -12,8 +12,10 @@ module LinguaQuanta.Qasm.Gate
   , addNegCtrlsToMod
   , exprToGate
   , getCtrlList
+  , hasControlMod
   , hasInversionMod
   , invert
+  , isControlled
   , isInverted
   , negateMod
   , nullGateMod
@@ -23,6 +25,10 @@ module LinguaQuanta.Qasm.Gate
 -------------------------------------------------------------------------------
 -- * Import Section.
 
+import LinguaQuanta.Either
+  ( expandLeft
+  , leftMap
+  )
 import LinguaQuanta.Qasm.Expression
   ( ExprErr(..)
   , parseGateOperand
@@ -81,6 +87,10 @@ addNegCtrlsToMod = addSignsToMod Neg
 hasInversionMod :: GateMod -> Bool
 hasInversionMod (GateMod inv _) = inv
 
+-- | Returns true if at least one control modifier is active.
+hasControlMod :: GateMod -> Bool
+hasControlMod (GateMod _ ctrls) = not $ null ctrls 
+
 -- | Returns a list of control modifiers.
 getCtrlList :: GateMod -> [Sign]
 getCtrlList (GateMod _ ctrls) = ctrls
@@ -118,6 +128,11 @@ isInverted :: Gate -> Bool
 isInverted (NamedGate _ _ _ mod) = hasInversionMod mod
 isInverted (GPhaseGate _ _ mod)  = hasInversionMod mod
 
+-- | Returns true if the gate is controlled.
+isControlled :: Gate -> Bool
+isControlled (NamedGate _ _ _ mod) = hasControlMod mod
+isControlled (GPhaseGate _ _ mod)  = hasControlMod mod
+
 -------------------------------------------------------------------------------
 -- * Gate Summarization.
 
@@ -134,10 +149,8 @@ type GateEval = Either (Int, Gate) GateSummaryErr
 -- If expr evaluates successfully to (n, gate), then returns (n, f gate).
 -- Otherwise, a gate summarization error is returned to describe the failure.
 tryUpdate :: (Gate -> Gate) -> GateExpr -> GateEval
-tryUpdate f gateExpr =
-    case exprToGate gateExpr of
-        Left (n, gate) -> Left (n, f gate)
-        Right err      -> Right err
+tryUpdate f gateExpr = expandLeft (exprToGate gateExpr) $
+                                  \(n, gate) -> Left (n, f gate)
 
 -- | Takes as input an expression (expr). If expr evaluates to a constant,
 -- positive integer n, then n is returned. Otherwise, a gate summarization
@@ -145,8 +158,8 @@ tryUpdate f gateExpr =
 tryParseParam :: Expr -> Either Int GateSummaryErr
 tryParseParam expr =
     case toConstInt expr of
-        Left n    -> if n > 0 then Left n else Right (NonPosParam n expr)
-        Right err -> Right (NonConstParam err expr)
+        Left n    -> if n > 0 then Left n else Right $ NonPosParam n expr
+        Right err -> Right $ NonConstParam err expr
 
 -- | Wrapper to parseGateOperand.
 tryParseOperand :: GateOperand -> Either Operand GateSummaryErr
@@ -155,27 +168,14 @@ tryParseOperand gop =
         Left op   -> Left op
         Right err -> Right $ BadArrIndex err
 
--- | Applies tryParseOperand to a list of GateOperands. The first error from
--- left-to-right is returned.
-tryParseOperands :: [GateOperand] -> Either [Operand] GateSummaryErr
-tryParseOperands [] = Left []
-tryParseOperands (gop:gops) =
-    case tryParseOperand gop of
-        Right err -> Right err
-        Left op   -> case tryParseOperands gops of
-            Right err -> Right err
-            Left ops  -> Left $ op:ops
-
 -- | Takes as input a gate update function parameterized by an integer (f), 
 -- gate expression (gateExpr), and a parameter expression (paramExpr). If
 -- gateExpr evaluates successfully to (n, gate) and paramExpr evaluates
 -- successfully to m, then (n, f m gate) is returned. Otherwise, a gate
 -- summarization error is returned to descrie the first evaluation failure.
 tryParamUpdate :: (Int -> Gate -> Gate) -> GateExpr -> Expr -> GateEval
-tryParamUpdate f gateExpr paramExpr =
-    case tryParseParam paramExpr of
-        Left n    -> tryUpdate (f n) gateExpr
-        Right err -> Right err
+tryParamUpdate f gateExpr paramExpr = expandLeft (tryParseParam paramExpr) $
+                                                 \n -> tryUpdate (f n) gateExpr
 
 -- | Evaluates a gate expression as a tuple (n, gate) where gate is the
 -- specified gate and n is the number of applications of gate. If summarization
@@ -183,27 +183,23 @@ tryParamUpdate f gateExpr paramExpr =
 -- evaluation failure.
 exprToGate :: GateExpr -> GateEval
 exprToGate (NamedGateOp nameStr params gops) =
-    case tryParseOperands gops of
-        Right err -> Right err
-        Left  ops -> let name = toGateName nameStr
-                         gate = NamedGate name params ops nullGateMod
-                     in Left (0, gate)
+    expandLeft (leftMap tryParseOperand gops) $
+        \ops -> let name = toGateName nameStr
+                    gate = NamedGate name params ops nullGateMod
+                in Left (0, gate)
 exprToGate (GPhaseOp param gops) =
-    case tryParseOperands gops of
-        Right err -> Right err
-        Left  ops -> let gate = GPhaseGate param ops nullGateMod
-                     in Left (0, gate)
+    expandLeft (leftMap tryParseOperand gops) $
+        \ops -> let gate = GPhaseGate param ops nullGateMod
+                in Left (0, gate)
 exprToGate (CtrlMod Nothing gate)        = tryUpdate (addCtrls 1) gate
 exprToGate (CtrlMod (Just expr) gate)    = tryParamUpdate addCtrls gate expr
 exprToGate (NegCtrlMod Nothing gate)     = tryUpdate (addNegCtrls 1) gate
 exprToGate (NegCtrlMod (Just expr) gate) = tryParamUpdate addNegCtrls gate expr
 exprToGate (InvMod gate)                 = tryUpdate invert gate
 exprToGate (PowMod expr gate) =
-    case tryParseParam expr of
-        Left m -> case exprToGate gate of
-            Left (n, gate) -> Left (n + m, gate)
-            Right err      -> Right err
-        Right err -> Right err
+    expandLeft (tryParseParam expr) $
+        \m -> expandLeft (exprToGate gate) $
+            \(n, gate) -> Left (n + m, gate)
 
 -------------------------------------------------------------------------------
 -- * Gate Validation.
@@ -215,7 +211,7 @@ checkParamCt :: Maybe Int -> [Expr] -> Maybe GateSummaryErr
 checkParamCt Nothing  _ = Nothing
 checkParamCt (Just expect) params
     | actual == expect = Nothing
-    | otherwise        = Just (UnexpectedParamCount actual expect)
+    | otherwise        = Just $ UnexpectedParamCount actual expect
     where actual = length params
 
 -- | Takes as input a gate modifier (mod), an operand list (operands), and an
@@ -225,14 +221,14 @@ checkParamCt (Just expect) params
 -- does not equal the number of operands, then an UnexpectedOperandCount
 -- expection is returned. Otherwise, nothing is returned.
 checkOpCt :: Maybe Int -> GateMod -> [Operand] -> Maybe GateSummaryErr
-checkOpCt Nothing  (GateMod _ ctrls) operands
+checkOpCt Nothing (GateMod _ ctrls) operands
     | actual >= expect = Nothing
-    | otherwise        = Just (UnexpectedOperandCount actual expect)
+    | otherwise        = Just $ UnexpectedOperandCount actual expect
     where actual = length operands
           expect = length ctrls + 1
 checkOpCt (Just n) (GateMod _ ctrls) operands
     | actual == expect = Nothing
-    | otherwise        = Just (UnexpectedOperandCount actual expect)
+    | otherwise        = Just $ UnexpectedOperandCount actual expect
     where actual = length operands
           expect = length ctrls + n
 

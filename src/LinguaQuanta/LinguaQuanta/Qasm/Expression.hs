@@ -2,6 +2,8 @@
 
 module LinguaQuanta.Qasm.Expression
   ( ExprErr(..)
+  , applyBinaryOp
+  , applyUnaryOp
   , avgExpr
   , euler
   , negateExpr
@@ -11,6 +13,7 @@ module LinguaQuanta.Qasm.Expression
   , toArrayIndex
   , toConstFloat
   , toConstInt
+  , toQasm3
   , toRValue
   , toVoidCall
   , zero
@@ -19,6 +22,7 @@ module LinguaQuanta.Qasm.Expression
 -------------------------------------------------------------------------------
 -- * Import Section.
 
+import LinguaQuanta.Either (expandLeft)
 import LinguaQuanta.List (splitAtFirst)
 import LinguaQuanta.Qasm.Language
   ( Expr
@@ -50,8 +54,9 @@ data ExprErr = BadType String
              | UnexpectedMeasure
              deriving (Show, Eq)
 
-type ExprEval a = Either a ExprErr
-type ExprEvalFn a = Expr -> ExprEval a
+type ExprEval a   = Either a ExprErr
+type EvalFn a err = Expr -> Either a err
+type ExprEvalFn a = EvalFn a ExprErr
 
 -------------------------------------------------------------------------------
 -- * Useful Expressions.
@@ -97,22 +102,17 @@ readFloat = read . padFloat . (filter (/= '_'))
 -- type (op), and two expressions (lhs and rhs). If (f lhs) evaluates to v1 and
 -- (f rhs) evaluates to v2, then returns (op v1 v2). Otherwise, returns the
 -- first error value produced by f.
-applyBinaryOp :: ExprEvalFn a -> (a -> a -> b) -> Expr -> Expr -> ExprEval b
+applyBinaryOp :: EvalFn a err -> (a -> a -> b) -> Expr -> Expr -> Either b err
 applyBinaryOp f op lhs rhs =
-    case f lhs of
-        Left x -> case f rhs of
-            Left y  -> Left $ op x y
-            Right e -> Right e
-        Right e -> Right e
+    expandLeft (f lhs) $
+        \x -> expandLeft (f rhs) $
+            \y -> Left $ op x y
 
 -- | Consumes an evaluation function (f), a unary operation on the evaluation
 -- type (op), and an expression (expr). If (f expr) evaluates to v, then
 -- returns (op v). Otherwise, returns the first error value produced by f.
-applyUnaryOp :: ExprEvalFn a -> (a -> b) -> Expr -> ExprEval b
-applyUnaryOp f op expr =
-    case f expr of
-        Left x  -> Left $ op x
-        Right e -> Right e
+applyUnaryOp :: EvalFn a err -> (a -> b) -> Expr -> Either b err
+applyUnaryOp f op expr = expandLeft (f expr) $ \x -> Left $ op x
 
 -- | Consumes the name of a function (id), an evaluation function (f), a unary
 -- operation on the evaluation type (op), and a list of arguments (args). If
@@ -140,10 +140,8 @@ applyBinaryFn id _ _    args     = Right $ CallArityMismatch id actual 2
 -- integer). If the evaluation is possible, then the corresponding integer is
 -- returned. Otherwise, returns an error describing the first failure.
 toArrayIndex :: Expr -> ExprEval Int
-toArrayIndex expr =
-    case toConstInt expr of
-        Left n    -> if n >= 0 then Left n else Right $ NegArrIdx n
-        Right err -> Right err
+toArrayIndex expr = expandLeft (toConstInt expr) $
+    \n -> if n >= 0 then Left n else Right $ NegArrIdx n
 
 -- | Evaluates an expression as a quantum gate operand. If the evaluation is
 -- possible, then the corresponding integer is returned. Otherwise, returns an
@@ -151,10 +149,8 @@ toArrayIndex expr =
 toOperand :: Expr -> ExprEval Operand
 toOperand (Brack expr)            = toOperand expr
 toOperand (Qasm.QasmId str)       = Left $ QRef str
-toOperand (Qasm.QasmCell str idx) =
-    case toArrayIndex idx of
-        Left n    -> Left $ Cell str n
-        Right err -> Right err
+toOperand (Qasm.QasmCell str idx) = expandLeft (toArrayIndex idx) $
+                                               \n -> Left $ Cell str n
 toOperand _ = Right NonOperandExpr
 
 -- | Takes as input a gate operand (op). If op is a QVar, then a QRef operand
@@ -163,20 +159,16 @@ toOperand _ = Right NonOperandExpr
 -- array cell index is non-constant.
 parseGateOperand :: GateOperand -> ExprEval Operand
 parseGateOperand (QVar id) = Left $ QRef id
-parseGateOperand (QReg id idx) =
-    case toArrayIndex idx of
-        Left n    -> Left $ Cell id n
-        Right err -> Right err
+parseGateOperand (QReg id idx) = expandLeft (toArrayIndex idx) $
+                                            \n -> Left $ Cell id n
 
 -- | Takes as input a function name, a unary call of input type Operand, and a
 -- list of arguments. If the argument list evaluates to a single operand, then
 -- the unary call is applied to given operand with the bound call returned.
 -- Otherwise, returns an error describing the first failure.
 operandToCall :: String -> (Operand -> a) -> [Expr] -> ExprEval a
-operandToCall name ctor [arg] =
-    case toOperand arg of
-        Left op   -> Left $ ctor op
-        Right err -> Right err
+operandToCall name ctor [arg] = expandLeft (toOperand arg) $
+                                           \op -> Left $ ctor op
 operandToCall name _ args = Right $ CallArityMismatch name actual 1
     where actual = length args
 
@@ -192,10 +184,8 @@ toNullaryCall name _    args = Right $ CallArityMismatch name actual 0
 -- evaluated as an operand, then the corresponding measurement call is
 -- returned. Otherwise, nothing is returned.
 toMeasure :: GateOperand -> ExprEval RValue
-toMeasure expr =
-    case parseGateOperand expr of
-        Left op   -> Left $ Measure op
-        Right err -> Right err
+toMeasure expr = expandLeft (parseGateOperand expr) $
+                            \op -> Left $ Measure op
 
 -- | Evaluates an expression as an r-value (i.e., a valid expression for the
 -- right-hand side of an assignment operation). If the evaluation is possible,
@@ -234,13 +224,11 @@ callToConstInt :: String -> [Expr] -> ExprEval Int
 callToConstInt name args
     | name == "mod" = applyBinaryFn name toConstInt rem args
     | name == "pow" = case args of
-        [arg1, arg2] -> case toConstInt arg1 of
-            Left a -> case toConstInt arg2 of
-                Left b -> if b < 0
-                          then Right $ NegIntExp b
-                          else Left $ a^b
-                Right e -> Right e
-            Right e -> Right e
+        [arg1, arg2] -> expandLeft (toConstInt arg1) $
+            \a -> expandLeft (toConstInt arg2) $
+                \b -> if b < 0
+                      then Right $ NegIntExp b
+                      else Left $ a^b
         _ -> Right $ CallArityMismatch name actual 2
     | otherwise = Right $ UnknownCall name actual
     where actual = length args
@@ -317,15 +305,35 @@ toSymReal (Qasm.DecFloat str)   = Left $ SR.Decimal val str
 -- is possible, then the corresponding double is returned. Otherwise, returns
 -- an error describing the first failure.
 toConstFloat :: Expr -> ExprEval Double
-toConstFloat expr =
-    case toSymReal expr of
-        Left val  -> Left $ to_real val
-        Right err -> Right err
+toConstFloat expr = expandLeft (toSymReal expr) $
+                               \val -> Left $ to_real val
+
+
+-- | Takes as input an OpenQASM 2.0 expression. Returns an equivalent OpenQASM
+-- 3 expression. In particular, every instance of ln is replaced by log.
+toQasm3 :: Expr -> Expr
+toQasm3 (Qasm.Plus lhs rhs)      = Qasm.Plus (toQasm3 lhs) (toQasm3 rhs)
+toQasm3 (Qasm.Minus lhs rhs)     = Qasm.Minus (toQasm3 lhs) (toQasm3 rhs)
+toQasm3 (Qasm.Times lhs rhs)     = Qasm.Times (toQasm3 lhs) (toQasm3 rhs)
+toQasm3 (Qasm.Div lhs rhs)       = Qasm.Div (toQasm3 lhs) (toQasm3 rhs)
+toQasm3 (Qasm.Brack expr)        = Qasm.Brack $ toQasm3 expr
+toQasm3 (Qasm.Negate expr)       = Qasm.Negate $ toQasm3 expr
+toQasm3 Qasm.Euler               = Qasm.Euler
+toQasm3 Qasm.Pi                  = Qasm.Pi
+toQasm3 Qasm.Tau                 = Qasm.Tau
+toQasm3 lit@(Qasm.DecInt _)      = lit
+toQasm3 lit@(Qasm.DecFloat _)    = lit
+toQasm3 id@(Qasm.QasmId _)       = id
+toQasm3 cell@(Qasm.QasmCell _ _) = cell
+toQasm3 expr@(QasmMeasure _)     = expr
+toQasm3 (Qasm.Call name args)    = Qasm.Call name' args'
+    where name' = if name == "ln" then "log" else name
+          args' = map toQasm3 args
 
 -------------------------------------------------------------------------------
 -- * Manipulation Methods.
 
--- Returns the symbolic negation of a numeric expression.
+-- | Returns the symbolic negation of a numeric expression.
 negateExpr :: Expr -> Expr
 negateExpr expr = Qasm.Negate (Qasm.Brack expr)
 

@@ -40,7 +40,7 @@ toFormat EPS       = Quipper.Internal.Printing.EPS
 toFormat GateCount = Quipper.Internal.Printing.GateCount
 
 parseQuip :: DoTaskFn FunctionQuipCirc
-parseQuip _ input = Right $ parse_circuit input
+parseQuip _ input = Left $ parse_circuit input
 
 printQuip :: QuipVizFormat -> DisplayFn FunctionQuipCirc
 printQuip viz hdl (sp, fn) =

@@ -14,6 +14,7 @@ import LinguaQuanta.Qasm.Gate
 import LinguaQuanta.Qasm.GateName
 import LinguaQuanta.Qasm.Header
 import LinguaQuanta.Qasm.Language
+import LinguaQuanta.Qasm.LatticeSurgery
 import LinguaQuanta.Qasm.Operand
 import LinguaQuanta.Qasm.Passes
 
@@ -467,11 +468,11 @@ test86 = allIncludesIn3Test "quip_omega" []
 -- elimFun.
 
 test87 = TestCase (assertEqual "elimFun supports empty files."
-                               (Left [] :: Either [AstStmt] InlineError)
+                               (Left [] :: Either [AstStmt] InlineErr)
                                (elimFun []))
 
 test88 = TestCase (assertEqual "elimFun for void calls."
-                               (Left elims :: Either [AstStmt] InlineError)
+                               (Left elims :: Either [AstStmt] InlineErr)
                                (elimFun input))
     where decl1 = AstQubitDecl Nothing "q1"
           decl2 = AstQubitDecl (Just 5) "q2"
@@ -490,7 +491,7 @@ test88 = TestCase (assertEqual "elimFun for void calls."
           elims = [decl1, decl2, out1a, out2a, out2b, call6, call7, decl3]
 
 test89 = TestCase (assertEqual "elimFun for assignment (no classical initialization)."
-                               (Left elims :: Either [AstStmt] InlineError)
+                               (Left elims :: Either [AstStmt] InlineErr)
                                (elimFun input))
     where decl1 = AstQubitDecl Nothing "q1"
           decl2 = AstQubitDecl (Just 5) "q2"
@@ -518,7 +519,7 @@ eval_as_float :: Expr -> Expr
 eval_as_float = DecFloat . show . fromLeft 0 . toConstFloat
 
 test90 = TestCase (assertEqual "elimFun for gates."
-                               (Left elims :: Either [AstStmt] InlineError)
+                               (Left elims :: Either [AstStmt] InlineErr)
                                (elimFun input))
     where expr1 = Call "arcsin" [DecInt "1"]
           expr2 = Call "arccos" [DecFloat "0.5"]
@@ -535,12 +536,172 @@ test90 = TestCase (assertEqual "elimFun for gates."
           elims = [decls, gate1, out2a, out3a, gate4]
 
 test91 = TestCase (assertEqual "elimFun handles inline failures for gata parameters."
-                               (Right errs :: Either [AstStmt] InlineError)
+                               (Right errs :: Either [AstStmt] InlineErr)
                                (elimFun [decl, gate]))
     where mods = nullGateMod
           decl = AstQubitDecl (Just 5) "q1"
           gate = AstGateStmt 0 $ NamedGate GateP [Call "f" []] [Cell "q1" 1] mods
           errs = FailedToEval 2 "f"
+
+-----------------------------------------------------------------------------------------
+-- toLsc.
+
+test92 = TestCase (assertEqual "toLsc handles valid translations."
+                               (Left louts :: Either [AstStmt] ToLscErr)
+                               (toLsc input))
+    where decl1 = AstQubitDecl Nothing "q1"
+          gate1 = AstGateStmt 0 $ NamedGate GateZ [] [QRef "q1"] nullGateMod
+          gate2 = AstGateStmt 0 $ NamedGate GateID [] [QRef "q1"] nullGateMod
+          gate3 = AstGateStmt 0 $ NamedGate GateQuipIX [] [QRef "q1"] nullGateMod
+          decl2 = AstBitDecl Nothing "c1"
+          asgn1 = AstAssign "c1" Nothing $ QuipMeasure $ QRef "q1"
+          call1 = AstCall $ VoidReset $ QRef "q1"
+          input = [decl1, gate1, gate2, gate3, decl2, asgn1, call1]
+          out3a = AstGateStmt 0 $ NamedGate GateX [] [QRef "q1"] nullGateMod
+          louts = [decl1, gate1, out3a, decl2, asgn1, call1]
+
+test93 = TestCase (assertEqual "toLsc handles rewriteLscGate errors."
+                               (Right errs :: Either [AstStmt] ToLscErr)
+                               (toLsc [decl, gate]))
+    where decl = AstQubitDecl Nothing "q"
+          gate = AstGateStmt 0 $ NamedGate GateU [] [QRef "q"] nullGateMod
+          errs = LscRewriteFailure 2 $ UnsupportedCompilation GateU
+
+test94 = TestCase (assertEqual "toLsc handles power modifier errors."
+                               (Right errs :: Either [AstStmt] ToLscErr)
+                               (toLsc [decl, gate]))
+    where decl = AstQubitDecl Nothing "q"
+          gate = AstGateStmt 5 $ NamedGate GateX [] [QRef "q"] nullGateMod
+          errs = UnexpectedPowerMod 2
+
+-----------------------------------------------------------------------------------------
+-- mergeReg.
+
+test95 = TestCase (assertEqual "mergeReg handles empty files."
+                               (Left [] :: Either [AstStmt] RegMergeErr)
+                               (mergeReg []))
+
+test96 = TestCase (assertEqual "mergeReg handles only classical registers."
+                               (Left merg :: Either [AstStmt] RegMergeErr)
+                               (mergeReg [AstQubitDecl (Just 6) "q1"]))
+    where merg = [AstQubitDecl (Just 6) "q"]
+
+test97 = TestCase (assertEqual "mergeReg handles only quantum registers."
+                               (Left merg :: Either [AstStmt] RegMergeErr)
+                               (mergeReg [AstBitDecl (Just 6) "c1"]))
+    where merg = [AstBitDecl (Just 6) "c"]
+
+test98 = TestCase (assertEqual "mergeReg handles valid translations."
+                               (Left merg :: Either [AstStmt] RegMergeErr)
+                               (mergeReg prog))
+    where int6 = Plus (DecInt "0") $ DecInt "6"
+          mods = nullGateMod
+          ctrl = addCtrlsToMod 1 mods
+          prog = [AstQubitDecl Nothing "q1",
+                  AstQubitDecl Nothing "q2",
+                  AstBitDecl (Just 6) "c1",
+                  AstAssign "c1" (Just 1) QuipCInit0,
+                  AstBitDecl Nothing "c2",
+                  AstQubitDecl (Just 4) "q3",
+                  AstAssign "c2" Nothing $ Measure $ Cell "q3" 2,
+                  AstCall $ QuipQInit1 $ QRef "q1",
+                  AstGateStmt 4 $ NamedGate GateRX [QasmId "c2"] [QRef "q1"] mods,
+                  AstGateStmt 0 $ GPhaseGate (QasmId "c2") [QRef "q2"] ctrl]
+          merg = [AstQubitDecl (Just 6) "q",
+                  AstBitDecl (Just 7) "c",
+                  AstAssign "c" (Just 1) QuipCInit0,
+                  AstAssign "c" (Just 6) $ Measure $ Cell "q" 4,
+                  AstCall $ QuipQInit1 $ Cell "q" 0,
+                  AstGateStmt 4 $ NamedGate GateRX [QasmCell "c" int6] [Cell "q" 0] mods,
+                  AstGateStmt 0 $ GPhaseGate (QasmCell "c" int6) [Cell "q" 1] ctrl]
+
+test99 = TestCase (assertEqual "mergeReg detects undeclared operands in NamedGates."
+                               (Right errs :: Either [AstStmt] RegMergeErr)
+                               (mergeReg prog))
+    where mods = nullGateMod
+          prog = [AstQubitDecl Nothing "q1",
+                  AstGateStmt 4 $ NamedGate GateX [] [QRef "q2"] mods]
+          errs = MissingDecl 2 "q2"
+
+test100 = TestCase (assertEqual "mergeReg detects undeclared operands in GPhaseGates."
+                                (Right errs :: Either [AstStmt] RegMergeErr)
+                                (mergeReg prog))
+    where mods = addCtrlsToMod 1 nullGateMod
+          prog = [AstQubitDecl Nothing "q1",
+                  AstQubitDecl Nothing "q2",
+                  AstGateStmt 0 $ GPhaseGate (Pi) [QRef "q3"] mods]
+          errs = MissingDecl 3 "q3"
+
+test101 = TestCase (assertEqual "mergeReg detects undeclared parameters in NamedGates."
+                                (Right errs :: Either [AstStmt] RegMergeErr)
+                                (mergeReg prog))
+    where mods = nullGateMod
+          prog = [AstQubitDecl Nothing "q1",
+                  AstGateStmt 4 $ NamedGate GateRX [QasmId "c1"] [QRef "q1"] mods]
+          errs = MissingDecl 2 "c1"
+
+test102 = TestCase (assertEqual "mergeReg detects undeclared parameters in GPhaseGates."
+                                (Right errs :: Either [AstStmt] RegMergeErr)
+                                (mergeReg prog))
+    where mods = addCtrlsToMod 1 nullGateMod
+          prog = [AstQubitDecl Nothing "q1",
+                  AstQubitDecl Nothing "q2",
+                  AstGateStmt 0 $ GPhaseGate (QasmId "c2") [QRef "q1"] mods]
+          errs = MissingDecl 3 "c2"
+
+test103 = TestCase (assertEqual "mergeReg detects undeclared declarations in lvalues."
+                                (Right errs :: Either [AstStmt] RegMergeErr)
+                                (mergeReg prog))
+    where prog = [AstQubitDecl Nothing "q1",
+                  AstAssign "ccc" Nothing $ Measure $ QRef "q1"]
+          errs = MissingDecl 2 "ccc"
+
+test104 = TestCase (assertEqual "mergeReg detects undeclared declarations in rvalues."
+                                (Right errs :: Either [AstStmt] RegMergeErr)
+                                (mergeReg prog))
+    where prog = [AstBitDecl Nothing "c1",
+                  AstBitDecl Nothing "c2",
+                  AstAssign "c1" Nothing $ Measure $ QRef "q1"]
+          errs = MissingDecl 3 "q1"
+
+test105 = TestCase (assertEqual "mergeReg detects undeclared declarations in void calls."
+                                (Right errs :: Either [AstStmt] RegMergeErr)
+                                (mergeReg prog))
+    where prog = [AstBitDecl Nothing "c1",
+                  AstBitDecl Nothing "c2",
+                  AstBitDecl Nothing "c3",
+                  AstCall $ QuipQInit1 $ QRef "qqq"]
+          errs = MissingDecl 4 "qqq"
+
+-----------------------------------------------------------------------------------------
+-- Top-level Measure Statements.
+
+test106 = TestCase (assertEqual "toAst detects undeclared declarations in void calls."
+                                (Right errs :: Either [AstStmt] AbstractionErr)
+                                (toAst libhdr prog))
+    where prog = [qdecStmt,
+                  QasmExprStmt $ Brack $ QasmMeasure $ QVar "qvar"]
+          errs = NestedMeasureTerm 2
+
+-----------------------------------------------------------------------------------------
+-- Legacy support for ln.
+
+ln_prog = [QasmLDeclStmt QubitT "v1",
+           QasmGateStmt $ NamedGateOp "rz" [call] [QVar "v1"]]
+    where call = Call "ln" [Euler]
+
+
+ln_ast name = [AstQubitDecl Nothing "v1",
+               AstGateStmt 0 $ NamedGate GateRZ [call] [QRef "v1"] nullGateMod]
+    where call = Call name [Euler]
+
+test107 = TestCase (assertEqual "toAst will replace ln with log for v2.0 input files."
+                                (Left $ ln_ast "log" :: Either [AstStmt] AbstractionErr)
+                                (toAst legacyAll ln_prog))
+
+test108 = TestCase (assertEqual "toAst will not replace ln with log for v3 input files."
+                                (Left $ ln_ast "ln" :: Either [AstStmt] AbstractionErr)
+                                (toAst libhdr ln_prog))
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
@@ -635,6 +796,23 @@ tests = hUnitTestToTests $ TestList [TestLabel "toAst_EmptyFile" test1,
                                      TestLabel "elimFun_VoidCall" test88,
                                      TestLabel "elimFun_Assign" test89,
                                      TestLabel "elimFun_Gate" test90,
-                                     TestLabel "elimFun_GateFail" test91]
+                                     TestLabel "elimFun_GateFail" test91,
+                                     TestLabel "toLsc_ValidInput" test92,
+                                     TestLabel "toLsc_Error_Lsc" test93,
+                                     TestLabel "toLsc_Error_Pow" test94,
+                                     TestLabel "mergeReg_Empty" test95,
+                                     TestLabel "mergeReg_Pure_Quantum" test96,
+                                     TestLabel "mergeReg_Pure_Classic" test97,
+                                     TestLabel "mergeReg_Valid" test98,
+                                     TestLabel "mergeReg_Invalid_1" test99,
+                                     TestLabel "mergeReg_Invalid_2" test100,
+                                     TestLabel "mergeReg_Invalid_3" test101,
+                                     TestLabel "mergeReg_Invalid_4" test102,
+                                     TestLabel "mergeReg_Invalid_5" test103,
+                                     TestLabel "mergeReg_Invalid_6" test104,
+                                     TestLabel "mergeReg_Invalid_6" test105,
+                                     TestLabel "toAst_NestedMeas_Err" test106,
+                                     TestLabel "toAst_ln_Qasm2" test107,
+                                     TestLabel "toAst_ln_Qasm3" test108]
 
 main = defaultMain tests

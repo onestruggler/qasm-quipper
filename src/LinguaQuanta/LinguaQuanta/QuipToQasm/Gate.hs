@@ -160,13 +160,14 @@ translRotExpZ wmap inv texpr ins (c:ctrls) = stmts
 -- the name of a rotation, a duration (t), and the description of a Quipper
 -- gate. Returns an OpenQASM rotation gate equivalent to name(t) with an
 -- equivalent list of controls.
+--
+-- Note: The RotExpZ gate and the RotZ gate differ by a factor of two.
 rotGateTransl :: WireLookup -> Quip.RotName -> Bool -> Double -> GateGenerator
 rotGateTransl wmap Quip.RotExpZ inv t ins ctrls = stmts
     where texpr = DecFloat $ show t
           stmts = translRotExpZ wmap inv texpr ins ctrls
 rotGateTransl wmap Quip.RotZ inv t ins ctrls = stmts
-    where twopi = Times Pi $ DecInt "2"
-          texpr = Div twopi $ DecFloat $ show t
+    where texpr = Div Pi $ DecFloat $ show t
           stmts = translRotExpZ wmap inv texpr ins ctrls
 rotGateTransl _ (Quip.UserDefinedRot _) _ _ _ _ = error msg
     where msg = "User-defined gate translations not implemented."

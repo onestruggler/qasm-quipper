@@ -24,7 +24,7 @@ import QuipToQasm.CmdLn
 -- * Translation Interface.
 
 doTask :: DoTaskFn [AstStmt]
-doTask file text = Right $ translate $ quipToGates $ parseQuip file text 
+doTask file text = Left $ translate $ quipToGates $ parseQuip file text 
 
 -------------------------------------------------------------------------------
 -- * Entry Point.

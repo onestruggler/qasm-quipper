@@ -10,6 +10,7 @@ module LinguaQuanta.Qasm.Lexer
   , alexQasmError
   ) where
 
+import LinguaQuanta.Either
 import Control.Monad (liftM)
 import System.FilePath (FilePath)
 }
@@ -214,6 +215,6 @@ alexQasmMonadScan = do
             action (ignorePendingBytes inp) len
 
 -- A variant of runAlex, keeping track of the path of the file we are lexing.
-runAlexQasm :: Alex a -> FilePath -> String -> Either String a
-runAlexQasm a fp input = runAlex input (setFilePath fp >> a)
+runAlexQasm :: Alex a -> FilePath -> String -> Either a String
+runAlexQasm a fp input = swapEither $ runAlex input (setFilePath fp >> a)
 }

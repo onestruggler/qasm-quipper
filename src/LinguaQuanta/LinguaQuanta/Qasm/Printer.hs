@@ -153,7 +153,8 @@ printExpr True   (DecInt str)      = filter (/= '_') str
 printExpr False  (DecInt str)      = str
 printExpr _      (QasmId id)       = id
 printExpr legacy (QasmCell id idx) = printQasmCell legacy id idx
-printExpr legacy (Call id args)    = printExprCall legacy id args
+printExpr legacy (Call id args)    = printExprCall legacy id'  args
+    where id' = if legacy && id == "log" then "ln" else id
 
 -- | Takes as input a legacy flag, a parameter list, and a base case string.
 -- The parameter list is converted to a list of syntactic expressions,
@@ -232,7 +233,7 @@ printName GateP             = "p"
 printName GateCP            = "cp"
 printName GatePhase         = "phase"
 printName GateCPhase        = "cphase"
-printName GateU             = "u"
+printName GateU             = "U"
 printName GateCU            = "cu"
 printName GateU1            = "u1"
 printName GateU2            = "u2"
@@ -295,7 +296,7 @@ printQRv legacy used name op = (used', call)
 
 -- | Specializes printCHelper to printRValue.
 printCRv :: Bool -> LibUsage -> String -> LineSummary
-printCRv legacy used name = (used', call ++ ";")
+printCRv legacy used name = (used', call)
     where call  = printCHelper legacy name
           used' = useQuipfuncs used
 

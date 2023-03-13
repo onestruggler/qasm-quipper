@@ -85,7 +85,7 @@ toGateName "p"          = GateP
 toGateName "cp"         = GateCP
 toGateName "phase"      = GatePhase
 toGateName "cphase"     = GateCPhase
-toGateName "u"          = GateU
+toGateName "U"          = GateU
 toGateName "cu"         = GateCU
 toGateName "u1"         = GateU1
 toGateName "u2"         = GateU2
@@ -207,3 +207,12 @@ isQuipperGate GateQuipOmega = True
 isQuipperGate GateQuipE     = True
 isQuipperGate GateQuipW     = True
 isQuipperGate _             = False
+
+-- | Returns true if the gate is some variation of the universal U-gate.
+isUGate :: GateName -> Bool
+isUGate GateU  = True
+isUGate GateCU = True
+isUGate GateU1 = True
+isUGate GateU2 = True
+isUGate GateU3 = True
+isUGate _      = False

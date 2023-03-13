@@ -296,6 +296,33 @@ test49 = TestCase (assertEqual "getCtrlList (6/6)."
                                (getCtrlList mod5))
 
 -----------------------------------------------------------------------------------------
+-- hasControlMod
+
+test50 = TestCase (assertBool "getCtrlList (1/6)."
+                              (not $ hasControlMod mod0))
+
+test51 = TestCase (assertBool "getCtrlList (2/6)."
+                              (not $ hasControlMod mod1))
+
+test52 = TestCase (assertBool "getCtrlList (3/6)."
+                              (hasControlMod mod2))
+
+test53 = TestCase (assertBool "getCtrlList (4/6)."
+                              (hasControlMod mod3))
+
+test54 = TestCase (assertBool "getCtrlList (5/6)."
+                              (hasControlMod mod4))
+
+test55 = TestCase (assertBool "getCtrlList (6/6)."
+                              (hasControlMod mod5))
+
+test56 = TestCase (assertBool "Identify a gate without controls."
+                              (not $ isControlled validGate1))
+
+test57 = TestCase (assertBool "Identify a gate with controls."
+                              (isControlled validGate2))
+
+-----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
 tests = hUnitTestToTests $ TestList [TestLabel "GateMod_1" test1,
@@ -346,6 +373,14 @@ tests = hUnitTestToTests $ TestList [TestLabel "GateMod_1" test1,
                                      TestLabel "getCtrlList_3" test46,
                                      TestLabel "getCtrlList_4" test47,
                                      TestLabel "getCtrlList_5" test48,
-                                     TestLabel "getCtrlList_6" test49]
+                                     TestLabel "getCtrlList_6" test49,
+                                     TestLabel "hasControlMod_1" test50,
+                                     TestLabel "hasControlMod_2" test51,
+                                     TestLabel "hasControlMod_3" test52,
+                                     TestLabel "hasControlMod_4" test53,
+                                     TestLabel "hasControlMod_5" test54,
+                                     TestLabel "hasControlMod_6" test55,
+                                     TestLabel "isControlled_1" test56,
+                                     TestLabel "isControlled_2" test57]
 
 main = defaultMain tests

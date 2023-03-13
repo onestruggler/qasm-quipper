@@ -15,8 +15,8 @@ import LinguaQuanta.Qasm.Parser
 runTest :: Bool -> String -> Bool
 runTest isValid input =
     case parseQasm "file" input of
-        Left _  -> not isValid
-        Right _ -> isValid
+        Right _ -> not isValid
+        Left _  -> isValid
 
 test1 = TestCase (assertBool "parseQasm supports valid files."
                              (runTest True input))

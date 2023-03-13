@@ -17,9 +17,10 @@ extra-source-files:  CHANGELOG.md, README.md
 -- Main library.
 
 library
-  exposed-modules:     LinguaQuanta.MaxTracker
-                       LinguaQuanta.Maybe
+  exposed-modules:     LinguaQuanta.Either
                        LinguaQuanta.List
+                       LinguaQuanta.MaxTracker
+                       LinguaQuanta.Maybe
                        LinguaQuanta.Qasm.AST
                        LinguaQuanta.Qasm.Call
                        LinguaQuanta.Qasm.Expression
@@ -28,6 +29,7 @@ library
                        LinguaQuanta.Qasm.Header
                        LinguaQuanta.Qasm.Inversion
                        LinguaQuanta.Qasm.Language
+                       LinguaQuanta.Qasm.LatticeSurgery
                        LinguaQuanta.Qasm.Operand
                        LinguaQuanta.Qasm.Passes
                        LinguaQuanta.Qasm.Parser
@@ -80,50 +82,37 @@ library LinguaQuantaExe
   hs-source-dirs:      src/LinguaQuantaExe
   default-language:    Haskell2010
 
+common basic-exe-props
+  hs-source-dirs:      exe
+  default-language:    Haskell2010
+  build-depends:       base,
+                       LinguaQuanta,
+                       LinguaQuantaExe
+
 executable elim_ctrls
+  import:              basic-exe-props
   main-is:             ElimCtrls/Main.hs
   other-modules:       ElimCtrls.CmdLn
-  build-depends:       base,
-                       LinguaQuanta,
-                       LinguaQuantaExe
-  hs-source-dirs:      exe
-  default-language:    Haskell2010
 
 executable elim_funs
+  import:              basic-exe-props
   main-is:             ElimFuns/Main.hs
   other-modules:       ElimFuns.CmdLn
-  build-depends:       base,
-                       LinguaQuanta,
-                       LinguaQuantaExe
-  hs-source-dirs:      exe
-  default-language:    Haskell2010
 
 executable elim_invs
+  import:              basic-exe-props
   main-is:             ElimInvs/Main.hs
   other-modules:       ElimInvs.CmdLn
-  build-depends:       base,
-                       LinguaQuanta,
-                       LinguaQuantaExe
-  hs-source-dirs:      exe
-  default-language:    Haskell2010
 
 executable elim_pows
+  import:              basic-exe-props
   main-is:             ElimPows/Main.hs
   other-modules:       ElimPows.CmdLn
-  build-depends:       base,
-                       LinguaQuanta,
-                       LinguaQuantaExe
-  hs-source-dirs:      exe
-  default-language:    Haskell2010
 
 executable format_qasm
+  import:              basic-exe-props
   main-is:             FormatQasm/Main.hs
   other-modules:       FormatQasm.CmdLn
-  build-depends:       base,
-                       LinguaQuanta,
-                       LinguaQuantaExe
-  hs-source-dirs:      exe
-  default-language:    Haskell2010
 
 executable format_quip
   main-is:             FormatQuip/Main.hs
@@ -136,42 +125,36 @@ executable format_quip
   default-language:    Haskell2010
 
 executable qasm_to_quip
+  import:              basic-exe-props
   main-is:             QasmToQuip/Main.hs
   other-modules:       QasmToQuip.CmdLn
-  build-depends:       base,
-                       LinguaQuanta,
-                       LinguaQuantaExe
-  hs-source-dirs:      exe
-  default-language:    Haskell2010
 
 executable qasm_tools
+  import:              basic-exe-props
   main-is:             QasmTools/Main.hs
   other-modules:       QasmTools.CmdLn
-  build-depends:       base,
-                       LinguaQuanta,
-                       LinguaQuantaExe,
-                       pretty-simple
-  hs-source-dirs:      exe
-  default-language:    Haskell2010
+  build-depends:       pretty-simple
 
 executable quip_to_qasm
+  import:              basic-exe-props
   main-is:             QuipToQasm/Main.hs
   other-modules:       QuipToQasm.CmdLn
-  build-depends:       base,
-                       LinguaQuanta,
-                       LinguaQuantaExe
-  hs-source-dirs:      exe
-  default-language:    Haskell2010
 
 executable quip_tools
+  import:              basic-exe-props
   main-is:             QuipTools/Main.hs
   other-modules:       QuipTools.CmdLn
-  build-depends:       base,
-                       LinguaQuanta,
-                       LinguaQuantaExe,
-                       pretty-simple
-  hs-source-dirs:      exe
-  default-language:    Haskell2010
+  build-depends:       pretty-simple
+
+executable reg_merge
+  import:              basic-exe-props
+  main-is:             RegMerge/Main.hs
+  other-modules:       RegMerge.CmdLn
+
+executable to_lsc
+  import:              basic-exe-props
+  main-is:             ToLsc/Main.hs
+  other-modules:       ToLsc.CmdLn
 
 -----------------------------------------------------------------------------------------
 -- Unit Testing.
@@ -184,6 +167,15 @@ common basic-unit-test-props
                        test-framework-hunit,
                        HUnit,
                        LinguaQuanta
+
+common container-unit-test-props
+  import:              basic-unit-test-props
+  build-depends:       containers
+
+test-suite either-tests
+  import:              basic-unit-test-props
+  main-is:             Either-Tests.hs
+  type:                exitcode-stdio-1.0
 
 test-suite maxtracker-tests
   import:              basic-unit-test-props
@@ -230,6 +222,11 @@ test-suite qasm-inversion-tests
   main-is:             Qasm-Inversion-Tests.hs
   type:                exitcode-stdio-1.0
 
+test-suite qasm-latticesurgery-tests
+  import:              basic-unit-test-props
+  main-is:             Qasm-LatticeSurgery-Tests.hs
+  type:                exitcode-stdio-1.0
+
 test-suite qasm-parser-tests
   import:              basic-unit-test-props
   main-is:             Qasm-Parser-Tests.hs
@@ -241,51 +238,43 @@ test-suite qasm-passes-tests
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-ancilla-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QasmToQuip-Ancilla-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-assign-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QasmToQuip-Assign-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-call-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QasmToQuip-Call-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-control-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QasmToQuip-Control-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-gate-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QasmToQuip-Gate-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-operand-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QasmToQuip-Operand-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-translator-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QasmToQuip-Translator-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite qasmtoquip-wire-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QasmToQuip-Wire-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite quip-gate-tests
@@ -305,37 +294,31 @@ test-suite quip-transformers-tests
   type:                exitcode-stdio-1.0
 
 test-suite quip-wire-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             Quip-Wire-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite quiptoqasm-ancilla-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QuipToQasm-Ancilla-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite quiptoqasm-gate-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QuipToQasm-Gate-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite quiptoqasm-measurement-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QuipToQasm-Measurement-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite quiptoqasm-translator-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QuipToQasm-Translator-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
 
 test-suite quiptoqasm-wire-tests
-  import:              basic-unit-test-props
+  import:              container-unit-test-props
   main-is:             QuipToQasm-Wire-Tests.hs
-  build-depends:       containers
   type:                exitcode-stdio-1.0
