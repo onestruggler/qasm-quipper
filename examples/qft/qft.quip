@@ -1,0 +1,12 @@
+Inputs: 1:Qbit, 2:Qbit, 3:Qbit, 4:Qbit
+QGate["H"](1)
+QRot["R(2pi/%)",4](1) with controls=[+2]
+QRot["R(2pi/%)",8](1) with controls=[+3]
+QRot["R(2pi/%)",16](1) with controls=[+4]
+QGate["H"](2)
+QRot["R(2pi/%)",4](2) with controls=[+3]
+QRot["R(2pi/%)",8](2) with controls=[+4]
+QGate["H"](3)
+QRot["R(2pi/%)",4](3) with controls=[+4]
+QGate["H"](4)
+Outputs: 1:Qbit, 2:Qbit, 3:Qbit, 4:Qbit

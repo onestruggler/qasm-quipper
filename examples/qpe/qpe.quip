@@ -1,0 +1,27 @@
+Inputs: 0:Qbit
+QInit0(1)
+QInit0(2)
+QInit0(3)
+QGate["H"](1)
+QGate["H"](2)
+QGate["H"](3)
+QGate["T"](0) with controls=[+1]
+QGate["T"](0) with controls=[+1]
+QGate["T"](0) with controls=[+1]
+QGate["T"](0) with controls=[+1]
+QGate["T"](0) with controls=[+2]
+QGate["T"](0) with controls=[+2]
+QGate["T"](0) with controls=[+3]
+QGate["H"](1)
+QRot["R(2pi/%)",4](1) with controls=[+2]
+QRot["R(2pi/%)",8](1) with controls=[+3]
+QGate["H"](2)
+QRot["R(2pi/%)",4](2) with controls=[+3]
+QGate["H"](3)
+QMeas(1)
+QMeas(2)
+QMeas(3)
+CDiscard(1)
+CDiscard(2)
+CDiscard(3)
+Outpus: 0:Qbit
