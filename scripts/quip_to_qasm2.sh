@@ -9,16 +9,16 @@ source $(dirname "$0")/lingua_quanta_utils.sh
 #   -o      the output file (OpenQASM 2.0)                      stored to $dst
 #   -t      a directory to store all intermediate results.      stored to $tmp
 # Reads user arguments.
-while getopts 's:d:t:' OPTION
+while getopts 's:o:t:' OPTION
 do
     case "$OPTION" in
         s) src=${OPTARG};;
-        d) dst=${OPTARG};;
+        o) dst=${OPTARG};;
         t) tmp=${OPTARG};;
     esac
 done
 if [ -z "${src}" ]; then error_exit "Expected source file (-s)!"; fi
-if [ -z "${dst}" ]; then error_exit "Expected output file (-d)!"; fi
+if [ -z "${dst}" ]; then error_exit "Expected output file (-o)!"; fi
 if [ -z "${tmp}" ]; then tmp=$(mktemp -d); fi
 
 # Names intermediate files.
