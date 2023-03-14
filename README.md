@@ -9,7 +9,7 @@ generator. In practice, this means that using the output of one LinguaQuanta
 tool as the input to a second LinguaQuanta tool is equivalent to writing a new
 LinguaQuanta tool which composes the underlying code for the two respective
 tools. In this way LinguaQuanta provides a family of flexible tools, that
-provide reasonable guarentees on their outputs.
+provide reasonable guarantees on their outputs.
 
 # Getting Started
 
@@ -113,7 +113,7 @@ automated by the `scripts/quip_to_qasm2.sh` script.
 To translate the `T` gate quantum phase estimation circuit from Quipper to
 OpenQASM 2.0, simply run the following command.
 ```
-scripts/quip_to_qasm2.sh
+scripts/quip_to_qasm2.sh -s=examples/qpe/qpe.quip -o=qpe.2.qasm
 ```
 In this script, both the `-s` and `-o` arguments are mandatory. An `-t` flag
 is also provided to specify a "temporary directory". If `-t` is set, then the
