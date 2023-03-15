@@ -53,8 +53,8 @@ library
                        LinguaQuanta.QuipToQasm.Translator
                        LinguaQuanta.QuipToQasm.Wire
   other-modules:       LinguaQuanta.Qasm.Lexer
-  build-tools:         happy,
-                       alex
+  build-tool-depends:  happy:happy,
+                       alex:alex
   build-depends:       base,
                        array,
                        cond,
