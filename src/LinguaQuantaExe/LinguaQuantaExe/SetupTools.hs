@@ -11,6 +11,7 @@ module LinguaQuantaExe.SetupTools
 
 import LinguaQuantaExe.IOUtils
   ( readSrc
+  , setLocalToUtf8
   , withOut
   )
 import System.Exit (die)
@@ -49,5 +50,6 @@ runTool doTask display text file outHdl =
 -- display, the contents, and the handle to runTool.
 setupTool :: DoTaskFn a -> DisplayFn a -> String -> String -> IO ()
 setupTool doTask display src out = do
+    setLocalToUtf8
     (text, file) <- readSrc src
     withOut out (runTool doTask display text file)

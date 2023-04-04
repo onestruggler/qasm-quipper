@@ -5,11 +5,17 @@
 module LinguaQuantaExe.IOUtils
   ( readSrc
   , redirectStdout
+  , setLocalToUtf8
   , withOut
   ) where
 
 -------------------------------------------------------------------------------
 -- * Import Section.
+
+import GHC.IO.Encoding
+  ( setLocaleEncoding
+  , utf8
+  )
 
 import GHC.IO.Handle
   ( hClose
@@ -27,6 +33,10 @@ import System.IO
 
 -------------------------------------------------------------------------------
 -- * Basic Input and Output.
+
+-- | Configures IO to use utf8 (this is required for OpenQASM 3 integration).
+setLocalToUtf8 :: IO ()
+setLocalToUtf8 = setLocaleEncoding utf8
 
 -- | Takes as input the input source. If the source is empty, then (text, file)
 -- is returned where text is all contents pending on stdin, and file is set to
