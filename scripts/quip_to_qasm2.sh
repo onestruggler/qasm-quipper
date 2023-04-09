@@ -19,7 +19,7 @@ do
 done
 if [ -z "${src}" ]; then error_exit "Expected source file (-s)!"; fi
 if [ -z "${dst}" ]; then error_exit "Expected output file (-o)!"; fi
-if [ -z "${tmp}" ]; then tmp=$(mktemp -d); fi
+tmp=$(setup_tmpdir "${tmp}")
 
 # Names intermediate files.
 cmd1fn="${tmp}/tmp.elim_ctrls.quip"
