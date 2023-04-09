@@ -265,7 +265,8 @@ printGate legacy used (GPhaseGate param operands mods) = (used, line)
     where mstr = printMods legacy mods
           pstr = printParams legacy "" [param]
           ostr = printOperands operands
-          body = "gphase" ++ pstr ++ " " ++ ostr
+          pref = if null ostr then "" else " " ++ ostr
+          body = "gphase" ++ pstr ++ pref
           line = mstr ++ body
 
 -- | Takes as input a legacy flag, a library usage summary, a string encoding

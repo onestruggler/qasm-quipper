@@ -288,11 +288,12 @@ test55 = TestCase (assertEqual "invertGate applied to U2."
           iparams = [negateExpr halfPi, negateExpr angle2, negateExpr angle1]
 
 test56 = TestCase (assertEqual "invertGate applied to Omega."
-                               (Just [GPhaseGate sevenFourthsPi ops negMod])
+                               (Just [GPhaseGate sevenFourthsPi ctrlops negMod])
                                (invertGate (NamedGate name [] ops mod)))
     where name           = GateQuipOmega
           ctrl           = [Pos, Neg]
-          ops            = set4_mk_operands ctrl name
+          ops            = [QRef "var2", QRef "var1", QRef "var0"]
+          ctrlops        = [QRef "var2", QRef "var1"]
           mod            = GateMod True ctrl
           negMod         = negateMod mod
           sevenFourthsPi = Times (Div (DecInt "7") (DecInt "4")) Pi
@@ -323,11 +324,11 @@ test59 = TestCase (assertEqual "invertGate applied to E."
                                (Just [GPhaseGate Pi ops negMod,
                                       NamedGate GateQuipIX [] ops negMod])
                                (invertGate (NamedGate name [] ops mod)))
-    where name          = GateQuipIX
-          ctrl          = [Pos, Neg]
-          ops           = set4_mk_operands ctrl name
-          mod           = GateMod True ctrl
-          negMod        = negateMod mod
+    where name   = GateQuipIX
+          ctrl   = [Pos, Neg]
+          ops    = set4_mk_operands ctrl name
+          mod    = GateMod True ctrl
+          negMod = negateMod mod
 
 test60 = TestCase (assertEqual "invertGate rejects inverted user-defined gates."
                                Nothing
@@ -352,6 +353,16 @@ test62 = TestCase (assertEqual "invertGate rejects gates without known inverses.
           params = [zero, zero, zero, zero]
           ops    = set4_mk_operands ctrl name
           mod    = GateMod True ctrl
+
+test63 = TestCase (assertEqual "invertGate handles uncontrolled Omega."
+                               (Just [GPhaseGate sevenFourthsPi [] negMod])
+                               (invertGate (NamedGate name [] ops mod)))
+    where name           = GateQuipOmega
+          ctrl           = []
+          ops            = set4_mk_operands ctrl name
+          mod            = GateMod True ctrl
+          negMod         = negateMod mod
+          sevenFourthsPi = Times (Div (DecInt "7") (DecInt "4")) Pi
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
@@ -416,6 +427,7 @@ tests = hUnitTestToTests $ TestList [TestLabel "negateParams_Named_0Param" test1
                                      TestLabel "invertGate_iX" test59,
                                      TestLabel "invertGate_UserDefined_W_Inv" test60,
                                      TestLabel "invertGate_UserDefined_WO_Inv" test61,
-                                     TestLabel "invertGate_Unknown" test62]
+                                     TestLabel "invertGate_Unknown" test62,
+                                     TestLabel "invertGate_Omega_WO_Ctrl" test63]
 
 main = defaultMain tests

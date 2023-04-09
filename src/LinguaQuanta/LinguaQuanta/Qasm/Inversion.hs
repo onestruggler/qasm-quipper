@@ -121,7 +121,8 @@ invertGateImpl (NamedGate name [] operands mod)
                                     NamedGate GateX [] operands mod]
     | name == GateT         = Just [NamedGate GateTdg [] operands mod]
     | name == GateTdg       = Just [NamedGate GateT [] operands mod]
-    | name == GateQuipOmega = Just [GPhaseGate sevenFourthsPi operands mod]
+    | name == GateQuipOmega = let ctrls = init operands
+                              in Just [GPhaseGate sevenFourthsPi ctrls mod]
     | name == GateQuipIX    = Just [GPhaseGate Pi operands mod,
                                     NamedGate GateQuipIX [] operands mod]
     | name == GateQuipE     = Just [GPhaseGate fiveFourthsPi operands mod,
