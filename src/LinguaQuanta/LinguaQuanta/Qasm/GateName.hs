@@ -124,6 +124,7 @@ toOperandCount GateCZ          = Just 2
 toOperandCount GateCH          = Just 2
 toOperandCount GateSwap        = Just 2
 toOperandCount GateCSwap       = Just 3
+toOperandCount GateQuipW       = Just 2
 toOperandCount GateCRX         = Just 2
 toOperandCount GateCRY         = Just 2
 toOperandCount GateCRZ         = Just 2
