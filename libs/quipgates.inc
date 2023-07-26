@@ -1,7 +1,7 @@
 gate quip_ix a {
-    y a;
+    x a;
     s a;
-    y a;
+    x a;
     s a;
     x a;
 }
@@ -29,8 +29,8 @@ gate quip_e a {
 
 gate quip_w a, b {
     cx b, a;
-    cx a, b;
+    x b;
     ch a, b;
-    cx a, b;
+    x b;
     cx b, a;
 }
