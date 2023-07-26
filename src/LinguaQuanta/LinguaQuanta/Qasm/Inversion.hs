@@ -79,16 +79,6 @@ gateIsParamInverse :: Gate -> Bool
 gateIsParamInverse (NamedGate name _ _ _) = isParamInverse name
 gateIsParamInverse (GPhaseGate _ _ _)     = True
 
--- | Takes as input the three parameters of a u3 gate (a, b, c), its operands,
--- and its modifiers (mod). If the u3 gate is valid, then returns the inverse
--- of u3(a, b, c) with the modifiers mod (i.e., a phase gate of angle (b+c)/2,
--- followed by the inverse of U(a,b,c)). Otherwise, nothing is returned.
-invertU3 :: Expr -> Expr -> Expr -> [Operand] -> GateMod -> Maybe [Gate]
-invertU3 a b c operands mod = maybeAppend phase mcirc
-    where phase = GPhaseGate (avgExpr b c) operands mod
-          ucomp = NamedGate GateU [a, b, c] operands mod
-          mcirc = maybeWrap $ threeParamInversion ucomp
-
 -- | Takes as input a gate g. If g is not user-defined, self-inverse, nor
 -- inverted by negating all parameters, and the inverse of g is known a-priori,
 -- then just the inverse of g is returned (with all modifiers unchanged).
@@ -109,13 +99,13 @@ invertGateImpl (NamedGate name [] operands mod)
                                     NamedGate GateS [] operands mod]
     | otherwise             = Nothing
 invertGateImpl (NamedGate name [a, b] operands mod)
-    | name == GateU2 = invertU3 halfPi a b operands mod
+    | name == GateU2 = maybeWrap $ threeParamInversion gate
     | otherwise      = Nothing
-    where comp = NamedGate GateU [halfPi, a, b] operands mod
+    where gate = NamedGate GateU3 [halfPi, a, b] operands mod
 invertGateImpl (NamedGate name [a, b, c] operands mod)
     | name == GateU  = maybeWrap $ threeParamInversion gate
     | name == GateCU = maybeWrap $ threeParamInversion gate
-    | name == GateU3 = invertU3 a b c operands mod
+    | name == GateU3 = maybeWrap $ threeParamInversion gate
     | otherwise      = Nothing
     where gate = NamedGate name [a, b, c] operands mod
 invertGateImpl _ = Nothing

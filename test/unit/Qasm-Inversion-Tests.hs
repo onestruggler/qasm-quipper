@@ -210,8 +210,7 @@ test52 = set4_mktest_ugate GateU
 test53 = set4_mktest_ugate GateCU
 
 test54 = TestCase (assertEqual "invertGate applied to U3."
-                               (Just [GPhaseGate (avgExpr angle2 angle3) ops negMod,
-                                      NamedGate GateU iparams ops negMod])
+                               (Just [NamedGate GateU3 iparams ops negMod])
                                (invertGate (NamedGate GateU3 params ops mod)))
     where ctrl    = [Pos, Neg]
           ops     = set4_mk_operands ctrl GateU3
@@ -221,8 +220,7 @@ test54 = TestCase (assertEqual "invertGate applied to U3."
           iparams = [negateExpr angle1, negateExpr angle3, negateExpr angle2]
 
 test55 = TestCase (assertEqual "invertGate applied to U2."
-                               (Just [GPhaseGate (avgExpr angle1 angle2) ops negMod,
-                                      NamedGate GateU iparams ops negMod])
+                               (Just [NamedGate GateU3 iparams ops negMod])
                                (invertGate (NamedGate name params ops mod)))
     where name    = GateU2
           ctrl    = [Pos, Neg]
