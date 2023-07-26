@@ -3,7 +3,6 @@
 module LinguaQuanta.Qasm.Inversion
   ( invertGate
   , negateParams
-  , oneParamInversion
   , threeParamInversion
   ) where
 
@@ -56,25 +55,6 @@ negateParams (NamedGate name params operands mod)
 negateParams (GPhaseGate param operands mod)
     = GPhaseGate (negateExpr param) operands mod
 
--- | Takes as input a unitary gate g with one parameter (a), and a flag which
--- indicates if the gate is controlled (isControlled). If the isControlled flag
--- is false, then returns the just gate U(0, a, 0) with the same modifiers as
--- g. If the isControlled flag is true, then returns just the  gate CU(0, a, 0)
--- with the same modifiers as g. Otherwise, nothing is returned.
---
--- Note: If isControlled is set, then g must take two operands to match CU.
--- Otherwise, g must take a single operand to match U. If this requirement is
--- violated, then nothing is returned.
-oneParamInversion :: Gate -> Bool -> Maybe Gate
-oneParamInversion (NamedGate name [a] operands mod) isControlled
-    | actOpCt == expOpCt = Just (NamedGate newName params operands mod)
-    | otherwise          = Nothing
-    where actOpCt = toOperandCount name
-          expOpCt = if isControlled then Just 2 else Just 1
-          newName = if isControlled then GateCU else GateU
-          params  = [zero, negateExpr a, zero]
-oneParamInversion _ _ = Nothing
-
 -- | Takes as input a unitary gate g with three parameters, (a, b, c). Returns
 -- a new gate with the same name, operands, and modifiers as g, and the
 -- parameters (-a, -c, -b). For gates such as U and CU, this function computes
@@ -121,20 +101,13 @@ invertGateImpl (NamedGate name [] operands mod)
                                     NamedGate GateX [] operands mod]
     | name == GateT         = Just [NamedGate GateTdg [] operands mod]
     | name == GateTdg       = Just [NamedGate GateT [] operands mod]
-    | name == GateQuipOmega = let ctrls = init operands
-                              in Just [GPhaseGate sevenFourthsPi ctrls mod]
+    | name == GateQuipOmega = Just [GPhaseGate sevenFourthsPi operands mod]
     | name == GateQuipIX    = Just [GPhaseGate Pi operands mod,
                                     NamedGate GateQuipIX [] operands mod]
     | name == GateQuipE     = Just [GPhaseGate fiveFourthsPi operands mod,
                                     NamedGate GateH [] operands mod,
                                     NamedGate GateS [] operands mod]
     | otherwise             = Nothing
-invertGateImpl (NamedGate name [a] operands mod)
-    | name == GateU1     = maybeWrap $ oneParamInversion gate False
-    | name == GatePhase  = maybeWrap $ oneParamInversion gate False
-    | name == GateCPhase = maybeWrap $ oneParamInversion gate True
-    | otherwise          = Nothing
-    where gate = NamedGate name [a] operands mod
 invertGateImpl (NamedGate name [a, b] operands mod)
     | name == GateU2 = invertU3 halfPi a b operands mod
     | otherwise      = Nothing

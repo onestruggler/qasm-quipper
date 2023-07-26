@@ -160,6 +160,9 @@ isParamInverse GateRZ     = True
 isParamInverse GateCRZ    = True
 isParamInverse GateP      = True
 isParamInverse GateCP     = True
+isParamInverse GatePhase  = True
+isParamInverse GateCPhase = True
+isParamInverse GateU1     = True
 isParamInverse _          = False
 
 -- | Returns true if the gate is defined in the qelib1.inc library.
