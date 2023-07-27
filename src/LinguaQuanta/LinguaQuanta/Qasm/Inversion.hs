@@ -66,6 +66,17 @@ threeParamInversion (NamedGate name [a, b, c] operands mod) = Just result
           result = NamedGate name params operands mod
 threeParamInversion _ = Nothing
 
+-- | Takes as input a unitary gate g with four parameters, (a, b, c, d).
+-- Returns a new gate with the same name, operands, and modifiers as g, and the
+-- parameters (-a, -c, -b, -d). For gates such as U and CU, this function
+-- computes the inverse operation to g. If G does not have three parameters,
+-- then nothing is returned.
+fourParamInversion :: Gate -> Maybe Gate
+fourParamInversion (NamedGate name [a, b, c, d] operands mod) = Just result
+    where params = [negateExpr a, negateExpr c, negateExpr b, negateExpr d]
+          result = NamedGate name params operands mod
+fourParamInversion _ = Nothing
+
 -------------------------------------------------------------------------------
 -- * Named Gate Inversion.
 
@@ -104,10 +115,13 @@ invertGateImpl (NamedGate name [a, b] operands mod)
     where gate = NamedGate GateU3 [halfPi, a, b] operands mod
 invertGateImpl (NamedGate name [a, b, c] operands mod)
     | name == GateU  = maybeWrap $ threeParamInversion gate
-    | name == GateCU = maybeWrap $ threeParamInversion gate
     | name == GateU3 = maybeWrap $ threeParamInversion gate
     | otherwise      = Nothing
     where gate = NamedGate name [a, b, c] operands mod
+invertGateImpl (NamedGate name [a, b, c, d] operands mod)
+    | name == GateCU = maybeWrap $ fourParamInversion gate
+    | otherwise      = Nothing
+    where gate = NamedGate name [a, b, c, d] operands mod
 invertGateImpl _ = Nothing
 
 -- | Takes as input a gate g. If g is not modified by the inverse flag, then g

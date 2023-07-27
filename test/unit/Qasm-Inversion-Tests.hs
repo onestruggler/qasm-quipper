@@ -95,9 +95,9 @@ test6 = TestCase (assertEqual "negataParams supports phase gates (2/2)."
 -- threeParamInversion
 
 set2_params1_pre = [angle1, angle2, angle3]
-set2_params1_res = [negateExpr angle1, negateExpr angle3, negateExpr angle2]
+set2_params1_res = [neg_angle1, neg_angle3, neg_angle2]
 set2_params2_pre = [angle4, angle3, angle1]
-set2_params2_res = [negateExpr angle4, negateExpr angle1, negateExpr angle3]
+set2_params2_res = [neg_angle4, neg_angle1, neg_angle3]
 
 test7 = TestCase (assertEqual "threeParamInversion requires 3 parameters (1/5)."
                               Nothing
@@ -196,18 +196,25 @@ test46 = set4_mktest_invpair GateSdg GateS
 test47 = set4_mktest_invpair GateT GateTdg
 test48 = set4_mktest_invpair GateTdg GateT
 
-set4_mktest_ugate :: GateName -> Test.HUnit.Test
-set4_mktest_ugate name = TestCase (assertEqual msg (Just [inv]) res)
-    where msg     = "invertGate applied to " ++ show name ++ "."
-          ctrl    = [Pos, Neg]
-          ops     = set4_mk_operands ctrl name
+test52 = TestCase (assertEqual "invertGate applied to U."
+                               (Just [NamedGate GateU iparams ops negMod])
+                               (invertGate (NamedGate GateU params ops mod)))
+    where ctrl    = [Pos, Neg]
+          ops     = set4_mk_operands ctrl GateU
+          mod     = GateMod True ctrl
+          negMod  = negateMod mod
           params  = [angle1, angle2, angle3]
-          iparams = [negateExpr angle1, negateExpr angle3, negateExpr angle2]
-          inv     = NamedGate name iparams ops (GateMod False ctrl)
-          res     = invertGate (NamedGate name params ops (GateMod True ctrl))
+          iparams = [neg_angle1, neg_angle3, neg_angle2]
 
-test52 = set4_mktest_ugate GateU
-test53 = set4_mktest_ugate GateCU
+test53 = TestCase (assertEqual "invertGate applied to CU."
+                               (Just [NamedGate GateCU iparams ops negMod])
+                               (invertGate (NamedGate GateCU params ops mod)))
+    where ctrl    = [Pos, Neg]
+          ops     = set4_mk_operands ctrl GateCU
+          mod     = GateMod True ctrl
+          negMod  = negateMod mod
+          params  = [angle1, angle2, angle3, angle4]
+          iparams = [neg_angle1, neg_angle3, neg_angle2, neg_angle4]
 
 test54 = TestCase (assertEqual "invertGate applied to U3."
                                (Just [NamedGate GateU3 iparams ops negMod])
@@ -217,7 +224,7 @@ test54 = TestCase (assertEqual "invertGate applied to U3."
           mod     = GateMod True ctrl
           negMod  = negateMod mod
           params  = [angle1, angle2, angle3]
-          iparams = [negateExpr angle1, negateExpr angle3, negateExpr angle2]
+          iparams = [neg_angle1, neg_angle3, neg_angle2]
 
 test55 = TestCase (assertEqual "invertGate applied to U2."
                                (Just [NamedGate GateU3 iparams ops negMod])
@@ -229,7 +236,7 @@ test55 = TestCase (assertEqual "invertGate applied to U2."
           negMod  = negateMod mod
           halfPi  = Div Pi (DecInt "2")
           params  = [angle1, angle2]
-          iparams = [negateExpr halfPi, negateExpr angle2, negateExpr angle1]
+          iparams = [negateExpr halfPi, neg_angle2, neg_angle1]
 
 test56 = TestCase (assertEqual "invertGate applied to Omega."
                                (Just [GPhaseGate sevenFourthsPi ops negMod])
