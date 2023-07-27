@@ -1,5 +1,5 @@
 Read("quantum-gap/src/Base.g");
-Read("quantum-gap/src/Qutrit.g");
+Read("quantum-gap/src/Qudit.g");
 Read("quantum-gap/src/Qubit.g");
 
 # Constants (e.g., roots of unity).
@@ -27,8 +27,9 @@ m_swap := [ [ 1, 0, 0, 0 ],
             [ 0, 0, 0, 1 ] ];
 
 # Derived operators.
-m_cx := AddQubitControl( m_x );
-m_ch := AddQubitControl( m_h );
+m_cx    := AddQubitControl( m_x );
+m_ch    := AddQubitControl( m_h );
+m_cswap := AddQubitControl( m_swap );
 
 # Quipper parameter-free operators.
 m_e   := [ [ -1 + c_i, 1 + c_i ],
