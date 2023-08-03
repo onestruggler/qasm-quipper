@@ -5,9 +5,9 @@ gate swap a, b {
 }
 
 gate cswap c, a, b {
-    ccx c, a, b;
+    cx a, b;
     ccx c, b, a;
-    ccx c, a, b;
+    cx a, b;
 }
 
 gate sx a {
@@ -16,13 +16,12 @@ gate sx a {
     h a;
     sdg a;
     h a;
-    x a;
 }
 
 gate p(theta) a {
     // This gate is off by a global phase of theta / 2. However, controls are
     // not a feature in OpenQASM 2.0, so the global phase is unobservable.
-    rz(theta) a;
+    u1(theta) a;
 }
 
 gate cp(theta) c, t {
@@ -30,20 +29,21 @@ gate cp(theta) c, t {
     cx c, t;
     p(-theta / 2) t;
     cx c, t;
+    p(theta / 2) c;
 }
 
 gate crx(theta) c, t {
     rx(theta / 2) t;
-    cx c, t;
+    cz c, t;
     rx(-theta / 2) t;
-    cx c, t;
+    cz c, t;
 }
 
 gate cry(theta) c, t {
     ry(theta / 2) t;
-    cx c, t;
+    cz c, t;
     ry(-theta / 2) t;
-    cx c, t;
+    cz c, t;
 }
 
 gate cu(theta, phi, lambda, gamma) c, t {

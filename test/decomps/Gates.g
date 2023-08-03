@@ -15,10 +15,16 @@ end;
 # Common parameter-free operators.
 m_x    := [ [ 0, 1 ],
             [ 1, 0 ] ];
+m_y    := [ [ 0, -c_i ],
+            [ c_i, 0 ] ];
+m_z    := [ [ 1, 0 ],
+            [ 0, -1 ] ];
 m_sx   := [ [ 1 - c_i, 1 + c_i ],
             [ 1 + c_i, 1 - c_i ] ] / 2;
 m_s    := [ [ 1, 0 ],
             [ 0, c_i ] ];
+m_sdg  := [ [ 1, 0 ],
+            [ 0, -c_i ] ];
 m_h    := [ [ 1, 1 ],
             [ 1, -1 ] ] / c_sqrt2;
 m_swap := [ [ 1, 0, 0, 0 ],
@@ -28,6 +34,7 @@ m_swap := [ [ 1, 0, 0, 0 ],
 
 # Derived operators.
 m_cx    := AddQubitControl( m_x );
+m_cz    := AddQubitControl( m_z );
 m_ch    := AddQubitControl( m_h );
 m_cswap := AddQubitControl( m_swap );
 
@@ -46,3 +53,34 @@ PGate := function( x )
     return [ [ 1, 0 ], [ 0, x ] ];
 end;
 
+# Produces a list of matrix exponentials for testing gate decomposition tests.
+# For each rotation angle t, the matrices e^(iMt), e^(iMt/2), and e^(-iMt/2)
+# are returned.
+SampleExps := function( M )
+    local tmp1, tmp2, tmp3;
+
+    tmp1 := 1 / Sqrt( 2 );
+    tmp2 := 1 / 2;
+    tmp3 := Sqrt( 3 ) / 2;
+
+    return [ # [ theta = 0 ]
+             [ SelfInvExp( 2, M, 1, 0 ),
+               SelfInvExp( 2, M, 1, 0 ),
+               SelfInvExp( 2, M, 1, 0 ) ],
+             # [ theta = pi / 2 ]
+             [ SelfInvExp( 2, M, 0, 1 ),
+               SelfInvExp( 2, M, tmp1, tmp1 ),
+               SelfInvExp( 2, M, tmp1, -tmp1 ) ],
+             # [ theta = pi ]
+             [ SelfInvExp( 2, M, -1, 0 ),
+               SelfInvExp( 2, M, 0, 1 ),
+               SelfInvExp( 2, M, 0, -1 ) ],
+             # [ theta = 3 pi / 2 ]
+             [ SelfInvExp( 2, M, 0, -1 ),
+               SelfInvExp( 2, M, -tmp1, tmp1 ),
+               SelfInvExp( 2, M, -tmp1, -tmp1 ) ],
+             # [ theta = 2 pi / 3 ]
+             [ SelfInvExp( 2, M, tmp2, tmp3 ),
+               SelfInvExp( 2, M, tmp3, tmp2 ),
+               SelfInvExp( 2, M, tmp3, -tmp2 ) ] ];
+end;
