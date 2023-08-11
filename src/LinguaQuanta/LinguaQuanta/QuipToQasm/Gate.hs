@@ -129,32 +129,36 @@ translGPhase wmap t ctrls = translGPhaseImpl wmap param ctrls
 -- the name of an OpenQASM gate (name) a symbolic duration value (texpr), and
 -- the description of a Quipper gate. Returns an equivalent OpenQASM rotation
 -- with the provided name and angle.
-toRotGate :: WireLookup -> Qasm.GateName -> Bool -> Expr -> GateGenerator
-toRotGate wmap name inv texpr ins ctrls = [AstGateStmt 0 gate]
+toRGate :: WireLookup -> Qasm.GateName -> Bool -> Expr -> GateGenerator
+toRGate wmap name inv texpr ins ctrls = [AstGateStmt 0 gate]
     where ops   = mergeCtrlsAndIns wmap ctrls ins
           mods  = toGateMod inv ctrls
           param = Times texpr $ DecInt "2"
           gate  = NamedGate name [param] ops mods
 
 -- | Takes as input a map from Quipper wires to OpenQASM declarations (wmap),
--- a symbolic duration value (texpr), and the description of a Quipper gate.
--- Returns a cr(texpr) gate with an equivalent list of controls. The first
--- control is promoted to an input wire.
-toCrzGate :: WireLookup -> Bool -> Expr -> Control -> GateGenerator
-toCrzGate wmap inv texpr (Pos w) ins ctrls = stmts
-    where stmts = toRotGate wmap Qasm.GateCRZ inv texpr (w:ins) ctrls
-toCrzGate wmap inv texpr (Neg w) ins ctrls = conjugateByNots wmap w stmts
-    where stmts = toCrzGate wmap inv texpr (Pos w) ins ctrls
+-- the name of the controlled rotation (name), a symbolic duration value
+-- (texpr), and the description of a Quipper gate. Returns a cname(texpr) gate
+-- with an equivalent list of controls. The first control is promoted to an
+-- input wire.
+toCRGate :: WireLookup -> Qasm.GateName -> Bool -> Expr -> Control
+                       -> GateGenerator
+toCRGate wmap name inv texpr (Pos w) ins ctrls = stmts
+    where stmts = toRGate wmap name inv texpr (w:ins) ctrls
+toCRGate wmap name inv texpr (Neg w) ins ctrls = conjugateByNots wmap w stmts
+    where stmts = toCRGate wmap name inv texpr (Pos w) ins ctrls
 
 -- | Takes as input a map from Quipper wires to OpenQASM declarations (wmap),
--- a symbolic duration value (texpr), and the description of a Quipper gate.
--- Returns a OpenQASM Z-rotation parameterized by texpr with an equivalent
--- list of controls.
-translRotExpZ :: WireLookup -> Bool -> Expr -> GateGenerator
-translRotExpZ wmap inv texpr ins [] = stmts
-    where stmts = toRotGate wmap Qasm.GateRZ inv texpr ins []
-translRotExpZ wmap inv texpr ins (c:ctrls) = stmts
-    where stmts = toCrzGate wmap inv texpr c ins ctrls
+-- the name of a rotation (name), the name of a corresponding controlled
+-- rotation (cname), a symbolic duration value (texpr), and the description of
+-- a Quipper gate. Returns the requested OpenQASM rotation parameterized by
+-- texpr with an equivalent list of controls.
+translRotGate :: WireLookup -> Qasm.GateName -> Qasm.GateName -> Bool -> Expr
+                            -> GateGenerator
+translRotGate wmap name _ inv texpr ins [] = stmts
+    where stmts = toRGate wmap name inv texpr ins []
+translRotGate wmap _ cname inv texpr ins (c:ctrls) = stmts
+    where stmts = toCRGate wmap cname inv texpr c ins ctrls
 
 -- | Takes as input a map from Quipper wires to OpenQASM declarations (wmap),
 -- the name of a rotation, a duration (t), and the description of a Quipper
@@ -165,10 +169,10 @@ translRotExpZ wmap inv texpr ins (c:ctrls) = stmts
 rotGateTransl :: WireLookup -> Quip.RotName -> Bool -> Double -> GateGenerator
 rotGateTransl wmap Quip.RotExpZ inv t ins ctrls = stmts
     where texpr = DecFloat $ show t
-          stmts = translRotExpZ wmap inv texpr ins ctrls
+          stmts = translRotGate wmap Qasm.GateRZ Qasm.GateCRZ inv texpr ins ctrls
 rotGateTransl wmap Quip.RotZ inv t ins ctrls = stmts
     where texpr = Div Pi $ DecFloat $ show t
-          stmts = translRotExpZ wmap inv texpr ins ctrls
+          stmts = translRotGate wmap Qasm.GateP Qasm.GateCP inv texpr ins ctrls
 rotGateTransl _ (Quip.UserDefinedRot _) _ _ _ _ = error msg
     where msg = "User-defined gate translations not implemented."
 

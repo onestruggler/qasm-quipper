@@ -555,7 +555,7 @@ test58 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (1/2)."
     where expzt = Div Pi (DecFloat "2.0")
           param = Times expzt (DecInt "2")
           decl1 = Cell "input_qwires" 2
-          gate  = Qasm.NamedGate Qasm.GateRZ [param] [decl1] nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateP [param] [decl1] nullGateMod
 
 test59 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (2/2)."
                                [AstGateStmt 0 gate]
@@ -564,7 +564,7 @@ test59 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (2/2)."
           param = Times expzt (DecInt "2")
           decl1 = Cell "input_qwires" 3
           mod   = negateMod $ nullGateMod
-          gate  = Qasm.NamedGate Qasm.GateRZ [param] [decl1] mod
+          gate  = Qasm.NamedGate Qasm.GateP [param] [decl1] mod
 
 -----------------------------------------------------------------------------------------
 -- Translating rotation gates with a single control (many configurations).
@@ -598,7 +598,7 @@ test62 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (1/2)."
           param = Times expzt (DecInt "2")
           decl1 = Cell "input_qwires" 2
           decl2 = Cell "input_qwires" 0
-          gate  = Qasm.NamedGate Qasm.GateCRZ [param] [decl2, decl1] nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateCP [param] [decl2, decl1] nullGateMod
 
 test63 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (2/2)."
                                [AstGateStmt 0 neg,
@@ -611,7 +611,7 @@ test63 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (2/2)."
           decl1 = Cell "input_qwires" 2
           decl2 = Cell "input_qwires" 0
           neg   = Qasm.NamedGate Qasm.GateX [] [decl2] nullGateMod
-          gate  = Qasm.NamedGate Qasm.GateCRZ [param] [decl2, decl1] nullGateMod
+          gate  = Qasm.NamedGate Qasm.GateCP [param] [decl2, decl1] nullGateMod
 
 -----------------------------------------------------------------------------------------
 -- Translating rotation gates with two controls (many configurations).
@@ -651,7 +651,7 @@ test66 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (1/2)."
           decl2 = Cell "input_qwires" 0
           decl3 = Cell "input_qwires" 2
           mod   = addCtrlsToMod 1 $ nullGateMod
-          gate  = Qasm.NamedGate Qasm.GateCRZ [param] [decl1, decl2, decl3] mod
+          gate  = Qasm.NamedGate Qasm.GateCP [param] [decl1, decl2, decl3] mod
 
 test67 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (2/2)."
                                [AstGateStmt 0 neg,
@@ -666,7 +666,7 @@ test67 = TestCase (assertEqual "rotGateTransl: support for the RotZ gate (2/2)."
           decl3 = Cell "input_qwires" 2
           neg   = Qasm.NamedGate Qasm.GateX [] [decl2] nullGateMod
           mod   = addNegCtrlsToMod 1 $ nullGateMod
-          gate  = Qasm.NamedGate Qasm.GateCRZ [param] [decl1, decl2, decl3] mod
+          gate  = Qasm.NamedGate Qasm.GateCP [param] [decl1, decl2, decl3] mod
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
