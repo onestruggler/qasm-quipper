@@ -18,10 +18,10 @@ pow(pow(2, 1)) @ ctrl @ t x[1], phi;
 pow(pow(2, 0)) @ ctrl @ t x[2], phi;
 
 h x[0];
-crz(pi / 2) x[1], x[0];
-crz(pi / 4) x[2], x[0];
+cp(pi / 2) x[1], x[0];
+cp(pi / 4) x[2], x[0];
 h x[1];
-crz(pi / 2) x[2], x[1];
+cp(pi / 2) x[2], x[1];
 h x[2];
 
 measure x[0];
