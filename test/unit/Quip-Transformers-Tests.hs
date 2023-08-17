@@ -606,18 +606,18 @@ test43 = TestCase (assertEqual "elimCtrlsTransformer on CCC(MyRot)."
                   "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
 
 test44 = TestCase (assertEqual "elimCtrlsTransformer on CCX with Toffoli elim (1/2)."
-                               (toffoliLn * 2 + ancillaCt + 1)
+                               toffoliLn
                                (length $ apply elimWithoutTof input))
     where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
                   ascii_ccx ++ "\n" ++
                   "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
-          toffoliLn = 16
-          ancillaCt = 2
+          toffoliLn = 33
 
 containsCCX :: [Gate] -> Bool
-containsCCX []                                  = False
-containsCCX (NamedGate GateX _ _ [c1, c2]:rest) = True
-containsCCX (_:rest)                            = containsCCX rest
+containsCCX []                             = False
+containsCCX (NamedGate GateX _ _ [_, _]:_)  = True
+containsCCX (NamedGate GateIX _ _ [_, _]:_) = True
+containsCCX (_:rest)                        = containsCCX rest
 
 test45 = TestCase (assertBool "elimCtrlsTransformer on CCX with Toffoli elim (2/2)."
                                (not $ containsCCX $ apply elimWithoutTof input))
@@ -633,9 +633,9 @@ test46 = TestCase (assertEqual "elimCtrlsTransformer on CSwap with Fredkin elim 
                   "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
 
 containsCSwap :: [Gate] -> Bool
-containsCSwap []                                 = False
-containsCSwap (NamedGate GateSwap _ _ [c1]:rest) = True
-containsCSwap (_:rest)                           = containsCCX rest
+containsCSwap []                             = False
+containsCSwap (NamedGate GateSwap _ _ [_]:_) = True
+containsCSwap (_:rest)                       = containsCSwap rest
 
 test47 = TestCase (assertBool "elimCtrlsTransformer on CSwap with Fredkin elim (2/2)."
                                (not $ containsCSwap $ apply elimWithoutFredkin input))
@@ -651,9 +651,9 @@ test48 = TestCase (assertEqual "elimCtrlsTransformer on CH with CH elim (1/2)."
                   "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
 
 containsCH :: [Gate] -> Bool
-containsCH []                              = False
-containsCH (NamedGate GateH _ _ [c1]:rest) = True
-containsCH (_:rest)                        = containsCCX rest
+containsCH []                           = False
+containsCH (NamedGate GateH _ _ [c1]:_) = True
+containsCH (_:rest)                     = containsCH rest
 
 test49 = TestCase (assertBool "elimCtrlsTransformer on CH with CH elim (2/2)."
                                (not $ containsCH $ apply elimWithoutCH input))
@@ -662,17 +662,41 @@ test49 = TestCase (assertBool "elimCtrlsTransformer on CH with CH elim (2/2)."
                   "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
 
 test50 = TestCase (assertEqual "elimCtrlsTransformer with all inlining enabled."
-                               (toffoliLn * 2 + ancillaCt + 1 + fredkinLn + hadamarLn)
+                               (toffoliLn + fredkinLn + hadamarLn)
                                (length $ apply elimMaxInline input))
     where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
                   ascii_ccx ++ "\n" ++
                   ascii_ch ++ "\n" ++
                   ascii_cswp ++ "\n" ++
                   "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
-          toffoliLn = 16
-          ancillaCt = 2
+          toffoliLn = 33
           fredkinLn = 18
           hadamarLn = 7
+
+test51 = TestCase (assertEqual "elimCtrlsTransformer on CCCX with Toffoli elim (1/2)."
+                               (2 * ccixLn + ancillaCt + toffoliLn)
+                               (length $ apply elimWithoutTof input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_cccx ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+          toffoliLn = 33
+          ccixLn    = 16
+          ancillaCt = 2
+
+containsCCCX :: [Gate] -> Bool
+containsCCCX []                                 = False
+containsCCCX (NamedGate GateX _ _ [_, _, _]:_)  = True
+containsCCCX (NamedGate GateIX _ _ [_, _, _]:_) = True
+containsCCCX (_:rest)                           = containsCCX rest
+
+containsCCXOrCCCX :: [Gate] -> Bool
+containsCCXOrCCCX gates = containsCCX gates || containsCCCX gates
+
+test52 = TestCase (assertBool "elimCtrlsTransformer on CCCX with Toffoli elim (2/2)."
+                               (not $ containsCCXOrCCCX $ apply elimWithoutTof input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_cccx ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
@@ -726,6 +750,8 @@ tests = hUnitTestToTests $ TestList [TestLabel "elimCtrlsTransformer_QGate_1" te
                                      TestLabel "elimCtrlsTransformer_elimCSwap_2" test47,
                                      TestLabel "elimCtrlsTransformer_elimCH_1" test48,
                                      TestLabel "elimCtrlsTransformer_elimCH_2" test49,
-                                     TestLabel "elimCtrlsTransformer_Inlining" test50]
+                                     TestLabel "elimCtrlsTransformer_Inlining" test50,
+                                     TestLabel "elimCtrlsTransformer_elimTof_3" test51,
+                                     TestLabel "elimCtrlsTransformer_elimTof_4" test52]
 
 main = defaultMain tests

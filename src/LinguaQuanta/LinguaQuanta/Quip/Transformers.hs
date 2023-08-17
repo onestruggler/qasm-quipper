@@ -60,6 +60,7 @@ import Quipper.Libraries.GateDecompositions
   , controlled_W_at
   , fredkin_at
   , toffoli_plain_at
+  , toffoli_S_at
   , with_combined_controls
   )
 
@@ -130,35 +131,44 @@ elimCtrlsBr elimTof inv ncf q ctrls op cop =
             (reverse_imp_if inv cop) q c
         return ([q], [], ctrls)
 
--- | Implements elimCtrls fo the swap QGate (a special case).
+-- | Implements elimCtrls for the swap QGate (a special case).
 elimCtrlsSwap :: Bool -> Bool -> Bool
                       -> Qubit -> Qubit -> CtrlList
                       -> ElimCtrlsRv
 elimCtrlsSwap elimTof elimCSwap ncf q0 q1 ctrls =
     without_controls_if ncf $ do
-        if null ctrls
-        then swap_at q0 q1
-        else if elimCSwap
-             then with_combined_controls_tof elimTof 1 ctrls $ \[c] -> do
-                fredkin_at q0 q1 c
-             else do
-                elimCtrlsQGate elimTof ncf 1 [q0, q1] ctrls $ swap_at q0 q1
-                return ()
-        return ([q0, q1], [], ctrls)
+        if elimCSwap
+        then with_combined_controls_tof elimTof 1 ctrls $ \ctrls' -> do
+            case ctrls' of
+                []  -> swap_at q0 q1 
+                [c] -> fredkin_at q0 q1 c
+            return ([q0, q1], [], ctrls)
+        else elimCtrlsQGate elimTof ncf 1 [q0, q1] ctrls $ swap_at q0 q1
 
--- | Implements elimCtrls fo the H QGate (a special case).
+-- | Implements elimCtrls for the H QGate (a special case).
 elimCtrlsH :: Bool -> Bool -> Bool -> Qubit -> CtrlList -> ElimCtrlsRv
 elimCtrlsH elimTof elimCH ncf q ctrls =
     without_controls_if ncf $ do
-        if null ctrls
-        then gate_H_at q
-        else if elimCH
-             then with_combined_controls_tof elimTof 1 ctrls $ \[c] -> do
-                cH_AMMR_at q c
-             else do
-                elimCtrlsQGate elimTof ncf 1 [q] ctrls $ gate_H_at q
-                return ()
-        return ([q], [], ctrls)
+        if elimCH
+        then with_combined_controls_tof elimTof 1 ctrls $ \ctrls' -> do
+            case ctrls' of
+                []  -> gate_H_at q
+                [c] -> cH_AMMR_at q c
+            return ([q], [], ctrls)
+        else elimCtrlsQGate elimTof ncf 1 [q] ctrls $ gate_H_at q
+
+-- | Implements elimCtrls for the X QGate (a special case).
+elimCtrlsX :: Bool -> Bool -> Qubit -> CtrlList -> ElimCtrlsRv
+elimCtrlsX elimTof ncf q ctrls =
+    without_controls_if ncf $ do
+        if elimTof
+        then with_combined_controls_tof elimTof 2 ctrls $ \ctrls' -> do
+            case ctrls' of
+                []       -> gate_X_at q
+                [c]      -> gate_X_at q `controlled` c
+                [c1, c2] -> toffoli_S_at q c1 c2
+            return ([q], [], ctrls)
+        else elimCtrlsQGate elimTof ncf 2 [q] ctrls $ gate_X_at q
 
 -- | Implements elimCtrls for the omega QGate (a special case).
 elimCtrlsOmega :: Bool -> Bool -> Bool -> Qubit -> CtrlList -> ElimCtrlsRv
@@ -236,21 +246,17 @@ elimCtrlsTransformer :: Bool -> Bool -> Bool -> Transformer Circ Qubit Bit
 elimCtrlsTransformer elimTof _ _ (T_QGate "multinot" _ 0 _ ncf f) = f $
     \ins [] ctrls -> elimCtrlsQGate elimTof ncf 2 ins ctrls $ qmultinot_at ins
 elimCtrlsTransformer elimTof _ _ (T_QGate "not" 1 0 _ ncf f) = f $
-    \[q] [] ctrls -> let ct = if elimTof then 1 else 2
-                     in elimCtrlsQGate elimTof ncf ct [q] ctrls $ qnot_at q
+    \[q] [] ctrls -> elimCtrlsX elimTof ncf q ctrls
 elimCtrlsTransformer elimTof _ _ (T_QGate "X" 1 0 _ ncf f) = f $
-    \[q] [] ctrls -> let ct = if elimTof then 1 else 2
-                     in elimCtrlsQGate elimTof ncf ct [q] ctrls $ gate_X_at q
+    \[q] [] ctrls -> elimCtrlsX elimTof ncf q ctrls
 elimCtrlsTransformer elimTof _ _ (T_QGate "Y" 1 0 _ ncf f) = f $
     \[q] [] ctrls -> elimCtrlsQGate elimTof ncf 1 [q] ctrls $ gate_Y_at q
 elimCtrlsTransformer elimTof _ _ (T_QGate "Z" 1 0 _ ncf f) = f $
     \[q] [] ctrls -> elimCtrlsQGate elimTof ncf 1 [q] ctrls $ gate_Z_at q
 elimCtrlsTransformer elimTof _ elimCSwap (T_QGate "swap" 2 0 _ ncf f) = f $
-    \ins [] ctrls -> let [q0, q1] = ins
-                     in elimCtrlsSwap elimTof elimCSwap ncf q0 q1 ctrls
+    \[q0, q1] [] ctrls -> elimCtrlsSwap elimTof elimCSwap ncf q0 q1 ctrls
 elimCtrlsTransformer elimTof elimCH _ (T_QGate "H" 1 0 _ ncf f) = f $
     \[q] [] ctrls -> elimCtrlsH elimTof elimCH ncf q ctrls
-
 -- Non-Controllable QGates in OpenQASM 2 (GateDecomposition).
 elimCtrlsTransformer elimTof _ _ (T_QGate "E" 1 0 inv ncf f) = f $
     \[q] [] ctrls -> let op  = gate_E_at
