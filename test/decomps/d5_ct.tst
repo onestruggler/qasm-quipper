@@ -1,7 +1,7 @@
 # Tests the decomposition of C(T).
 gap> Read("Gates.g");;
 
-# Computes permutates of cx.
+# Computes permutations of cx.
 gap> m_xc  := SwapAndApply( 2, 2, 1, 2, m_cx );;
 gap> m_xci := ApplyQuditGateBetween( 2, m_xc, 0, 1 );;
 gap> m_ixc := ApplyQuditGateBetween( 2, m_xc, 1, 0 );;
