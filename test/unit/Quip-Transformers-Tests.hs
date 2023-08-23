@@ -21,11 +21,12 @@ import Quipper
 apply :: Transformer Circ Qubit Bit -> String -> [Gate]
 apply t = gates . quipToGates . applyTransformer t . parseQuip "x"
 
-elimWithTof        = elimCtrlsTransformer False False False
-elimWithoutTof     = elimCtrlsTransformer True False False
-elimWithoutFredkin = elimCtrlsTransformer False False True
-elimWithoutCH      = elimCtrlsTransformer False True False
-elimMaxInline      = elimCtrlsTransformer True True True
+elimWithTof        = elimCtrlsTransformer UseTof False False
+elimWithoutTof     = elimCtrlsTransformer ElimTof False False
+elimWithoutFredkin = elimCtrlsTransformer UseTof False True
+elimWithoutCH      = elimCtrlsTransformer UseTof True False
+elimMaxInline      = elimCtrlsTransformer ElimTof True True
+elimUseCCIX        = elimCtrlsTransformer UseCCIX False False
 
 -----------------------------------------------------------------------------------------
 -- elimCtrlsTransformer
@@ -698,6 +699,18 @@ test52 = TestCase (assertBool "elimCtrlsTransformer on CCCX with Toffoli elim (2
                   ascii_cccx ++ "\n" ++
                   "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
 
+test53 = TestCase (assertEqual "elimCtrlsTransformer using CCIX."
+                               output
+                               (apply elimUseCCIX input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                   ascii_cccx ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+          output = [QInitGate False 4,
+                    NamedGate GateIX False [4] [Pos 1, Pos 2],
+                    NamedGate GateX  False [0] [Pos 3, Pos 4],
+                    NamedGate GateIX True  [4] [Pos 1, Pos 2],
+                    QTermGate False 4]
+
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
@@ -752,6 +765,7 @@ tests = hUnitTestToTests $ TestList [TestLabel "elimCtrlsTransformer_QGate_1" te
                                      TestLabel "elimCtrlsTransformer_elimCH_2" test49,
                                      TestLabel "elimCtrlsTransformer_Inlining" test50,
                                      TestLabel "elimCtrlsTransformer_elimTof_3" test51,
-                                     TestLabel "elimCtrlsTransformer_elimTof_4" test52]
+                                     TestLabel "elimCtrlsTransformer_elimTof_4" test52,
+                                     TestLabel "elimCtrlsTransformer_useCCIX" test53]
 
 main = defaultMain tests

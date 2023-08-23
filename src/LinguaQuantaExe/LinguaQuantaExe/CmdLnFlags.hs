@@ -5,6 +5,7 @@
 module LinguaQuantaExe.CmdLnFlags
   ( QuipVizFormat(..)
   , def
+  , disableCCIXFlags
   , elimGateFlags
   , outFlags
   , quipVizFlags
@@ -46,6 +47,12 @@ outFlags x = x &= help "Output destination (defaults to stdout)."
 
 -------------------------------------------------------------------------------
 -- * Gate Set Flags.
+
+-- | Returns the flags for the --enable_ccix argument. The default value is
+-- taken as an argument, since flags are impure.
+disableCCIXFlags :: Bool -> Bool
+disableCCIXFlags x = x &= help helpMsg
+    where helpMsg = "Forbids the introduction of new CC(iX) gates."
 
 -- | Takes as input the name of a gate. Returns the flags for the --elim_{gate}
 -- argument. The default value is taken as an argument, since flags are impure.

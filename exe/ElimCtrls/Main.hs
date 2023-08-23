@@ -14,7 +14,8 @@ import LinguaQuanta.Quip.Quipper
   , quipToGates
   )
 import LinguaQuanta.Quip.Transformers
-  ( applyTransformer
+  ( TofRule(..)
+  , applyTransformer
   , elimCtrlsTransformer
   )
 import LinguaQuantaExe.SetupTools
@@ -29,12 +30,20 @@ import ElimCtrls.CmdLn
 import System.IO (hPutStrLn)
 
 -------------------------------------------------------------------------------
+-- * Argument Post-Processing.
+
+determineTofRule :: Bool -> Bool -> TofRule
+determineTofRule True  _     = ElimTof
+determineTofRule False True  = UseTof
+determineTofRule False False = UseCCIX
+
+-------------------------------------------------------------------------------
 -- * ElimCtrls Interface.
 
-doTask :: Bool -> Bool -> Bool -> DoTaskFn QuipCirc
-doTask elimTof elimCH elimCSwap file input = Left $ applyTransformer elim
+doTask :: TofRule -> Bool -> Bool -> DoTaskFn QuipCirc
+doTask tofRule elimCH elimCSwap file input = Left $ applyTransformer elim
                                                   $ parseQuip file input
-    where elim = elimCtrlsTransformer elimTof elimCH elimCSwap
+    where elim = elimCtrlsTransformer tofRule elimCH elimCSwap
 
 display :: DisplayFn QuipCirc
 display hdl = hPutStrLn hdl . gatesToAscii . quipToGates
@@ -44,7 +53,8 @@ display hdl = hPutStrLn hdl . gatesToAscii . quipToGates
 
 processArgs :: ElimCtrlsTool -> IO ()
 processArgs mode@ElimCtrls{..} = setupTool taskFn display src out
-    where taskFn = doTask elim_toffoli elim_chadamard elim_fredkin
+    where tofRule = determineTofRule elim_toffoli disable_ccix
+          taskFn  = doTask tofRule elim_chadamard elim_fredkin
 
 main :: IO ()
 main = do
