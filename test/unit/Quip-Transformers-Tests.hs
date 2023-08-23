@@ -21,12 +21,41 @@ import Quipper
 apply :: Transformer Circ Qubit Bit -> String -> [Gate]
 apply t = gates . quipToGates . applyTransformer t . parseQuip "x"
 
-elimWithTof        = elimCtrlsTransformer UseTof False False
-elimWithoutTof     = elimCtrlsTransformer ElimTof False False
-elimWithoutFredkin = elimCtrlsTransformer UseTof False True
-elimWithoutCH      = elimCtrlsTransformer UseTof True False
-elimMaxInline      = elimCtrlsTransformer ElimTof True True
-elimUseCCIX        = elimCtrlsTransformer UseCCIX False False
+elimWithTof = elimCtrlsTransformer $ ElimCtrlsConf { tofRule   = UseTof
+                                                   , elimCH    = False
+                                                   , elimCSwap = False
+                                                   , druleMap  = emptyDruleMap
+                                                   }
+
+elimWithoutTof = elimCtrlsTransformer $ ElimCtrlsConf { tofRule   = ElimTof
+                                                      , elimCH    = False
+                                                      , elimCSwap = False
+                                                      , druleMap  = emptyDruleMap
+                                                      }
+
+elimWithoutFredkin = elimCtrlsTransformer $ ElimCtrlsConf { tofRule   = UseTof
+                                                          , elimCH    = False
+                                                          , elimCSwap = True
+                                                          , druleMap  = emptyDruleMap
+                                                          }
+
+elimWithoutCH = elimCtrlsTransformer $ ElimCtrlsConf { tofRule   = UseTof
+                                                     , elimCH    = True
+                                                     , elimCSwap = False
+                                                     , druleMap  = emptyDruleMap
+                                                     }
+
+elimMaxInline = elimCtrlsTransformer $ ElimCtrlsConf { tofRule   = ElimTof
+                                                     , elimCH    = True
+                                                     , elimCSwap = True
+                                                     , druleMap  = emptyDruleMap
+                                                     }
+
+elimUseCCIX = elimCtrlsTransformer $ ElimCtrlsConf { tofRule   = UseCCIX
+                                                   , elimCH    = False
+                                                   , elimCSwap = False
+                                                   , druleMap  = emptyDruleMap
+                                                   }
 
 -----------------------------------------------------------------------------------------
 -- elimCtrlsTransformer
