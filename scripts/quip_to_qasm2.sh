@@ -8,13 +8,15 @@ source $(dirname "$0")/lingua_quanta_utils.sh
 #   -s      the source file (Quipper)                           stored to $src
 #   -o      the output file (OpenQASM 2.0)                      stored to $dst
 #   -t      a directory to store all intermediate results.      stored to $tmp
+#   -p      an optional path to search for LinguaQuanta tools   stored to $lqp 
 # Reads user arguments.
-while getopts 's:o:t:' OPTION
+while getopts 's:o:t:p:' OPTION
 do
     case "$OPTION" in
         s) src=${OPTARG};;
         o) dst=${OPTARG};;
         t) tmp=${OPTARG};;
+        p) lqp=${OPTARG};;
     esac
 done
 if [ -z "${src}" ]; then error_exit "Expected source file (-s)!"; fi
@@ -33,6 +35,7 @@ cmd6fn="${tmp}/tmp.formate_qasm.qasm"
 #
 # Eliminates controls not found in the OpenQASM 3 standard library.
 
+>&2 echo "(1/6) Inlining all controls." 
 elim_ctrls --src=${src} --out=${cmd1fn}
 if [ $? -ne 0 ]; then error_exit "Failure in elim_ctrls."; fi
 
@@ -41,6 +44,7 @@ if [ $? -ne 0 ]; then error_exit "Failure in elim_ctrls."; fi
 # A direct translation from Quipper without controls to OpenQASM without
 # control modifiers.
 
+>&2 echo "(2/6) Converting Quipper to OpenQASM 3."
 quip_to_qasm --src=${cmd1fn} --out=${cmd2fn}
 if [ $? -ne 0 ]; then error_exit "Failure in quip_to_qasm."; fi
 
@@ -50,12 +54,15 @@ if [ $? -ne 0 ]; then error_exit "Failure in quip_to_qasm."; fi
 # were already eliminated during during Phase 1, and that Phase 2 does not
 # introduce new control modifiers by design.
 
+>&2 echo "(3/6) Inlining all power modifiers."
 elim_pows --src=${cmd2fn} --out=${cmd3fn}
 if [ $? -ne 0 ]; then error_exit "Failure in elim_pows."; fi
 
+>&2 echo "(4/6) Inlining all inverse modifiers."
 elim_invs --src=${cmd3fn} --out=${cmd4fn}
 if [ $? -ne 0 ]; then error_exit "Failure in elim_invs."; fi
 
+>&2 echo "(5/6) Inlining all built-in and LinguaQuanta functions."
 elim_funs --src=${cmd4fn} --out=${cmd5fn}
 if [ $? -ne 0 ]; then error_exit "Failure in elim_funs."; fi
 
@@ -65,5 +72,6 @@ if [ $? -ne 0 ]; then error_exit "Failure in elim_funs."; fi
 # reaches this stage, then the remaining statements belong to the OpenQASM 2.0
 # subset of OpenQASM 3.
 
+>&2 echo "(6/6) Converting to OpenQASM 2.0 syntax."
 format_qasm --legacy --src=${cmd5fn} --out=${dst}
 if [ $? -ne 0 ]; then error_exit "Failure in format_qasm."; fi

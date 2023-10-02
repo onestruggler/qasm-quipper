@@ -8,13 +8,15 @@ source $(dirname "$0")/lingua_quanta_utils.sh
 #   -s      the source file (Quipper)                           stored to $src
 #   -o      the output file (OpenQASM 2.0)                      stored to $dst
 #   -t      a directory to store all intermediate results.      stored to $tmp
+#   -p      an optional path to search for LinguaQuanta tools   stored to $lqp
 # Reads user arguments.
-while getopts 's:o:t:' OPTION
+while getopts 's:o:t:p:' OPTION
 do
     case "$OPTION" in
         s) src=${OPTARG};;
         o) dst=${OPTARG};;
         t) tmp=${OPTARG};;
+	p) lqp=${OPTARG};;
     esac
 done
 if [ -z "${src}" ]; then error_exit "Expected source file (-s)!"; fi
@@ -36,8 +38,9 @@ cmd7fn="${tmp}/tmp.to_lsc.qasm"
 # Toffoli, Fredkin (i.e. CSWAP), and CH gates are also eliminated as they are
 # not supported by the Lattice Surgery Compiler.
 
-elim_ctrls --elim-toffoli --elim-fredkin --elim-chadamard \
-           --src=${src} --out=${cmd1fn}
+>&2 echo "(1/8) Inlining all controls."
+${lqp}/elim_ctrls --elim-toffoli --elim-fredkin --elim-chadamard \
+                  --src=${src} --out=${cmd1fn}
 if [ $? -ne 0 ]; then error_exit "Failure in elim_ctrls."; fi
 
 # Phase 2: Translation
@@ -45,7 +48,8 @@ if [ $? -ne 0 ]; then error_exit "Failure in elim_ctrls."; fi
 # A direct translation from Quipper without controls to OpenQASM without
 # control modifiers.
 
-quip_to_qasm --src=${cmd1fn} --out=${cmd2fn}
+>&2 echo "(2/8) Converting Quipper to OpenQASM 3."
+${lqp}/quip_to_qasm --src=${cmd1fn} --out=${cmd2fn}
 if [ $? -ne 0 ]; then error_exit "Failure in quip_to_qasm."; fi
 
 # Phase 3: Modifier elimination.
@@ -54,13 +58,16 @@ if [ $? -ne 0 ]; then error_exit "Failure in quip_to_qasm."; fi
 # were already eliminated during during Phase 1, and that Phase 2 does not
 # introduce new control modifiers by design.
 
-elim_pows --src=${cmd2fn} --out=${cmd3fn}
+>&2 echo "(3/8) Inlining all power modifiers."
+${lqp}/elim_pows --src=${cmd2fn} --out=${cmd3fn}
 if [ $? -ne 0 ]; then error_exit "Failure in elim_pows."; fi
 
-elim_invs --src=${cmd3fn} --out=${cmd4fn}
+>&2 echo "(4/8) Inlining all inverse modifiers."
+${lqp}/elim_invs --src=${cmd3fn} --out=${cmd4fn}
 if [ $? -ne 0 ]; then error_exit "Failure in $?."; fi
 
-elim_funs --src=${cmd4fn} --out=${cmd5fn}
+>&2 echo "(5/8) Inlining all built-in and LinguaQuanta functions."
+${lqp}/elim_funs --src=${cmd4fn} --out=${cmd5fn}
 if [ $? -ne 0 ]; then error_exit "Failure in elim_funs."; fi
 
 # Phase 4: Register merger.
@@ -70,7 +77,8 @@ if [ $? -ne 0 ]; then error_exit "Failure in elim_funs."; fi
 # quantum bits are merged into a single register, and that all operands are
 # updated according.
 
-reg_merge --src=${cmd5fn} --out=${cmd6fn}
+>&2 echo "(6/8) Merging all registers."
+${lqp}/reg_merge --src=${cmd5fn} --out=${cmd6fn}
 if [ $? -ne 0 ]; then error_exit "Failure in reg_merge."; fi
 
 # Phase 5: Lattice Surgery Preparation.
@@ -81,7 +89,8 @@ if [ $? -ne 0 ]; then error_exit "Failure in reg_merge."; fi
 # eliminated in previous passes (e.g., CSWAP) or are never introduced during
 # a translation from Quipper to OpenQASM 3 (e.g., U(a,b,c))
 
-to_lsc --src=${cmd6fn} --out=${cmd7fn}
+>&2 echo "(7/8) Restricting to LSC instructions."
+${lqp}/to_lsc --src=${cmd6fn} --out=${cmd7fn}
 if [ $? -ne 0 ]; then error_exit "Failure in to_lsc."; fi
 
 # Phase 6: Formatting.
@@ -90,5 +99,6 @@ if [ $? -ne 0 ]; then error_exit "Failure in to_lsc."; fi
 # reaches this stage, then the remaining statements belong to the OpenQASM 2.0
 # subset of OpenQASM 3. 
 
-format_qasm --legacy --src=${cmd7fn} --out=${dst}
+>&2 echo "(8/8) Converting to OpenQASM 2.0 syntax."
+${lqp}/format_qasm --legacy --src=${cmd7fn} --out=${dst}
 if [ $? -ne 0 ]; then error_exit "Failure in format_qasm."; fi
