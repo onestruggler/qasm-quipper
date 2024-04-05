@@ -741,8 +741,7 @@ test72 = case toConstFloat $ Negate $ Div p1 Pi of
 
 test73 = case toConstFloat $ Div param $ Times Pi $ DecInt "2" of
     Right err -> TestCase (assertFailure "Unable to parse p1.")
-    Left pt   -> let circ = [PhaseGate                    pt      [],
-                             NamedGate Quip.GateH   False     [0] [],
+    Left pt   -> let circ = [NamedGate Quip.GateH   False     [0] [],
                              RotGate   Quip.RotExpZ False 0.5 [0] [],
                              NamedGate Quip.GateH   False     [0] []]
                  in TestCase (assertEqual msg circ expt)
@@ -752,8 +751,7 @@ test73 = case toConstFloat $ Div param $ Times Pi $ DecInt "2" of
 
 test74 = case toConstFloat $ Negate $ Div param $ Times Pi $ DecInt "2" of
     Right err -> TestCase (assertFailure "Unable to parse p1.")
-    Left pt   -> let circ = [PhaseGate                    pt      ctrls,
-                             NamedGate Quip.GateH   False     [2] [],
+    Left pt   -> let circ = [NamedGate Quip.GateH   False     [2] [],
                              RotGate   Quip.RotExpZ True  1.0 [2] ctrls,
                              NamedGate Quip.GateH   False     [2] []]
                  in TestCase (assertEqual msg circ expt)
@@ -768,8 +766,7 @@ test74 = case toConstFloat $ Negate $ Div param $ Times Pi $ DecInt "2" of
 
 test75 = case toConstFloat $ Div param $ Times Pi $ DecInt "2" of
     Right err -> TestCase (assertFailure "Unable to parse p1.")
-    Left pt   -> let circ = [PhaseGate                    pt      ctrls,
-                             NamedGate Quip.GateH   False     [0] [],
+    Left pt   -> let circ = [NamedGate Quip.GateH   False     [0] [],
                              RotGate   Quip.RotExpZ False 0.5 [0] ctrls,
                              NamedGate Quip.GateH   False     [0] []]
                  in TestCase (assertEqual msg circ expt)
@@ -781,8 +778,7 @@ test75 = case toConstFloat $ Div param $ Times Pi $ DecInt "2" of
 
 test76 = case toConstFloat $ Negate $ Div param $ Times Pi $ DecInt "2" of
     Right err -> TestCase (assertFailure "Unable to parse p1.")
-    Left pt   -> let circ = [PhaseGate                    pt      ctrls,
-                             NamedGate Quip.GateH   False     [2] [],
+    Left pt   -> let circ = [NamedGate Quip.GateH   False     [2] [],
                              RotGate   Quip.RotExpZ True  1.0 [2] ctrls,
                              NamedGate Quip.GateH   False     [2] []]
                  in TestCase (assertEqual msg circ expt)

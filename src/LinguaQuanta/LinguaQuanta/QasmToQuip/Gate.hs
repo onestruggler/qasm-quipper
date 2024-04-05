@@ -285,9 +285,9 @@ toRXGate param inv ins ctrls = circ
           phase = toGPhase t     inv     ctrls
           zrot  = toRZGate param inv ins ctrls
           -- Unitary Gates
-          hgate   = toNamedGate Qasm.GateH False ins []
+          hgate = toNamedGate Qasm.GateH False ins []
           -- Result
-          circ = [phase] ++ hgate ++ zrot ++ hgate
+          circ = hgate ++ zrot ++ hgate
 
 -- | Translation details for the RY gate.
 toRYGate :: Dim1Rot -> Bool -> QuipCircFn
