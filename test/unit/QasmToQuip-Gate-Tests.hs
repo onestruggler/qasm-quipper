@@ -739,118 +739,92 @@ test72 = case toConstFloat $ Negate $ Div p1 Pi of
 -----------------------------------------------------------------------------------------
 -- Translating RX gates (single controlled, single uncontrolled, as tedious to test).
 
-test73 = case toConstFloat $ Div param $ Times Pi $ DecInt "2" of
-    Right err -> TestCase (assertFailure "Unable to parse p1.")
-    Left pt   -> let circ = [NamedGate Quip.GateH   False     [0] [],
-                             RotGate   Quip.RotExpZ False 0.5 [0] [],
-                             NamedGate Quip.GateH   False     [0] []]
-                 in TestCase (assertEqual msg circ expt)
-    where msg   = "Translation of an RX gate (1/2)."
-          param = DecInt "1"
+test73 = TestCase (assertEqual "Translation of an RX gate (1/2)." circ expt)
+    where param = DecInt "1"
           expt  = d1RotTransl alloc4 Qasm.GateRX param [decl1] mod0
+          circ  = [NamedGate Quip.GateH   False     [0] [],
+                   RotGate   Quip.RotExpZ False 0.5 [0] [],
+                   NamedGate Quip.GateH   False     [0] []]
 
-test74 = case toConstFloat $ Negate $ Div param $ Times Pi $ DecInt "2" of
-    Right err -> TestCase (assertFailure "Unable to parse p1.")
-    Left pt   -> let circ = [NamedGate Quip.GateH   False     [2] [],
-                             RotGate   Quip.RotExpZ True  1.0 [2] ctrls,
-                             NamedGate Quip.GateH   False     [2] []]
-                 in TestCase (assertEqual msg circ expt)
-    where msg   = "Translation of an RX gate (2/2)."
-          param = DecFloat "2.0"
+test74 = TestCase (assertEqual "Translation of an RX gate (2/2)." circ expt)
+    where param = DecFloat "2.0"
           ops   = [decl2at 3, decl2at 2, decl2at 1]
-          ctrls = [Pos 4, Pos 3]
           expt  = d1RotTransl alloc4 Qasm.GateRX param ops mod4
+          circ  = [NamedGate Quip.GateH   False     [2] [],
+                   RotGate   Quip.RotExpZ True  1.0 [2] [Pos 4, Pos 3],
+                   NamedGate Quip.GateH   False     [2] []]
 
 -----------------------------------------------------------------------------------------
 -- Translating CRX gates (single controlled, single uncontrolled, as tedious to test).
 
-test75 = case toConstFloat $ Div param $ Times Pi $ DecInt "2" of
-    Right err -> TestCase (assertFailure "Unable to parse p1.")
-    Left pt   -> let circ = [NamedGate Quip.GateH   False     [0] [],
-                             RotGate   Quip.RotExpZ False 0.5 [0] ctrls,
-                             NamedGate Quip.GateH   False     [0] []]
-                 in TestCase (assertEqual msg circ expt)
-    where msg   = "Translation of an CRX gate (1/2)."
-          param = DecInt "1"
+test75 = TestCase (assertEqual "Translation of an CRX gate (1/2)." circ expt)
+    where param = DecInt "1"
           ops   = [decl2at 0, decl1]
-          ctrls = [Pos 1]
           expt  = d1RotTransl alloc4 Qasm.GateCRX param ops mod0
+          circ  = [NamedGate Quip.GateH   False     [0] [],
+                   RotGate   Quip.RotExpZ False 0.5 [0] [Pos 1],
+                   NamedGate Quip.GateH   False     [0] []]
 
-test76 = case toConstFloat $ Negate $ Div param $ Times Pi $ DecInt "2" of
-    Right err -> TestCase (assertFailure "Unable to parse p1.")
-    Left pt   -> let circ = [NamedGate Quip.GateH   False     [2] [],
-                             RotGate   Quip.RotExpZ True  1.0 [2] ctrls,
-                             NamedGate Quip.GateH   False     [2] []]
-                 in TestCase (assertEqual msg circ expt)
-    where msg   = "Translation of an CRX gate (2/2)."
-          param = DecFloat "2.0"
+test76 = TestCase (assertEqual "Translation of an CRX gate (2/2)." circ expt)
+    where param = DecFloat "2.0"
           ops   = [decl2at 3, decl2at 2, decl2at 0, decl2at 1]
-          ctrls = [Pos 1, Pos 4, Pos 3]
           expt  = d1RotTransl alloc4 Qasm.GateCRX param ops mod4
+          circ  = [NamedGate Quip.GateH   False     [2] [],
+                   RotGate   Quip.RotExpZ True  1.0 [2] [Pos 1, Pos 4, Pos 3],
+                   NamedGate Quip.GateH   False     [2] []]
 
 -----------------------------------------------------------------------------------------
 -- Translating RY gates (single controlled, single uncontrolled, as tedious to test).
 
-test77 = case toConstFloat $ Div param Pi of
-    Right err -> TestCase (assertFailure "Unable to parse p1.")
-    Left pt   -> let circ = [PhaseGate                    pt      [],
-                             NamedGate Quip.GateS   False     [0] [],
-                             NamedGate Quip.GateH   False     [0] [],
-                             RotGate   Quip.RotExpZ False 0.5 [0] [],
-                             NamedGate Quip.GateH   False     [0] [],
-                             NamedGate Quip.GateS   True      [0] []]
-                 in TestCase (assertEqual msg circ expt)
-    where msg   = "Translation of an RY gate (1/2)."
-          param = DecInt "1"
+test77 = TestCase (assertEqual "Translation of an RY gate (1/2)." circ expt)
+    where param = DecInt "1"
           expt  = d1RotTransl alloc4 Qasm.GateRY param [decl1] mod0
+          circ  = [NamedGate Quip.GateX   False     [0] [],
+                   NamedGate Quip.GateS   False     [0] [],
+                   NamedGate Quip.GateH   False     [0] [],
+                   RotGate   Quip.RotExpZ False 0.5 [0] [],
+                   NamedGate Quip.GateH   False     [0] [],
+                   NamedGate Quip.GateS   True      [0] [],
+                   NamedGate Quip.GateX   False     [0] []]
 
-test78 = case toConstFloat $ Negate $ Div param Pi of
-    Right err -> TestCase (assertFailure "Unable to parse p1.")
-    Left pt   -> let circ = [PhaseGate                    pt      ctrls,
-                             NamedGate Quip.GateS   False     [2] [],
-                             NamedGate Quip.GateH   False     [2] [],
-                             RotGate   Quip.RotExpZ True  1.0 [2] ctrls,
-                             NamedGate Quip.GateH   False     [2] [],
-                             NamedGate Quip.GateS   True      [2] []]
-                 in TestCase (assertEqual msg circ expt)
-    where msg   = "Translation of an RY gate (2/2)."
-          param = DecFloat "2.0"
+test78 = TestCase (assertEqual "Translation of an RY gate (2/2)." circ expt)
+    where param = DecFloat "2.0"
           ops   = [decl2at 3, decl2at 2, decl2at 1]
-          ctrls = [Pos 4, Pos 3]
           expt  = d1RotTransl alloc4 Qasm.GateRY param ops mod4
+          circ  = [NamedGate Quip.GateX   False     [2] [],
+                   NamedGate Quip.GateS   False     [2] [],
+                   NamedGate Quip.GateH   False     [2] [],
+                   RotGate   Quip.RotExpZ True  1.0 [2] [Pos 4, Pos 3],
+                   NamedGate Quip.GateH   False     [2] [],
+                   NamedGate Quip.GateS   True      [2] [],
+                   NamedGate Quip.GateX   False     [2] []]
 
 -----------------------------------------------------------------------------------------
 -- Translating CRY gates (single controlled, single uncontrolled, as tedious to test).
 
-test79 = case toConstFloat $ Div param Pi of
-    Right err -> TestCase (assertFailure "Unable to parse p1.")
-    Left pt   -> let circ = [PhaseGate                    pt      ctrls,
-                             NamedGate Quip.GateS   False     [0] [],
-                             NamedGate Quip.GateH   False     [0] [],
-                             RotGate   Quip.RotExpZ False 0.5 [0] ctrls,
-                             NamedGate Quip.GateH   False     [0] [],
-                             NamedGate Quip.GateS   True      [0] []]
-                 in TestCase (assertEqual msg circ expt)
-    where msg   = "Translation of an CRY gate (1/2)."
-          param = DecInt "1"
+test79 = TestCase (assertEqual "Translation of an CRY gate (1/2)." circ expt)
+    where param = DecInt "1"
           ops   = [decl2at 0, decl1]
-          ctrls = [Pos 1]
           expt  = d1RotTransl alloc4 Qasm.GateCRY param ops mod0
+          circ  = [NamedGate Quip.GateX   False     [0] [],
+                   NamedGate Quip.GateS   False     [0] [],
+                   NamedGate Quip.GateH   False     [0] [],
+                   RotGate   Quip.RotExpZ False 0.5 [0] [Pos 1],
+                   NamedGate Quip.GateH   False     [0] [],
+                   NamedGate Quip.GateS   True      [0] [],
+                   NamedGate Quip.GateX   False     [0] []]
 
-test80 = case toConstFloat $ Negate $ Div param Pi of
-    Right err -> TestCase (assertFailure "Unable to parse p1.")
-    Left pt   -> let circ = [PhaseGate                    pt      ctrls,
-                             NamedGate Quip.GateS   False     [2] [],
-                             NamedGate Quip.GateH   False     [2] [],
-                             RotGate   Quip.RotExpZ True  1.0 [2] ctrls,
-                             NamedGate Quip.GateH   False     [2] [],
-                             NamedGate Quip.GateS   True      [2] []]
-                 in TestCase (assertEqual msg circ expt)
-    where msg   = "Translation of an CRY gate (2/2)."
-          param = DecFloat "2.0"
+test80 = TestCase (assertEqual "Translation of an CRY gate (2/2)." circ expt)
+    where param = DecFloat "2.0"
           ops   = [decl2at 3, decl2at 2, decl2at 0, decl2at 1]
-          ctrls = [Pos 1, Pos 4, Pos 3]
           expt  = d1RotTransl alloc4 Qasm.GateCRY param ops mod4
+          circ  = [NamedGate Quip.GateX   False     [2] [],
+                   NamedGate Quip.GateS   False     [2] [],
+                   NamedGate Quip.GateH   False     [2] [],
+                   RotGate   Quip.RotExpZ True  1.0 [2] [Pos 1, Pos 4, Pos 3],
+                   NamedGate Quip.GateH   False     [2] [],
+                   NamedGate Quip.GateS   True      [2] [],
+                   NamedGate Quip.GateX   False     [2] []]
 
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.

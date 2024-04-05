@@ -1,4 +1,4 @@
-# Tests the decomposition of C(Rx).
+# Tests the decomposition of Rx.
 
 gap> Read("Gates.g");;
 gap> x_rots := SampleExps( m_x );;
