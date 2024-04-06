@@ -507,40 +507,38 @@ test64 = TestCase (assertEqual "Translation of CP gates with controls."
 -----------------------------------------------------------------------------------------
 -- Translating U2 gates (single controlled, single uncontrolled, as tedious to test).
 
-test65 = case toConstFloat $ Div a1 $ DecInt "2" of
+test65 = case toConstFloat $ Div p1 $ DecInt "2" of
     Right err  -> TestCase (assertFailure "Unable to parse p1.")
-    Left t1    -> case toConstFloat $ Div a2 $ DecInt "2" of
+    Left t1    -> case toConstFloat $ Div p2 $ DecInt "2" of
         Right err  -> TestCase (assertFailure "Unable to parse p1.")
-        Left t2    -> let circ = [NamedGate Quip.GateOmega False    [0] [],
-                                  RotGate   Quip.RotExpZ   False t1 [0] [],
+        Left t2    -> let circ = [RotGate   Quip.RotExpZ   False t1 [0] [],
+                                  NamedGate Quip.GateS     False    [0] [],
                                   NamedGate Quip.GateH     False    [0] [],
                                   NamedGate Quip.GateS     False    [0] [],
                                   NamedGate Quip.GateH     False    [0] [],
+                                  NamedGate Quip.GateS     True     [0] [],
                                   RotGate   Quip.RotExpZ   False t2 [0] []]
                       in TestCase (assertEqual msg circ expt)
     where msg  = "Translation of U2 gates without controls."
           p1   = Times Pi $ DecFloat "0.25"
           p2   = Times Pi $ DecFloat "0.33"
-          a1   = Plus p1 $ Div Pi $ DecInt "2"
-          a2   = Minus p2 $ Div Pi $ DecInt "2"
           expt = d2RotTransl alloc4 Qasm.GateU2 (p1, p2) [decl1] mod0
 
-test66 = case toConstFloat $ Div a1 $ DecInt "2" of
+test66 = case toConstFloat $ Div p1 $ DecInt "2" of
     Right err  -> TestCase (assertFailure "Unable to parse p1.")
-    Left t1    -> case toConstFloat $ Div a2 $ DecInt "2" of
+    Left t1    -> case toConstFloat $ Div p2 $ DecInt "2" of
         Right err  -> TestCase (assertFailure "Unable to parse p1.")
-        Left t2    -> let circ = [NamedGate Quip.GateOmega True     [2] ctrls,
-                                  RotGate   Quip.RotExpZ   False t1 [2] ctrls,
-                                  NamedGate Quip.GateH     False    [2] [],
-                                  NamedGate Quip.GateS     True     [2] ctrls,
-                                  NamedGate Quip.GateH     False    [2] [],
-                                  RotGate   Quip.RotExpZ   False t2 [2] ctrls]
+        Left t2    -> let circ = [RotGate   Quip.RotExpZ   False (-t2) [2] ctrls,
+                                  NamedGate Quip.GateS     True        [2] [],
+                                  NamedGate Quip.GateH     False       [2] [],
+                                  NamedGate Quip.GateS     True        [2] ctrls,
+                                  NamedGate Quip.GateH     False       [2] [],
+                                  NamedGate Quip.GateS     False       [2] [],
+                                  RotGate   Quip.RotExpZ   False (-t1) [2] ctrls]
                       in TestCase (assertEqual msg circ expt)
     where msg   = "Translation of U2 gates with controls."
           p1    = Times Pi $ DecFloat "0.27"
           p2    = Times Pi $ DecFloat "0.36"
-          a1    = Plus  (Negate p2) $ Div Pi $ DecInt "2"
-          a2    = Minus (Negate p1) $ Div Pi $ DecInt "2"
           ops   = [decl2at 3, decl2at 2, decl2at 1]
           ctrls = [Pos 4, Pos 3]
           expt  = d2RotTransl alloc4 Qasm.GateU2 (p1, p2) ops mod4
@@ -550,52 +548,48 @@ test66 = case toConstFloat $ Div a1 $ DecInt "2" of
 
 test67 = case toConstFloat $ Div p1 Pi of
     Right err -> TestCase (assertFailure "Unable to parse p1.")
-    Left ph   -> case toConstFloat $ Div p1 $ DecInt "2" of
+    Left ph   -> case toConstFloat $ Div p2 $ DecInt "2" of
         Right err -> TestCase (assertFailure "Unable to parse p2.")
-        Left t1   -> case toConstFloat $ Div a1 $ DecInt "2" of
+        Left t1   -> case toConstFloat $ Div p1 $ DecInt "2" of
             Right err -> TestCase (assertFailure "Unable to parse p1.")
-            Left t2   -> case toConstFloat $ Div a2 $ DecInt "2" of
+            Left t2   -> case toConstFloat $ Div p3 $ DecInt "2" of
                 Right err -> TestCase (assertFailure "Unable to parse p3.")
-                Left t3   -> let circ = [NamedGate Quip.GateOmega False    [0] [],
-                                         NamedGate Quip.GateOmega False    [0] [],
-                                         PhaseGate                      ph     [],
-                                         RotGate   Quip.RotExpZ   False t1 [0] [],
-                                         NamedGate Quip.GateH     False    [0] [],
-                                         RotGate   Quip.RotExpZ   False t2 [0] [],
-                                         NamedGate Quip.GateH     False    [0] [],
-                                         RotGate   Quip.RotExpZ   False t3 [0] []]
+                Left t3   -> let circ = [PhaseGate                    ph     [],
+                                         RotGate   Quip.RotExpZ False t1 [0] [],
+                                         NamedGate Quip.GateS   False    [0] [],
+                                         NamedGate Quip.GateH   False    [0] [],
+                                         RotGate   Quip.RotExpZ False t2 [0] [],
+                                         NamedGate Quip.GateH   False    [0] [],
+                                         NamedGate Quip.GateS   True     [0] [],
+                                         RotGate   Quip.RotExpZ False t3 [0] []]
                              in TestCase (assertEqual msg circ expt)
     where msg  = "Translation of U3 gates without controls."
           p1   = Times Pi $ DecFloat "0.25"
           p2   = Times Pi $ DecFloat "0.33"
           p3   = Times Pi $ DecFloat "0.5"
-          a1   = Plus p2 $ Div Pi $ DecInt "2"
-          a2   = Minus p3 $ Div Pi $ DecInt "2"
           expt = d3RotTransl alloc4 Qasm.GateU3 (p1, p2, p3) [decl1] mod0
 
-test68 = case toConstFloat $ Negate $ Div p1 Pi of
+test68 = case toConstFloat $ Div p1 Pi of
     Right err -> TestCase (assertFailure "Unable to parse p1.")
-    Left ph   -> case toConstFloat $ Negate $ Div p1 $ DecInt "2" of
+    Left ph   -> case toConstFloat $ Div p2 $ DecInt "2" of
         Right err -> TestCase (assertFailure "Unable to parse p2.")
-        Left t1   -> case toConstFloat $ Div (Negate a2) $ DecInt "2" of
+        Left t1   -> case toConstFloat $ Div p1 $ DecInt "2" of
             Right err -> TestCase (assertFailure "Unable to parse p1.")
-            Left t2   -> case toConstFloat $ Div (Negate a1) $ DecInt "2" of
+            Left t2   -> case toConstFloat $ Div p3 $ DecInt "2" of
                 Right err -> TestCase (assertFailure "Unable to parse p3.")
-                Left t3   -> let circ = [NamedGate Quip.GateOmega True     [2] ctrls,
-                                         NamedGate Quip.GateOmega True     [2] ctrls,
-                                         PhaseGate                      ph     ctrls,
-                                         RotGate   Quip.RotExpZ   False t1 [2] ctrls,
-                                         NamedGate Quip.GateH     False    [2] [],
-                                         RotGate   Quip.RotExpZ   False t2 [2] ctrls,
-                                         NamedGate Quip.GateH     False    [2] [],
-                                         RotGate   Quip.RotExpZ   False t3 [2] ctrls]
+                Left t3   -> let circ = [PhaseGate                    (-ph)     ctrls,
+                                         RotGate   Quip.RotExpZ False (-t3) [2] ctrls,
+                                         NamedGate Quip.GateS   True        [2] [],
+                                         NamedGate Quip.GateH   False       [2] [],
+                                         RotGate   Quip.RotExpZ False (-t2) [2] ctrls,
+                                         NamedGate Quip.GateH   False       [2] [],
+                                         NamedGate Quip.GateS   False       [2] [],
+                                         RotGate   Quip.RotExpZ False (-t1) [2] ctrls]
                              in TestCase (assertEqual msg circ expt)
     where msg   = "Translation of U3 gates with controls."
           p1    = Times Pi $ DecFloat "0.27"
           p2    = Times Pi $ DecFloat "0.36"
           p3    = Times Pi $ DecFloat "0.54"
-          a1    = Plus p2 $ Div Pi $ DecInt "2"
-          a2    = Minus p3 $ Div Pi $ DecInt "2"
           ops   = [decl2at 3, decl2at 2, decl2at 1]
           ctrls = [Pos 4, Pos 3]
           expt  = d3RotTransl alloc4 Qasm.GateU3 (p1, p2, p3) ops mod4
@@ -605,60 +599,56 @@ test68 = case toConstFloat $ Negate $ Div p1 Pi of
 
 test69 = case toConstFloat $ Div p1 Pi of
     Right err -> TestCase (assertFailure "Unable to parse p1.")
-    Left ph   -> case toConstFloat $ Div p1 $ DecInt "2" of
+    Left ph   -> case toConstFloat $ Div p2 $ DecInt "2" of
         Right err -> TestCase (assertFailure "Unable to parse p2.")
-        Left t1   -> case toConstFloat $ Div a1 $ DecInt "2" of
+        Left t1   -> case toConstFloat $ Div p1 $ DecInt "2" of
             Right err -> TestCase (assertFailure "Unable to parse p1.")
-            Left t2   -> case toConstFloat $ Div a2 $ DecInt "2" of
+            Left t2   -> case toConstFloat $ Div p3 $ DecInt "2" of
                 Right err -> TestCase (assertFailure "Unable to parse p3.")
                 Left t3   -> case toConstFloat $ Div (Plus p2 p3) pi2 of
                     Right err -> TestCase (assertFailure "Unable to parse p2+p3/2.")
-                    Left  ut  -> let circ = [PhaseGate                      ut     [],
-                                             NamedGate Quip.GateOmega False    [0] [],
-                                             NamedGate Quip.GateOmega False    [0] [],
-                                             PhaseGate                      ph     [],
-                                             RotGate   Quip.RotExpZ   False t1 [0] [],
-                                             NamedGate Quip.GateH     False    [0] [],
-                                             RotGate   Quip.RotExpZ   False t2 [0] [],
-                                             NamedGate Quip.GateH     False    [0] [],
-                                             RotGate   Quip.RotExpZ   False t3 [0] []]
+                    Left  ut  -> let circ = [PhaseGate                    ut     [],
+                                             PhaseGate                    ph     [],
+                                             RotGate   Quip.RotExpZ False t1 [0] [],
+                                             NamedGate Quip.GateS   False    [0] [],
+                                             NamedGate Quip.GateH   False    [0] [],
+                                             RotGate   Quip.RotExpZ False t2 [0] [],
+                                             NamedGate Quip.GateH   False    [0] [],
+                                             NamedGate Quip.GateS   True     [0] [],
+                                             RotGate   Quip.RotExpZ False t3 [0] []]
                                  in TestCase (assertEqual msg circ expt)
     where msg  = "Translation of U gates without controls."
           pi2  = Times Pi $ DecInt "2"
           p1   = Times Pi $ DecFloat "0.25"
           p2   = Times Pi $ DecFloat "0.33"
           p3   = Times Pi $ DecFloat "0.5"
-          a1   = Plus p2 $ Div Pi $ DecInt "2"
-          a2   = Minus p3 $ Div Pi $ DecInt "2"
           expt = d3RotTransl alloc4 Qasm.GateU (p1, p2, p3) [decl1] mod0
 
-test70 = case toConstFloat $ Negate $ Div p1 Pi of
+test70 = case toConstFloat $ Div p1 Pi of
     Right err -> TestCase (assertFailure "Unable to parse p1.")
-    Left ph   -> case toConstFloat $ Negate $ Div p1 $ DecInt "2" of
+    Left ph   -> case toConstFloat $ Div p2 $ DecInt "2" of
         Right err -> TestCase (assertFailure "Unable to parse p2.")
-        Left t1   -> case toConstFloat $ Div (Negate a2) $ DecInt "2" of
+        Left t1   -> case toConstFloat $ Div p1 $ DecInt "2" of
             Right err -> TestCase (assertFailure "Unable to parse p1.")
-            Left t2   -> case toConstFloat $ Div (Negate a1) $ DecInt "2" of
+            Left t2   -> case toConstFloat $ Div p3 $ DecInt "2" of
                 Right err -> TestCase (assertFailure "Unable to parse p3.")    
-                Left t3   -> case toConstFloat $ Div (Negate $ Plus p2 p3) pi2 of
+                Left t3   -> case toConstFloat $ Div (Plus p2 p3) pi2 of
                     Right err -> TestCase (assertFailure "Unable to parse p2+p3/2.")
-                    Left ut   -> let circ = [PhaseGate                      ut     ctrls,
-                                             NamedGate Quip.GateOmega True     [2] ctrls,
-                                             NamedGate Quip.GateOmega True     [2] ctrls,
-                                             PhaseGate                      ph     ctrls,
-                                             RotGate   Quip.RotExpZ   False t1 [2] ctrls,
-                                             NamedGate Quip.GateH     False    [2] [],
-                                             RotGate   Quip.RotExpZ   False t2 [2] ctrls,
-                                             NamedGate Quip.GateH     False    [2] [],
-                                             RotGate   Quip.RotExpZ   False t3 [2] ctrls]
+                    Left ut   -> let circ = [PhaseGate                    (-ut)     ctrls,
+                                             PhaseGate                    (-ph)     ctrls,
+                                             RotGate   Quip.RotExpZ False (-t3) [2] ctrls,
+                                             NamedGate Quip.GateS   True        [2] [],
+                                             NamedGate Quip.GateH   False       [2] [],
+                                             RotGate   Quip.RotExpZ False (-t2) [2] ctrls,
+                                             NamedGate Quip.GateH   False       [2] [],
+                                             NamedGate Quip.GateS   False       [2] [],
+                                             RotGate   Quip.RotExpZ False (-t1) [2] ctrls]
                                  in TestCase (assertEqual msg circ expt)
     where msg   = "Translation of U gates with controls."
           pi2   = Times Pi $ DecInt "2"
           p1    = Times Pi $ DecFloat "0.27"
           p2    = Times Pi $ DecFloat "0.36"
           p3    = Times Pi $ DecFloat "0.54"
-          a1    = Plus p2 $ Div Pi $ DecInt "2"
-          a2    = Minus p3 $ Div Pi $ DecInt "2"
           ops   = [decl2at 3, decl2at 2, decl2at 1]
           ctrls = [Pos 4, Pos 3]
           expt  = d3RotTransl alloc4 Qasm.GateU (p1, p2, p3) ops mod4
@@ -668,26 +658,26 @@ test70 = case toConstFloat $ Negate $ Div p1 Pi of
 
 test71 = case toConstFloat $ Div p1 Pi of
     Right err -> TestCase (assertFailure "Unable to parse p1.")
-    Left ph   -> case toConstFloat $ Div p1 $ DecInt "2" of
+    Left ph   -> case toConstFloat $ Div p2 $ DecInt "2" of
         Right err -> TestCase (assertFailure "Unable to parse p2.")
-        Left t1   -> case toConstFloat $ Div a1 $ DecInt "2" of
+        Left t1   -> case toConstFloat $ Div p1 $ DecInt "2" of
             Right err -> TestCase (assertFailure "Unable to parse p1.")
-            Left t2   -> case toConstFloat $ Div a2 $ DecInt "2" of
+            Left t2   -> case toConstFloat $ Div p3 $ DecInt "2" of
                 Right err -> TestCase (assertFailure "Unable to parse p3.")
                 Left t3   -> case toConstFloat $ Div (Plus p2 p3) pi2 of
                     Right err -> TestCase (assertFailure "Unable to parse p2+p3/2.")
                     Left  ut  -> case toConstFloat $ Div p4 Pi of
                         Right err -> TestCase (assertFailure "Unable to parse p4.")
-                        Left t4   -> let circ = [PhaseGate                      t4     ctrls,
-                                                 PhaseGate                      ut     ctrls,
-                                                 NamedGate Quip.GateOmega False    [0] ctrls,
-                                                 NamedGate Quip.GateOmega False    [0] ctrls,
-                                                 PhaseGate                      ph     ctrls,
-                                                 RotGate   Quip.RotExpZ   False t1 [0] ctrls,
-                                                 NamedGate Quip.GateH     False    [0] [],
-                                                 RotGate   Quip.RotExpZ   False t2 [0] ctrls,
-                                                 NamedGate Quip.GateH     False    [0] [],
-                                                 RotGate   Quip.RotExpZ   False t3 [0] ctrls]
+                        Left t4   -> let circ = [PhaseGate                    t4     ctrls,
+                                                 PhaseGate                    ut     ctrls,
+                                                 PhaseGate                    ph     ctrls,
+                                                 RotGate   Quip.RotExpZ False t1 [0] ctrls,
+                                                 NamedGate Quip.GateS   False    [0] [],
+                                                 NamedGate Quip.GateH   False    [0] [],
+                                                 RotGate   Quip.RotExpZ False t2 [0] ctrls,
+                                                 NamedGate Quip.GateH   False    [0] [],
+                                                 NamedGate Quip.GateS   True     [0] [],
+                                                 RotGate   Quip.RotExpZ False t3 [0] ctrls]
                                  in TestCase (assertEqual msg circ expt)
     where msg   = "Translation of CU gates without explicit controls."
           pi2   = Times Pi $ DecInt "2"
@@ -695,34 +685,32 @@ test71 = case toConstFloat $ Div p1 Pi of
           p2    = Times Pi $ DecFloat "0.33"
           p3    = Times Pi $ DecFloat "0.5"
           p4    = Times Pi $ DecFloat "0.1"
-          a1    = Plus p2 $ Div Pi $ DecInt "2"
-          a2    = Minus p3 $ Div Pi $ DecInt "2"
           ops   = [decl2at 0, decl1]
           ctrls = [Pos 1]
           expt  = d4RotTransl alloc4 Qasm.GateCU (p1, p2, p3, p4) ops mod0
 
-test72 = case toConstFloat $ Negate $ Div p1 Pi of
+test72 = case toConstFloat $ Div p1 Pi of
     Right err -> TestCase (assertFailure "Unable to parse p1.")
-    Left ph   -> case toConstFloat $ Negate $ Div p1 $ DecInt "2" of
+    Left ph   -> case toConstFloat $ Div p2 $ DecInt "2" of
         Right err -> TestCase (assertFailure "Unable to parse p2.")
-        Left t1   -> case toConstFloat $ Div (Negate a2) $ DecInt "2" of
+        Left t1   -> case toConstFloat $ Div p1 $ DecInt "2" of
             Right err -> TestCase (assertFailure "Unable to parse p1.")
-            Left t2   -> case toConstFloat $ Div (Negate a1) $ DecInt "2" of
+            Left t2   -> case toConstFloat $ Div p3 $ DecInt "2" of
                 Right err -> TestCase (assertFailure "Unable to parse p3.")    
-                Left t3   -> case toConstFloat $ Div (Negate $ Plus p2 p3) pi2 of
+                Left t3   -> case toConstFloat $ Div (Plus p2 p3) pi2 of
                     Right err -> TestCase (assertFailure "Unable to parse p2+p3/2.")
-                    Left ut   -> case toConstFloat $ Div (Negate p4) Pi of
+                    Left ut   -> case toConstFloat $ Div p4 Pi of
                         Right err -> TestCase (assertFailure "Unable to parse p4.")
-                        Left t4   -> let circ = [PhaseGate                      t4     ctrls,
-                                                 PhaseGate                      ut     ctrls,
-                                                 NamedGate Quip.GateOmega True     [2] ctrls,
-                                                 NamedGate Quip.GateOmega True     [2] ctrls,
-                                                 PhaseGate                      ph     ctrls,
-                                                 RotGate   Quip.RotExpZ   False t1 [2] ctrls,
-                                                 NamedGate Quip.GateH     False    [2] [],
-                                                 RotGate   Quip.RotExpZ   False t2 [2] ctrls,
-                                                 NamedGate Quip.GateH     False    [2] [],
-                                                 RotGate   Quip.RotExpZ   False t3 [2] ctrls]
+                        Left t4   -> let circ = [PhaseGate                    (-t4)     ctrls,
+                                                 PhaseGate                    (-ut)     ctrls,
+                                                 PhaseGate                    (-ph)     ctrls,
+                                                 RotGate   Quip.RotExpZ False (-t3) [2] ctrls,
+                                                 NamedGate Quip.GateS   True        [2] [],
+                                                 NamedGate Quip.GateH   False       [2] [],
+                                                 RotGate   Quip.RotExpZ False (-t2) [2] ctrls,
+                                                 NamedGate Quip.GateH   False       [2] [],
+                                                 NamedGate Quip.GateS   False       [2] [],
+                                                 RotGate   Quip.RotExpZ False (-t1) [2] ctrls]
                                  in TestCase (assertEqual msg circ expt)
     where msg   = "Translation of U gates with controls."
           pi2   = Times Pi $ DecInt "2"
@@ -730,8 +718,6 @@ test72 = case toConstFloat $ Negate $ Div p1 Pi of
           p2    = Times Pi $ DecFloat "0.36"
           p3    = Times Pi $ DecFloat "0.54"
           p4    = Times Pi $ DecFloat "0.91"
-          a1    = Plus p2 $ Div Pi $ DecInt "2"
-          a2    = Minus p3 $ Div Pi $ DecInt "2"
           ops   = [decl2at 3, decl2at 2, decl2at 4, decl2at 1]
           ctrls = [Pos 5, Pos 4, Pos 3]
           expt  = d4RotTransl alloc4 Qasm.GateCU (p1, p2, p3, p4) ops mod4

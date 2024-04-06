@@ -202,29 +202,30 @@ test30 = case toConstFloat $ Div p1 Pi of
     Right err -> TestCase (assertFailure "Unable to parse p1.")
     Left ph   -> case toConstFloat $ Div p1 $ DecInt "2" of
         Right err  -> TestCase (assertFailure "Unable to parse p1.")
-        Left t1    -> case toConstFloat $ Div a1 $ DecInt "2" of
-            Right err -> TestCase (assertFailure "Unable to parse p1.")
-            Left t2   -> case toConstFloat $ Div a2 $ DecInt "2" of
+        Left t1    -> case toConstFloat $ Div p2 $ DecInt "2" of
+            Right err -> TestCase (assertFailure "Unable to parse p2.")
+            Left t2   -> case toConstFloat $ Div p3 $ DecInt "2" of
                 Right err -> TestCase (assertFailure "Unable to parse p3.")
                 Left t3   -> let circ = [Quip.RotGate   Quip.RotExpZ   True  0.5 [3] ctrls,
-                                         Quip.NamedGate Quip.GateOmega False     [0] [],
+                                         -- Gate U2
                                          Quip.RotGate   Quip.RotExpZ   False t2  [0] [],
+                                         Quip.NamedGate Quip.GateS     False     [0] [],
                                          Quip.NamedGate Quip.GateH     False     [0] [],
                                          Quip.NamedGate Quip.GateS     False     [0] [],
                                          Quip.NamedGate Quip.GateH     False     [0] [],
+                                         Quip.NamedGate Quip.GateS     True      [0] [],
                                          Quip.RotGate   Quip.RotExpZ   False t3  [0] [],
-                                         Quip.NamedGate Quip.GateOmega False     [0] [],
-                                         Quip.NamedGate Quip.GateOmega False     [0] [],
+                                         -- Gate U3
                                          Quip.PhaseGate                      ph      [],
+                                         Quip.RotGate   Quip.RotExpZ   False t2  [0] [],
+                                         Quip.NamedGate Quip.GateS     False     [0] [],
+                                         Quip.NamedGate Quip.GateH     False     [0] [],
                                          Quip.RotGate   Quip.RotExpZ   False t1  [0] [],
                                          Quip.NamedGate Quip.GateH     False     [0] [],
-                                         Quip.RotGate   Quip.RotExpZ   False t2  [0] [],
-                                         Quip.NamedGate Quip.GateH     False     [0] [],
+                                         Quip.NamedGate Quip.GateS     True      [0] [],
                                          Quip.RotGate   Quip.RotExpZ   False t3  [0] []]
                       in TestCase (assertEqual msg circ $ gates circ8)
     where msg   = "translate (gates): miscellaneous rotations."
-          a1    = Plus p2 $ Div Pi $ DecInt "2"
-          a2    = Minus p3 $ Div Pi $ DecInt "2"
           ctrls = [Quip.Pos 0, Quip.Pos 1]
 
 test31 = TestCase (assertEqual "translate (outputs): miscellaneous rotations."

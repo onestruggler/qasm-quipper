@@ -163,20 +163,19 @@ toU3Gate (p1, p2, p3) inv ins ctrls = circ
           theta  = if inv then Negate p1 else p1
           phi    = if inv then Negate p3 else p2
           lambda = if inv then Negate p2 else p3
-          param2 = Plus phi $ Div Pi $ DecInt "2"
-          param3 = Minus lambda $ Div Pi $ DecInt "2"
           -- Global Phase
           phase = toGPhase theta False ctrls
           -- Rotations
-          rot1 = toRZGate theta  False ins ctrls
-          rot2 = toRZGate param2 False ins ctrls
-          rot3 = toRZGate param3 False ins ctrls
+          rot1 = toRZGate phi    False ins ctrls
+          rot2 = toRZGate theta  False ins ctrls
+          rot3 = toRZGate lambda False ins ctrls
           -- Unitary Gates
-          omega = toNamedGate Qasm.GateQuipOmega inv   ins ctrls
-          gateh = toNamedGate Qasm.GateH         False ins []
+          gateh   = toNamedGate Qasm.GateH   False ins []
+          gates   = toNamedGate Qasm.GateS   inv   ins []
+          gatesdg = toNamedGate Qasm.GateSdg inv   ins []
           -- Result
-          pref = omega ++ omega ++ [phase]
-          circ = pref ++ rot1 ++ gateh ++ rot2 ++ gateh ++ rot3
+          cmid = gates ++ gateh ++ rot2 ++ gateh ++ gatesdg
+          circ = [phase] ++ rot1 ++ cmid ++ rot3
 
 -- | Translation details for the U gate.
 toUGate :: Dim3Rot -> Bool -> QuipCircFn
@@ -220,17 +219,16 @@ toU2Gate (p1, p2) inv ins ctrls = circ
     where -- Angles
           phi    = if inv then Negate p2 else p1
           lambda = if inv then Negate p1 else p2
-          param1 = Plus phi $ Div Pi $ DecInt "2"
-          param2 = Minus lambda $ Div Pi $ DecInt "2"
           -- Rotations
-          rot1 = toRZGate param1 False ins ctrls
-          rot2 = toRZGate param2 False ins ctrls
+          rot1 = toRZGate phi    False ins ctrls
+          rot2 = toRZGate lambda False ins ctrls
           -- Unitary Gates
-          phase = toNamedGate Qasm.GateQuipOmega inv   ins ctrls
-          gateh = toNamedGate Qasm.GateH         False ins []
-          gates = toNamedGate Qasm.GateS         inv   ins ctrls
+          gateh   = toNamedGate Qasm.GateH   False ins []
+          gates   = toNamedGate Qasm.GateS   inv   ins []
+          gatesdg = toNamedGate Qasm.GateSdg inv   ins []
+          gatemid = toNamedGate Qasm.GateS   inv   ins ctrls
           -- Result
-          circ = phase ++ rot1 ++ gateh ++ gates ++ gateh ++ rot2
+          circ = rot1 ++ gates ++ gateh ++ gatemid ++ gateh ++ gatesdg ++ rot2
 
 -- | Same as d2RotTransl, but for Dim2Rot parameters.
 d2RotTransl :: WireAllocMap -> Qasm.GateName -> Dim2Rot -> GateGenerator
@@ -279,10 +277,7 @@ toRZGate param inv ins ctrls =
 -- | Translation details for the RY gate.
 toRXGate :: Dim1Rot -> Bool -> QuipCircFn
 toRXGate param inv ins ctrls = circ
-    where -- Angles.
-          t = Div param $ DecInt "2"
-          -- Rotational Gates.
-          phase = toGPhase t     inv     ctrls
+    where -- Rotational Gates.
           zrot  = toRZGate param inv ins ctrls
           -- Unitary Gates
           hgate = toNamedGate Qasm.GateH False ins []
@@ -293,14 +288,14 @@ toRXGate param inv ins ctrls = circ
 toRYGate :: Dim1Rot -> Bool -> QuipCircFn
 toRYGate param inv ins ctrls = circ
     where -- Rotational Gates.
-          phase = toGPhase param inv     ctrls
           zrot  = toRZGate param inv ins ctrls
           -- Unitary Gates
+          xgate   = toNamedGate Qasm.GateX False ins []
           sgate   = toNamedGate Qasm.GateS False ins []
           hgate   = toNamedGate Qasm.GateH False ins []
           sdggate = toNamedGate Qasm.GateS True  ins []
           -- Result
-          circ = [phase] ++ sgate ++ hgate ++ zrot ++ hgate ++ sdggate
+          circ = xgate ++ sgate ++ hgate ++ zrot ++ hgate ++ sdggate ++ xgate
 
 -- | Translates a CP gate from OpenQASM to Quipper, with the given input wires
 -- and additional controls.
