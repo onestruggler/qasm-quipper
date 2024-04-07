@@ -38,6 +38,7 @@ m_swap := [ [ 1, 0, 0, 0 ],
 
 # Derived operators.
 m_cx    := AddQubitControl( m_x );
+m_ccx   := AddQubitControl( m_cx );
 m_cz    := AddQubitControl( m_z );
 m_ch    := AddQubitControl( m_h );
 m_cswap := AddQubitControl( m_swap );
