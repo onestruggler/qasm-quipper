@@ -6,14 +6,14 @@ gap> m_cxiiiii := ApplyQuditGateBetween( 2, m_cx, 0, 5 );;
 gap> m_iihiiii := ApplyQuditGateBetween( 2, m_h, 2, 4 );;
 
 # Computes permutationss of cx.
-gap> m_ciixiii := SwapAndApply( 2, 7, 2, 4, m_cxiiiii );;
-gap> m_iiixici := SwapAndApply( 2, 7, 1, 6, m_ciixiii );;
-gap> m_ciiixii := SwapAndApply( 2, 7, 2, 5, m_cxiiiii );;
-gap> m_iciixii := SwapAndApply( 2, 7, 1, 2, m_ciiixii );;
-gap> m_iciiixi := SwapAndApply( 2, 7, 5, 6, m_iciixii );;
-gap> m_iiciixi := SwapAndApply( 2, 7, 2, 3, m_iciiixi );;
-gap> m_iiciiix := SwapAndApply( 2, 7, 6, 7, m_iiciixi );;
-gap> m_iiiciix := SwapAndApply( 2, 7, 3, 4, m_iiciiix );;
+gap> m_ciixiii := SwapAndApply( 2, 2, 4, m_cxiiiii );;
+gap> m_iiixici := SwapAndApply( 2, 1, 6, m_ciixiii );;
+gap> m_ciiixii := SwapAndApply( 2, 2, 5, m_cxiiiii );;
+gap> m_iciixii := SwapAndApply( 2, 1, 2, m_ciiixii );;
+gap> m_iciiixi := SwapAndApply( 2, 5, 6, m_iciixii );;
+gap> m_iiciixi := SwapAndApply( 2, 2, 3, m_iciiixi );;
+gap> m_iiciiix := SwapAndApply( 2, 6, 7, m_iiciixi );;
+gap> m_iiiciix := SwapAndApply( 2, 3, 4, m_iiciiix );;
 
 # Central component.
 gap> m_tt        := KroneckerProduct( m_t, m_t );;

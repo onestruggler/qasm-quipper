@@ -1,7 +1,7 @@
 # Tests the decomposition of C(E).
 gap> Read("Gates.g");;
 gap> m_ce := AddQubitControl( m_e );;
-gap> m_xc := SwapAndApply( 2, 2, 1, 2, m_cx );;
+gap> m_xc := SwapAndApply( 2, 1, 2, m_cx );;
 gap> m_g1 := KroneckerProduct( m_t, m_tdg );;
 gap> m_g2 := ApplyQuditGateBetween( 2, m_h * m_tdg, 1, 0 );;
 gap> m_g3 := KroneckerProduct( m_s, m_t * m_h );;

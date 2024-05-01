@@ -2,15 +2,15 @@
 gap> Read("Gates.g");;
 
 # Base gates.
-gap> m_xc   := SwapAndApply( 2, 2, 1, 2, m_cx );;
+gap> m_xc   := SwapAndApply( 2, 1, 2, m_cx );;
 gap> m_cxii := ApplyQuditGateBetween( 2, m_cx, 0, 2 );;
 gap> m_iihi := ApplyQuditGateBetween( 2, m_h, 2, 1 );;
 
 # Computes permutationss of cx.
-gap> m_ciix := SwapAndApply( 2, 4, 2, 4, m_cxii );;
-gap> m_icix := SwapAndApply( 2, 4, 1, 2, m_ciix );;
+gap> m_ciix := SwapAndApply( 2, 2, 4, m_cxii );;
+gap> m_icix := SwapAndApply( 2, 1, 2, m_ciix );;
 gap> m_ixci := ApplyQuditGateBetween( 2, m_xc, 1, 1 );;
-gap> m_xici := SwapAndApply( 2, 4, 1, 2, m_ixci );;
+gap> m_xici := SwapAndApply( 2, 1, 2, m_ixci );;
 
 # Central component.
 gap> m_tt     := KroneckerProduct( m_t, m_t );;
