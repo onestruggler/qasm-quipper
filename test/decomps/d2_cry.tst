@@ -3,10 +3,10 @@
 gap> Read("Gates.g");;
 gap> y_rots := SampleExps( m_y );;
 gap> z_rots := SampleExps( m_z );;
-gap> m_ix   := ApplyQuditGateBetween( 2, m_x, 1, 0 );;
-gap> m_is   := ApplyQuditGateBetween( 2, m_s, 1, 0 );;
-gap> m_isdg := ApplyQuditGateBetween( 2, m_sdg, 1, 0 );;
-gap> m_ih   := ApplyQuditGateBetween( 2, m_h, 1, 0 );;
+gap> m_ix   := ApplyQubitGateBetween( m_x, 1, 0 );;
+gap> m_is   := ApplyQubitGateBetween( m_s, 1, 0 );;
+gap> m_isdg := ApplyQubitGateBetween( m_sdg, 1, 0 );;
+gap> m_ih   := ApplyQubitGateBetween( m_h, 1, 0 );;
 
 # Test Case 1.
 gap> j     := 1;;

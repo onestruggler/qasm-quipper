@@ -3,7 +3,7 @@
 gap> Read("Gates.g");;
 gap> x_rots := SampleExps( m_x );;
 gap> z_rots := SampleExps( m_z );;
-gap> m_ih   := ApplyQuditGateBetween( 2, m_h, 1, 0 );;
+gap> m_ih   := ApplyQubitGateBetween( m_h, 1, 0 );;
 
 # Test Case 1.
 gap> j     := 1;;

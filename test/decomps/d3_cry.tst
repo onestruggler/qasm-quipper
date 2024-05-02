@@ -7,8 +7,8 @@ gap> mexps := SampleExps( m_y );;
 gap> j     := 1;;
 gap> case  := mexps[j];;
 gap> m_cry := AddQubitControl( case[1] );;
-gap> m_ry1 := ApplyQuditGateBetween( 2, case[2], 1, 0 );;
-gap> m_ry2 := ApplyQuditGateBetween( 2, case[3], 1, 0 );;
+gap> m_ry1 := ApplyQubitGateBetween( case[2], 1, 0 );;
+gap> m_ry2 := ApplyQubitGateBetween( case[3], 1, 0 );;
 gap> m_cry = m_cz * m_ry2 * m_cz * m_ry1;
 true
 
@@ -16,8 +16,8 @@ true
 gap> j     := 2;;
 gap> case  := mexps[j];;
 gap> m_cry := AddQubitControl( case[1] );;
-gap> m_ry1 := ApplyQuditGateBetween( 2, case[2], 1, 0 );;
-gap> m_ry2 := ApplyQuditGateBetween( 2, case[3], 1, 0 );;
+gap> m_ry1 := ApplyQubitGateBetween( case[2], 1, 0 );;
+gap> m_ry2 := ApplyQubitGateBetween( case[3], 1, 0 );;
 gap> m_cry = m_cz * m_ry2 * m_cz * m_ry1;
 true
 
@@ -25,8 +25,8 @@ true
 gap> j     := 3;;
 gap> case  := mexps[j];;
 gap> m_cry := AddQubitControl( case[1] );;
-gap> m_ry1 := ApplyQuditGateBetween( 2, case[2], 1, 0 );;
-gap> m_ry2 := ApplyQuditGateBetween( 2, case[3], 1, 0 );;
+gap> m_ry1 := ApplyQubitGateBetween( case[2], 1, 0 );;
+gap> m_ry2 := ApplyQubitGateBetween( case[3], 1, 0 );;
 gap> m_cry = m_cz * m_ry2 * m_cz * m_ry1;
 true
 
@@ -34,8 +34,8 @@ true
 gap> j     := 4;;
 gap> case  := mexps[j];;
 gap> m_cry := AddQubitControl( case[1] );;
-gap> m_ry1 := ApplyQuditGateBetween( 2, case[2], 1, 0 );;
-gap> m_ry2 := ApplyQuditGateBetween( 2, case[3], 1, 0 );;
+gap> m_ry1 := ApplyQubitGateBetween( case[2], 1, 0 );;
+gap> m_ry2 := ApplyQubitGateBetween( case[3], 1, 0 );;
 gap> m_cry = m_cz * m_ry2 * m_cz * m_ry1;
 true
 
@@ -43,7 +43,7 @@ true
 gap> j     := 5;;
 gap> case  := mexps[j];;
 gap> m_cry := AddQubitControl( case[1] );;
-gap> m_ry1 := ApplyQuditGateBetween( 2, case[2], 1, 0 );;
-gap> m_ry2 := ApplyQuditGateBetween( 2, case[3], 1, 0 );;
+gap> m_ry1 := ApplyQubitGateBetween( case[2], 1, 0 );;
+gap> m_ry2 := ApplyQubitGateBetween( case[3], 1, 0 );;
 gap> m_cry = m_cz * m_ry2 * m_cz * m_ry1;
 true
