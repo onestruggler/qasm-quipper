@@ -740,6 +740,18 @@ test53 = TestCase (assertEqual "elimCtrlsTransformer using CCIX."
                     NamedGate GateIX True  [4] [Pos 1, Pos 2],
                     QTermGate False 4]
 
+test54 = TestCase (assertEqual "elimCtrlsTransformer on large multiqnot."
+                               output
+                               (apply elimUseCCIX input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit, 4:Qbit\n" ++
+                  "QGate[\"multinot\"](0,1,2) with controls=[+3, +4]\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit, 4:Qbit"
+          output = [QInitGate False 5,
+                    NamedGate GateIX False        [5]     [Pos 3,Pos 4],
+                    NamedGate GateQMultiNot False [0,1,2] [Pos 5],
+                    NamedGate GateIX True         [5]     [Pos 3,Pos 4],
+                    QTermGate False 5]
+
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
@@ -795,6 +807,7 @@ tests = hUnitTestToTests $ TestList [TestLabel "elimCtrlsTransformer_QGate_1" te
                                      TestLabel "elimCtrlsTransformer_Inlining" test50,
                                      TestLabel "elimCtrlsTransformer_elimTof_3" test51,
                                      TestLabel "elimCtrlsTransformer_elimTof_4" test52,
-                                     TestLabel "elimCtrlsTransformer_useCCIX" test53]
+                                     TestLabel "elimCtrlsTransformer_useCCIX" test53,
+                                     TestLabel "elimCtrlsTransformer_multiqnot" test54]
 
 main = defaultMain tests

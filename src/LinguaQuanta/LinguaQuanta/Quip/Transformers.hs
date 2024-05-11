@@ -289,7 +289,8 @@ elimCtrlsGPhase conf ts ncf ins ctrls =
 elimCtrlsTransformer :: ElimCtrlsConf -> Transformer Circ Qubit Bit
 -- Controllable QGates in OpenQASM 2.
 elimCtrlsTransformer conf (T_QGate "multinot" _ 0 _ ncf f) = f $
-    \ins [] ctrls -> elimCtrlsQGate conf ncf 2 ins ctrls $ qmultinot_at ins
+    \ins [] ctrls -> let ct = if length ins <= 2 then 2 else 1
+                     in elimCtrlsQGate conf ncf ct ins ctrls $ qmultinot_at ins
 elimCtrlsTransformer conf (T_QGate "not" 1 0 _ ncf f) = f $
     \[q] [] ctrls -> elimCtrlsX conf ncf q ctrls
 elimCtrlsTransformer conf (T_QGate "X" 1 0 _ ncf f) = f $
