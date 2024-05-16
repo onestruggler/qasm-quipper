@@ -33,6 +33,7 @@ data ElimCtrlsTool = ElimCtrls { src            :: String
                                , elim_toffoli   :: Bool
                                , elim_fredkin   :: Bool
                                , elim_chadamard :: Bool
+                               , keep_ccz        :: Bool
                                , disable_ccix   :: Bool
                                } deriving (Show, Eq, Data, Typeable)
 
@@ -45,6 +46,7 @@ elimCtrlsMode = ElimCtrls { src            = srcFlags def
                           , elim_toffoli   = elimGateFlags "Toffoli-like" def
                           , elim_fredkin   = elimGateFlags "Fredkin" def
                           , elim_chadamard = elimGateFlags "C(H)" def
+                          , keep_ccz       = elimGateFlags "CCZ" def
                           , disable_ccix   = disableCCIXFlags def
                           }
 

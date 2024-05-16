@@ -22,36 +22,56 @@ apply :: Transformer Circ Qubit Bit -> String -> [Gate]
 apply t = gates . quipToGates . applyTransformer t . parseQuip "x"
 
 elimWithTof = elimCtrlsTransformer $ ElimCtrlsConf { tofRule   = UseTof
+                                                   , zRule     = UseCZ
+                                                   , elimCH    = False
+                                                   , elimCSwap = False
+                                                   , druleMap  = emptyDruleMap
+                                                   }
+
+elimWithoutCCZ = elimCtrlsTransformer $ ElimCtrlsConf { tofRule   = UseTof
+                                                      , zRule     = DecompCCZ
+                                                      , elimCH    = False
+                                                      , elimCSwap = False
+                                                      , druleMap  = emptyDruleMap
+                                                      }
+
+elimWithCCZ = elimCtrlsTransformer $ ElimCtrlsConf { tofRule   = UseTof
+                                                   , zRule     = UseCCZ
                                                    , elimCH    = False
                                                    , elimCSwap = False
                                                    , druleMap  = emptyDruleMap
                                                    }
 
 elimWithoutTof = elimCtrlsTransformer $ ElimCtrlsConf { tofRule   = ElimTof
+                                                      , zRule     = UseCZ
                                                       , elimCH    = False
                                                       , elimCSwap = False
                                                       , druleMap  = emptyDruleMap
                                                       }
 
 elimWithoutFredkin = elimCtrlsTransformer $ ElimCtrlsConf { tofRule   = UseTof
+                                                          , zRule     = UseCZ
                                                           , elimCH    = False
                                                           , elimCSwap = True
                                                           , druleMap  = emptyDruleMap
                                                           }
 
 elimWithoutCH = elimCtrlsTransformer $ ElimCtrlsConf { tofRule   = UseTof
+                                                     , zRule     = UseCZ
                                                      , elimCH    = True
                                                      , elimCSwap = False
                                                      , druleMap  = emptyDruleMap
                                                      }
 
 elimMaxInline = elimCtrlsTransformer $ ElimCtrlsConf { tofRule   = ElimTof
+                                                     , zRule     = UseCZ
                                                      , elimCH    = True
                                                      , elimCSwap = True
                                                      , druleMap  = emptyDruleMap
                                                      }
 
 elimUseCCIX = elimCtrlsTransformer $ ElimCtrlsConf { tofRule   = UseCCIX
+                                                   , zRule     = UseCZ
                                                    , elimCH    = False
                                                    , elimCSwap = False
                                                    , druleMap  = emptyDruleMap
@@ -86,6 +106,7 @@ abs_y      = NamedGate GateY False [0] []
 abs_cy     = NamedGate GateY False [0] [Pos 1]
 abs_z      = NamedGate GateZ False [0] []
 abs_cz     = NamedGate GateZ False [0] [Pos 1]
+abs_ccz    = NamedGate GateZ False [0] [Pos 1, Pos 2]
 abs_h      = NamedGate GateH False [0] []
 abs_ch     = NamedGate GateH False [0] [Pos 1]
 abs_swp    = NamedGate GateSwap False [0, 1] []
@@ -752,6 +773,64 @@ test54 = TestCase (assertEqual "elimCtrlsTransformer on large multiqnot."
                     NamedGate GateIX True         [5]     [Pos 3,Pos 4],
                     QTermGate False 5]
 
+containsCZ :: [Gate] -> Bool
+containsCZ []                           = False
+containsCZ (NamedGate GateZ _ _ [_]:_)  = True
+containsCZ (_:rest)                     = containsCZ rest
+
+containsCCZ :: [Gate] -> Bool
+containsCCZ []                              = False
+containsCCZ (NamedGate GateZ _ _ [_, _]:_)  = True
+containsCCZ (_:rest)                        = containsCCZ rest
+
+containsCZOrCCZ :: [Gate] -> Bool
+containsCZOrCCZ gates = containsCZ gates || containsCCZ gates
+
+containsCZOrCCZOrCCX :: [Gate] -> Bool
+containsCZOrCCZOrCCX gates = containsCZOrCCZ gates || containsCCX gates
+
+test55 = TestCase (assertEqual "elimCtrlsTransformer on CZ with CCZ elim (1/3)."
+                               output
+                               (apply elimWithoutCCZ input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                   ascii_cz ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+          output = [abs_cz]
+
+test56 = TestCase (assertBool "elimCtrlsTransformer on CCZ with CCZ elim (2/3)."
+                               (not $ containsCZOrCCZOrCCX $ apply elimWithoutCCZ input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_ccz ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+
+test57 = TestCase (assertBool "elimCtrlsTransformer on CCCZ with CCZ elim (3/3)."
+                               (not $ containsCZOrCCZ $ apply elimWithoutCCZ input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_cccz ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+
+test58 = TestCase (assertEqual "elimCtrlsTransformer on CZ with CCZ (1/3)."
+                               output
+                               (apply elimWithCCZ input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                   ascii_cz ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+          output = [abs_cz]
+
+test59 = TestCase (assertEqual "elimCtrlsTransformer on CCZ with CCZ (2/3)."
+                               output
+                               (apply elimWithCCZ input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                   ascii_ccz ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+          output = [abs_ccz]
+
+test60 = TestCase (assertBool "elimCtrlsTransformer on CCCZ with CCZ (3/3)."
+                               (not $ containsCZ $ apply elimWithCCZ input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_cccz ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
@@ -808,6 +887,12 @@ tests = hUnitTestToTests $ TestList [TestLabel "elimCtrlsTransformer_QGate_1" te
                                      TestLabel "elimCtrlsTransformer_elimTof_3" test51,
                                      TestLabel "elimCtrlsTransformer_elimTof_4" test52,
                                      TestLabel "elimCtrlsTransformer_useCCIX" test53,
-                                     TestLabel "elimCtrlsTransformer_multiqnot" test54]
+                                     TestLabel "elimCtrlsTransformer_multiqnot" test54,
+                                     TestLabel "elimCtrlsTransformer_DecompCCZ_1" test55,
+                                     TestLabel "elimCtrlsTransformer_DecompCCZ_2" test56,
+                                     TestLabel "elimCtrlsTransformer_DecompCCZ_3" test57,
+                                     TestLabel "elimCtrlsTransformer_UseCCZ_1" test58,
+                                     TestLabel "elimCtrlsTransformer_UseCCZ_2" test59,
+                                     TestLabel "elimCtrlsTransformer_UseCCZ_3" test60]
 
 main = defaultMain tests

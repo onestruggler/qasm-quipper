@@ -16,6 +16,7 @@ import LinguaQuanta.Quip.Quipper
 import LinguaQuanta.Quip.Transformers
   ( ElimCtrlsConf(..)
   , TofRule(..)
+  , ZRule(..)
   , applyTransformer
   , elimCtrlsTransformer
   , emptyDruleMap
@@ -39,6 +40,11 @@ determineTofRule True  _     = ElimTof
 determineTofRule False True  = UseTof
 determineTofRule False False = UseCCIX
 
+determineZRule :: Bool -> Bool -> ZRule
+determineZRule True  _     = DecompCCZ
+determineZRule False True  = UseCCZ
+determineZRule False False = UseCZ
+
 -------------------------------------------------------------------------------
 -- * ElimCtrls Interface.
 
@@ -54,12 +60,14 @@ display hdl = hPutStrLn hdl . gatesToAscii . quipToGates
 
 processArgs :: ElimCtrlsTool -> IO ()
 processArgs mode@ElimCtrls{..} = setupTool taskFn display src out
-    where policy = determineTofRule elim_toffoli disable_ccix
-          taskFn = doTask $ ElimCtrlsConf { tofRule   = policy
-                                          , elimCH    = elim_chadamard
-                                          , elimCSwap = elim_fredkin
-                                          , druleMap  = emptyDruleMap
-                                          }
+    where xpolicy = determineTofRule elim_toffoli disable_ccix
+          zpolicy = determineZRule elim_toffoli keep_ccz
+          taskFn  = doTask $ ElimCtrlsConf { tofRule   = xpolicy
+                                           , zRule     = zpolicy
+                                           , elimCH    = elim_chadamard
+                                           , elimCSwap = elim_fredkin
+                                           , druleMap  = emptyDruleMap
+                                           }
 
 main :: IO ()
 main = do

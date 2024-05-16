@@ -5,6 +5,7 @@
 
 module LinguaQuanta.Quip.Transformers
   ( TofRule(..)
+  , ZRule(..)
   , ElimCtrlsConf(..)
   , applyTransformer
   , elimCtrlsTransformer
@@ -56,6 +57,7 @@ import Quipper.Internal.Transformer (B_Endpoint)
 import Quipper.Libraries.GateDecompositions
   ( cc_iX_plain_at
   , cc_iX_S_at
+  , ccZ_S_at
   , cH_AMMR_at
   , controlled_E_at
   , controlled_iX_at
@@ -99,12 +101,16 @@ type Anchor = B_Endpoint Qubit Bit
 -- | Indicates which Toffoli-like gate(s) should be use to decompose controls.
 data TofRule = UseTof | UseCCIX | ElimTof deriving (Show, Eq)
 
+-- | Indicates how controlled-Z gates should be composed.
+data ZRule = UseCCZ | UseCZ | DecompCCZ deriving (Show, Eq)
+
 -- |
 emptyDruleMap :: Map.Map String String
 emptyDruleMap = Map.empty
 
 -- | Configurations for the ctrl_elim transformer.
 data ElimCtrlsConf = ElimCtrlsConf { tofRule   :: TofRule
+                                   , zRule     :: ZRule
                                    , elimCH    :: Bool
                                    , elimCSwap :: Bool
                                    , druleMap  :: Map.Map String String
@@ -204,6 +210,20 @@ elimCtrlsX conf ncf q ctrls =
             return ([q], [], ctrls)
         else elimCtrlsQGate conf ncf 2 [q] ctrls $ gate_X_at q
 
+-- | Implements elimCtrls for the Z QGate (a special case).
+elimCtrlsZ :: ElimCtrlsConf -> Bool -> Qubit -> CtrlList -> ElimCtrlsRv
+elimCtrlsZ conf ncf q ctrls =
+    without_controls_if ncf $ do
+        case zRule conf of
+            UseCCZ    -> elimCtrlsQGate conf ncf 2 [q] ctrls $ gate_Z_at q
+            UseCZ     -> elimCtrlsQGate conf ncf 1 [q] ctrls $ gate_Z_at q
+            DecompCCZ -> with_combined_controls_tof conf 2 ctrls $ \ctrls' -> do
+                case ctrls' of
+                    []       -> gate_Z_at q
+                    [c]      -> gate_Z_at q `controlled` c
+                    [c1, c2] -> ccZ_S_at q c1 c2
+                return ([q], [], ctrls)
+
 -- | Implements elimCtrls for the omega QGate (a special case).
 elimCtrlsOmega :: ElimCtrlsConf -> Bool -> Bool
                                 -> Qubit -> CtrlList
@@ -298,7 +318,7 @@ elimCtrlsTransformer conf (T_QGate "X" 1 0 _ ncf f) = f $
 elimCtrlsTransformer conf (T_QGate "Y" 1 0 _ ncf f) = f $
     \[q] [] ctrls -> elimCtrlsQGate conf ncf 1 [q] ctrls $ gate_Y_at q
 elimCtrlsTransformer conf (T_QGate "Z" 1 0 _ ncf f) = f $
-    \[q] [] ctrls -> elimCtrlsQGate conf ncf 1 [q] ctrls $ gate_Z_at q
+    \[q] [] ctrls -> elimCtrlsZ conf ncf q ctrls
 elimCtrlsTransformer conf (T_QGate "swap" 2 0 _ ncf f) = f $
     \[q0, q1] [] ctrls -> elimCtrlsSwap conf ncf q0 q1 ctrls
 elimCtrlsTransformer conf (T_QGate "H" 1 0 _ ncf f) = f $
