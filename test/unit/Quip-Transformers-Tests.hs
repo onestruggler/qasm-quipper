@@ -99,21 +99,22 @@ ascii_mnot   = "QGate[\"multinot\"](0,1)"
 ascii_cmnot  = "QGate[\"multinot\"](0,1) with controls=[+2]"
 ascii_ccmnot = "QGate[\"multinot\"](0,1) with controls=[+2, +3]"
 
-abs_x      = NamedGate GateX False [0] []
-abs_cx     = NamedGate GateX False [0] [Pos 1]
-abs_ccx    = NamedGate GateX False [0] [Pos 1, Pos 2]
-abs_y      = NamedGate GateY False [0] []
-abs_cy     = NamedGate GateY False [0] [Pos 1]
-abs_z      = NamedGate GateZ False [0] []
-abs_cz     = NamedGate GateZ False [0] [Pos 1]
-abs_ccz    = NamedGate GateZ False [0] [Pos 1, Pos 2]
-abs_h      = NamedGate GateH False [0] []
-abs_ch     = NamedGate GateH False [0] [Pos 1]
-abs_swp    = NamedGate GateSwap False [0, 1] []
-abs_cswp   = NamedGate GateSwap False [0, 1] [Pos 1]
-abs_mnot   = NamedGate GateQMultiNot False [0, 1] []
-abs_cmnot  = NamedGate GateQMultiNot False [0, 1] [Pos 2]
-abs_ccmnot = NamedGate GateQMultiNot False [0, 1] [Pos 2, Pos 3]
+abs_x       = NamedGate GateX False [0] []
+abs_cx      = NamedGate GateX False [0] [Pos 1]
+abs_ccx     = NamedGate GateX False [0] [Pos 1, Pos 2]
+abs_y       = NamedGate GateY False [0] []
+abs_cy      = NamedGate GateY False [0] [Pos 1]
+abs_z       = NamedGate GateZ False [0] []
+abs_cz      = NamedGate GateZ False [0] [Pos 1]
+abs_ccz     = NamedGate GateZ False [0] [Pos 1, Pos 2]
+abs_h       = NamedGate GateH False [0] []
+abs_ch      = NamedGate GateH False [0] [Pos 1]
+abs_swp     = NamedGate GateSwap False [0, 1] []
+abs_cswp    = NamedGate GateSwap False [0, 1] [Pos 1]
+abs_mnot    = NamedGate GateQMultiNot False [0, 1] []
+abs_cmnot   = NamedGate GateQMultiNot False [0, 1] [Pos 2]
+abs_ccmnot1 = NamedGate GateX False [0] [Pos 2, Pos 3]
+abs_ccmnot2 = NamedGate GateX False [1] [Pos 2, Pos 3]
 
 test1 = TestCase (assertEqual "elimCtrlsTransformer on simple gates with few ctrls."
                               output
@@ -133,7 +134,7 @@ test1 = TestCase (assertEqual "elimCtrlsTransformer on simple gates with few ctr
                     abs_z, abs_cz,
                     abs_h, abs_ch,
                     abs_swp, abs_cswp,
-                    abs_mnot, abs_cmnot, abs_ccmnot]
+                    abs_mnot, abs_cmnot, abs_ccmnot1, abs_ccmnot2]
 
 -- Simple Gates (Several Controls)
 ascii_cccnot = "QGate[\"not\"](0) with controls=[+1, +2, +3]"
@@ -831,6 +832,12 @@ test60 = TestCase (assertBool "elimCtrlsTransformer on CCCZ with CCZ (3/3)."
                   ascii_cccz ++ "\n" ++
                   "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
 
+test61 = TestCase (assertBool "elimCtrlsTransformer on multi CCX with Tof decomp."
+                               (not $ containsCCX $ apply elimWithoutTof input))
+    where input = "Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit\n" ++
+                  ascii_ccmnot ++ "\n" ++
+                  "Outputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit"
+
 -----------------------------------------------------------------------------------------
 -- Orchestrates tests.
 
@@ -893,6 +900,7 @@ tests = hUnitTestToTests $ TestList [TestLabel "elimCtrlsTransformer_QGate_1" te
                                      TestLabel "elimCtrlsTransformer_DecompCCZ_3" test57,
                                      TestLabel "elimCtrlsTransformer_UseCCZ_1" test58,
                                      TestLabel "elimCtrlsTransformer_UseCCZ_2" test59,
-                                     TestLabel "elimCtrlsTransformer_UseCCZ_3" test60]
+                                     TestLabel "elimCtrlsTransformer_UseCCZ_3" test60,
+                                     TestLabel "elimCtrlsTransformer_ccmultinot" test61]
 
 main = defaultMain tests

@@ -17,6 +17,7 @@ module LinguaQuanta.Quip.Transformers
 
 import qualified Data.Map.Strict as Map
 import Data.Algebra.Boolean (xor)
+import Data.Foldable (forM_)
 import LinguaQuanta.Quip.Quipper (QuipCirc(..))
 import Quipper
   ( Bit
@@ -53,7 +54,7 @@ import Quipper.Internal.Monad
   ( named_gate_qulist
   , named_rotation_qulist
   )
-import Quipper.Internal.Transformer (B_Endpoint)
+import Quipper.Internal.Transformer (B_Endpoint(Endpoint_Qubit))
 import Quipper.Libraries.GateDecompositions
   ( cc_iX_plain_at
   , cc_iX_S_at
@@ -135,6 +136,12 @@ lookupRotDRuleGate "H"  = gate_H_at
 lookupRotDRuleGate name = error $ errMsg ++ name ++ "."
     where errMsg = "elimCtrlsTransformer: Unable to lookup D-gate "
 
+-- | Takes as input a list of signed qubits. Returns a well-typed control list.
+toCtrlList :: [Signed Qubit] -> CtrlList
+toCtrlList []                = []
+toCtrlList (Signed q v:rest) = ctrl : toCtrlList rest
+    where ctrl = Signed (Endpoint_Qubit q) v
+
 -------------------------------------------------------------------------------
 -- * Transformer to Eliminate Controls.
 
@@ -150,8 +157,8 @@ elimCtrlsQGate :: ElimCtrlsConf -> Bool -> Int
                                 -> ElimCtrlsRv
 elimCtrlsQGate conf ncf n ins ctrls op =
     without_controls_if ncf $
-        with_combined_controls_tof conf n ctrls $ \ctrls' -> do
-            op `controlled` ctrls'
+        with_combined_controls_tof conf n ctrls $ \nctrls -> do
+            op `controlled` nctrls
             return (ins, [], ctrls)
 
 -- | Implements elimCtrls for single qubit QGates whose controlled form:
@@ -178,8 +185,8 @@ elimCtrlsSwap :: ElimCtrlsConf -> Bool
 elimCtrlsSwap conf ncf q0 q1 ctrls =
     without_controls_if ncf $ do
         if elimCSwap conf
-        then with_combined_controls_tof conf 1 ctrls $ \ctrls' -> do
-            case ctrls' of
+        then with_combined_controls_tof conf 1 ctrls $ \nctrls -> do
+            case nctrls of
                 []  -> swap_at q0 q1 
                 [c] -> fredkin_at q0 q1 c
             return ([q0, q1], [], ctrls)
@@ -190,20 +197,33 @@ elimCtrlsH :: ElimCtrlsConf -> Bool -> Qubit -> CtrlList -> ElimCtrlsRv
 elimCtrlsH conf ncf q ctrls =
     without_controls_if ncf $ do
         if elimCH conf
-        then with_combined_controls_tof conf 1 ctrls $ \ctrls' -> do
-            case ctrls' of
+        then with_combined_controls_tof conf 1 ctrls $ \nctrls -> do
+            case nctrls of
                 []  -> gate_H_at q
                 [c] -> cH_AMMR_at q c
             return ([q], [], ctrls)
         else elimCtrlsQGate conf ncf 1 [q] ctrls $ gate_H_at q
+
+-- | Implements elimCtrls for the multinot QGate (a special case).
+elimCtrlsMultiNot :: ElimCtrlsConf -> Bool -> [Qubit] -> CtrlList -> ElimCtrlsRv
+elimCtrlsMultiNot conf ncf ins ctrls =
+    without_controls_if ncf $ do
+        if length ins > 2
+        then elimCtrlsQGate conf ncf 1 ins ctrls $ qmultinot_at ins
+        else with_combined_controls_tof conf 2 ctrls $ \nctrls -> do
+            if length nctrls < 2
+            then qmultinot_at ins `controlled` nctrls
+            else forM_ ins $ \q -> do
+                elimCtrlsX conf ncf q $ toCtrlList nctrls
+            return (ins, [], ctrls)
 
 -- | Implements elimCtrls for the X QGate (a special case).
 elimCtrlsX :: ElimCtrlsConf -> Bool -> Qubit -> CtrlList -> ElimCtrlsRv
 elimCtrlsX conf ncf q ctrls =
     without_controls_if ncf $ do
         if tofRule conf == ElimTof
-        then with_combined_controls_tof conf 2 ctrls $ \ctrls' -> do
-            case ctrls' of
+        then with_combined_controls_tof conf 2 ctrls $ \nctrls -> do
+            case nctrls of
                 []       -> gate_X_at q
                 [c]      -> gate_X_at q `controlled` c
                 [c1, c2] -> toffoli_S_at q c1 c2
@@ -217,8 +237,8 @@ elimCtrlsZ conf ncf q ctrls =
         case zRule conf of
             UseCCZ    -> elimCtrlsQGate conf ncf 2 [q] ctrls $ gate_Z_at q
             UseCZ     -> elimCtrlsQGate conf ncf 1 [q] ctrls $ gate_Z_at q
-            DecompCCZ -> with_combined_controls_tof conf 2 ctrls $ \ctrls' -> do
-                case ctrls' of
+            DecompCCZ -> with_combined_controls_tof conf 2 ctrls $ \nctrls -> do
+                case nctrls of
                     []       -> gate_Z_at q
                     [c]      -> gate_Z_at q `controlled` c
                     [c1, c2] -> ccZ_S_at q c1 c2
@@ -297,8 +317,8 @@ elimCtrlsGPhase :: ElimCtrlsConf -> Double -> Bool -> [Anchor]
                                  -> CtrlList -> Circ CtrlList
 elimCtrlsGPhase conf ts ncf ins ctrls =
     without_controls_if ncf $
-        with_combined_controls_tof conf 2 ctrls $ \ctrls' -> do
-            global_phase_anchored ts ins `controlled` ctrls'
+        with_combined_controls_tof conf 2 ctrls $ \nctrls -> do
+            global_phase_anchored ts ins `controlled` nctrls
             return ctrls
 
 -- | Quipper transformer to eliminate all controls, except for those supported
@@ -309,8 +329,7 @@ elimCtrlsGPhase conf ts ncf ins ctrls =
 elimCtrlsTransformer :: ElimCtrlsConf -> Transformer Circ Qubit Bit
 -- Controllable QGates in OpenQASM 2.
 elimCtrlsTransformer conf (T_QGate "multinot" _ 0 _ ncf f) = f $
-    \ins [] ctrls -> let ct = if length ins <= 2 then 2 else 1
-                     in elimCtrlsQGate conf ncf ct ins ctrls $ qmultinot_at ins
+    \ins [] ctrls -> elimCtrlsMultiNot conf ncf ins ctrls
 elimCtrlsTransformer conf (T_QGate "not" 1 0 _ ncf f) = f $
     \[q] [] ctrls -> elimCtrlsX conf ncf q ctrls
 elimCtrlsTransformer conf (T_QGate "X" 1 0 _ ncf f) = f $
