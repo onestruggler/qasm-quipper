@@ -1,4 +1,4 @@
-# Tests the decomposition of C(W).
+# Tests the decomposition of C(SWAP).
 gap> Read("Gates.g");;
 
 # Base gates.

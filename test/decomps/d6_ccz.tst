@@ -1,9 +1,8 @@
-# Tests the decomposition of CC(X).
+# Tests the decomposition of CC(Z).
 gap> Read("Gates.g");;
 
 # Base gates.
 gap> m_cxiiiii := ApplyQubitGateBetween( m_cx, 0, 5 );;
-gap> m_iihiiii := ApplyQubitGateBetween( m_h, 2, 4 );;
 
 # Computes permutationss of cx.
 gap> m_ciixiii := QubitSwapAndApply( 2, 4, m_cxiiiii );;
@@ -25,7 +24,7 @@ gap> m_mid       := KroneckerProduct( m_tttt, m_tdgtdgtdg );;
 # Full circuit, with ancilla.
 gap> m_lhs       := m_iciiixi * m_ciixiii * m_iciixii * m_iiciixi * m_iiiciix * m_ciiixii * m_iiciiix * m_iiixici;;
 gap> m_rhs       := m_iiixici * m_iiciiix * m_ciiixii * m_iiiciix * m_iiciixi * m_iciixii * m_ciixiii * m_iciiixi;;
-gap> m_circ_4anc := m_iihiiii * m_lhs * m_mid * m_rhs * m_iihiiii;;
+gap> m_circ_4anc := m_lhs * m_mid * m_rhs;;
 
 # Expands first layer of ancilla.
 gap> m_circ_3anc := AssertQubitAncilla( m_circ_4anc );;
@@ -48,5 +47,5 @@ gap> CheckQubitAncilla( m_circ_1anc );
 true
 
 # Validates the circuit.
-gap> m_circ = m_ccx;
+gap> m_circ = m_ccz;
 true
